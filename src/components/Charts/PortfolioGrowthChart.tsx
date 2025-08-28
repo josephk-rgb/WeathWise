@@ -45,6 +45,49 @@ const PortfolioGrowthChart: React.FC<PortfolioGrowthChartProps> = ({
     }).format(value);
   };
 
+  // Improved date formatting based on selected period
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    
+    switch (selectedPeriod) {
+      case '1M':
+        // For 1 month, show day and month
+        return date.toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric' 
+        });
+      case '3M':
+        // For 3 months, show month and day
+        return date.toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric' 
+        });
+      case '6M':
+        // For 6 months, show month and year
+        return date.toLocaleDateString('en-US', { 
+          month: 'short', 
+          year: '2-digit' 
+        });
+      case '1Y':
+        // For 1 year, show month and year
+        return date.toLocaleDateString('en-US', { 
+          month: 'short', 
+          year: '2-digit' 
+        });
+      case 'ALL':
+        // For all time, show month and year
+        return date.toLocaleDateString('en-US', { 
+          month: 'short', 
+          year: '2-digit' 
+        });
+      default:
+        return date.toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric' 
+        });
+    }
+  };
+
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
@@ -115,15 +158,17 @@ const PortfolioGrowthChart: React.FC<PortfolioGrowthChartProps> = ({
             <XAxis 
               dataKey="date" 
               stroke="#6b7280"
-              fontSize={12}
-              tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              fontSize={11}
+              tickFormatter={formatDate}
               axisLine={false}
               tickLine={false}
+              interval="preserveStartEnd"
+              minTickGap={30}
             />
             <YAxis 
               stroke="#6b7280"
               fontSize={12}
-              tickFormatter={(value) => formatCurrency(value)}
+              tickFormatter={(value) => value === 0 ? '' : formatCurrency(value)}
               axisLine={false}
               tickLine={false}
             />
