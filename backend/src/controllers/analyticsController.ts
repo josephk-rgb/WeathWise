@@ -657,4 +657,127 @@ export class AnalyticsController {
       res.status(500).json({ error: 'Internal server error' });
     }
   }
+
+  // Get dashboard statistics with change calculations
+  static async getDashboardStats(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({ error: 'User not authenticated' });
+        return;
+      }
+
+      // Get current period (last 30 days)
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(endDate.getDate() - 30);
+
+      // Get previous period (30 days before that) for comparison
+      const prevEndDate = new Date(startDate);
+      const prevStartDate = new Date(prevEndDate);
+      prevStartDate.setDate(prevEndDate.getDate() - 30);
+
+      // Get current period data
+      const [currentTransactions, currentInvestments, currentGoals] = await Promise.all([
+        Transaction.find({
+          userId,
+          'transactionInfo.date': { $gte: startDate, $lte: endDate }
+        }),
+        Investment.find({ userId, isActive: true }),
+        Goal.find({ userId, isActive: true })
+      ]);
+
+      // Get previous period data for comparison
+      const prevTransactions = await Transaction.find({
+        userId,
+        'transactionInfo.date': { $gte: prevStartDate, $lte: prevEndDate }
+      });
+
+      // Calculate current metrics
+      const currentIncome = currentTransactions
+        .filter(t => t.transactionInfo.type === 'income')
+        .reduce((sum, t) => sum + t.transactionInfo.amount, 0);
+
+      const currentExpenses = Math.abs(currentTransactions
+        .filter(t => t.transactionInfo.type === 'expense')
+        .reduce((sum, t) => sum + t.transactionInfo.amount, 0));
+
+      const currentPortfolioValue = currentInvestments.reduce((sum, inv) => 
+        sum + inv.position.marketValue, 0);
+
+      const currentNetWorth = currentIncome - currentExpenses + currentPortfolioValue;
+
+      // Calculate previous metrics
+      const prevIncome = prevTransactions
+        .filter(t => t.transactionInfo.type === 'income')
+        .reduce((sum, t) => sum + t.transactionInfo.amount, 0);
+
+      const prevExpenses = Math.abs(prevTransactions
+        .filter(t => t.transactionInfo.type === 'expense')
+        .reduce((sum, t) => sum + t.transactionInfo.amount, 0));
+
+      // Calculate portfolio change (simplified - in reality would use historical data)
+      const prevPortfolioValue = currentInvestments.reduce((sum, inv) => 
+        sum + (inv.position.shares * inv.position.averageCost), 0);
+
+      const prevNetWorth = prevIncome - prevExpenses + prevPortfolioValue;
+
+      // Calculate percentage changes
+      const calculateChange = (current: number, previous: number) => {
+        if (previous === 0) return { change: current, changePercent: 0, changeType: 'neutral' as const };
+        const change = current - previous;
+        const changePercent = (change / Math.abs(previous)) * 100;
+        return {
+          change,
+          changePercent,
+          changeType: change > 0 ? 'positive' as const : change < 0 ? 'negative' as const : 'neutral' as const
+        };
+      };
+
+      const netWorthChange = calculateChange(currentNetWorth, prevNetWorth);
+      const portfolioChange = calculateChange(currentPortfolioValue, prevPortfolioValue);
+      const expenseChange = calculateChange(currentExpenses, prevExpenses);
+
+      // Count goals on track
+      const goalsOnTrack = currentGoals.filter(goal => {
+        const progress = goal.currentAmount / goal.targetAmount;
+        const timeElapsed = (Date.now() - goal.createdAt.getTime()) / (1000 * 60 * 60 * 24);
+        const totalDays = (goal.targetDate.getTime() - goal.createdAt.getTime()) / (1000 * 60 * 60 * 24);
+        const expectedProgress = timeElapsed / totalDays;
+        return progress >= expectedProgress * 0.8; // On track if within 80% of expected progress
+      }).length;
+
+      res.json({
+        success: true,
+        data: {
+          netWorth: {
+            current: currentNetWorth,
+            change: netWorthChange.changePercent,
+            changeType: netWorthChange.changeType,
+            changeText: `${netWorthChange.changePercent >= 0 ? '+' : ''}${netWorthChange.changePercent.toFixed(1)}% from last month`
+          },
+          portfolio: {
+            current: currentPortfolioValue,
+            change: portfolioChange.changePercent,
+            changeType: portfolioChange.changeType,
+            changeText: `${portfolioChange.changePercent >= 0 ? '+' : ''}${portfolioChange.changePercent.toFixed(1)}% this month`
+          },
+          expenses: {
+            current: currentExpenses,
+            change: expenseChange.changePercent,
+            changeType: expenseChange.changePercent <= 0 ? 'positive' : 'negative', // Lower expenses are positive
+            changeText: `${expenseChange.changePercent <= 0 ? '' : '+'}${expenseChange.changePercent.toFixed(1)}% from last month`
+          },
+          goals: {
+            total: currentGoals.length,
+            onTrack: goalsOnTrack,
+            changeText: `${goalsOnTrack} goal${goalsOnTrack !== 1 ? 's' : ''} on track`
+          }
+        }
+      });
+    } catch (error) {
+      logger.error('Error getting dashboard stats:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
 }

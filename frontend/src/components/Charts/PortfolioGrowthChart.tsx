@@ -6,6 +6,7 @@ interface PortfolioGrowthChartProps {
   data: any[];
   height?: number;
   currency: string;
+  loading?: boolean;
 }
 
 const timePeriods = [
@@ -20,6 +21,7 @@ const PortfolioGrowthChart: React.FC<PortfolioGrowthChartProps> = ({
   data,
   height = 400,
   currency,
+  loading = false,
 }) => {
   const [selectedPeriod, setSelectedPeriod] = useState('1Y');
 
@@ -154,7 +156,12 @@ const PortfolioGrowthChart: React.FC<PortfolioGrowthChartProps> = ({
 
       {/* Chart or No Data State */}
       <div className="relative">
-        {data.length > 0 ? (
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-16" style={{ height: height }}>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+            <p className="text-gray-500 dark:text-gray-400">Loading portfolio data...</p>
+          </div>
+        ) : data.length > 0 ? (
           <>
             <ResponsiveContainer width="100%" height={height}>
               <AreaChart data={filteredData}>

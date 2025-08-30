@@ -90,12 +90,6 @@ class ApiService {
   }
 
   // Authentication methods
-  async login(_email: string, _password: string): Promise<User> {
-    // This should be handled by Auth0 on the frontend
-    // Throw an error since we shouldn't be using this mock login
-    throw new Error('Login should be handled by Auth0, not this mock method');
-  }
-
   async logout(): Promise<void> {
     this.clearToken();
     // In a real implementation, you would also call Auth0's logout
@@ -315,6 +309,15 @@ class ApiService {
 
   async getNetWorthTrend(period: string = '6m', interval: string = 'weekly'): Promise<any> {
     return this.makeRequest(`/analytics/net-worth-trend?period=${period}&interval=${interval}`);
+  }
+
+  // Get dashboard statistics with change calculations
+  async getDashboardStats(): Promise<any> {
+    return this.makeRequest('/analytics/dashboard-stats');
+  }
+
+  async getFinancialHealth(): Promise<any> {
+    return this.makeRequest('/analytics/financial-health');
   }
 
   // Export methods

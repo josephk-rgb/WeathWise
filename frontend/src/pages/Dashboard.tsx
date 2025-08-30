@@ -11,7 +11,6 @@ import ExpenseList from '../components/Charts/ExpenseList';
 import FinancialHealthScore from '../components/Dashboard/FinancialHealthScore';
 import { formatCurrency } from '../utils/currency';
 import { useAuth } from '../hooks/useAuth';
-import { testAuthentication } from '../utils/authTest';
 
 const Dashboard: React.FC = () => {
   const { 
@@ -28,14 +27,9 @@ const Dashboard: React.FC = () => {
   } = useStore();
 
   const { isAuthenticated, isLoading: authLoading, tokenReady } = useAuth();
-  const [authDebug, setAuthDebug] = useState<any>(null);
-
-  // Debug function to test authentication
-  const runAuthTest = async () => {
-    const result = await testAuthentication();
-    setAuthDebug(result);
-    console.log('Auth test result:', result);
-  };
+  const [dashboardStats, setDashboardStats] = useState<any>(null);
+  const [expenseData, setExpenseData] = useState<any[]>([]);
+  const [loadingStats, setLoadingStats] = useState(true);
 
   useEffect(() => {
     console.log('Dashboard useEffect triggered:', {
@@ -62,7 +56,7 @@ const Dashboard: React.FC = () => {
     console.log('Starting to load dashboard data for user:', user.id);
 
     console.log('Making parallel API calls...');
-    const [transactionsData, goalsData, investmentsData, recommendationsData] = await Promise.all([
+    const [transactionsData, goalsData, investmentsData, recommendationsData, dashboardStatsData, spendingData, financialHealthData] = await Promise.all([
       apiService.getTransactions(user.id).then(data => {
         // Ensure we always get an array for transactions
         if (!Array.isArray(data)) {
@@ -107,6 +101,36 @@ const Dashboard: React.FC = () => {
         console.error('Failed to load recommendations:', err);
         return []; // Return empty array on error
       }),
+      // Get dashboard statistics
+      apiService.getDashboardStats().then(data => {
+        console.log('Dashboard stats loaded:', data);
+        return data.success ? data.data : null;
+      }).catch(err => {
+        console.error('Failed to load dashboard stats:', err);
+        return null;
+      }),
+      // Get spending analysis for expense breakdown
+      apiService.getSpendingAnalysis().then(data => {
+        console.log('Spending analysis loaded:', data);
+        if (data.success && data.data.categoryBreakdown) {
+          return data.data.categoryBreakdown.map((cat: any) => ({
+            name: cat._id || 'Other',
+            value: cat.totalAmount
+          }));
+        }
+        return [];
+      }).catch(err => {
+        console.error('Failed to load spending analysis:', err);
+        return [];
+      }),
+      // Get financial health data
+      apiService.getFinancialHealth().then(data => {
+        console.log('Financial health loaded:', data);
+        return data.success ? data.data : null;
+      }).catch(err => {
+        console.error('Failed to load financial health:', err);
+        return null;
+      }),
     ]);
 
     console.log('Successfully loaded all dashboard data');
@@ -114,6 +138,16 @@ const Dashboard: React.FC = () => {
     setGoals(goalsData);
     setInvestments(investmentsData);
     setRecommendations(recommendationsData);
+    
+    // Enhance dashboard stats with financial health data
+    const enhancedStats = dashboardStatsData ? {
+      ...dashboardStatsData,
+      financialHealth: financialHealthData
+    } : null;
+    
+    setDashboardStats(enhancedStats);
+    setExpenseData(spendingData);
+    setLoadingStats(false);
   };
 
   // Calculate metrics - ensure transactions is always an array
@@ -136,8 +170,22 @@ const Dashboard: React.FC = () => {
   const portfolioValue = safeInvestments.reduce((sum, inv) => 
     sum + (inv.shares * inv.currentPrice), 0);
 
-  // Calculate Financial Health Score
+  // Calculate Financial Health Score using real data or backend API
   const calculateFinancialHealth = () => {
+    // If we have dashboard stats from backend, try to use enhanced data
+    if (dashboardStats && !loadingStats) {
+      // Use backend-calculated financial health if available
+      return {
+        overall: dashboardStats.financialHealth?.overall || 50,
+        emergencyFund: dashboardStats.financialHealth?.emergencyFund || 50,
+        cashFlow: dashboardStats.financialHealth?.cashFlow || (totalIncome > totalExpenses ? 85 : 45),
+        debtToIncome: dashboardStats.financialHealth?.debtToIncome || 0,
+        savingsRate: dashboardStats.financialHealth?.savingsRate || 50,
+        diversification: dashboardStats.financialHealth?.diversification || (safeInvestments.length > 3 ? 80 : 50)
+      };
+    }
+
+    // Fallback to local calculation if backend data not available
     const monthlyIncome = totalIncome / 6; // Assuming 6 months of data
     const monthlyExpenses = totalExpenses / 6;
     
@@ -165,23 +213,12 @@ const Dashboard: React.FC = () => {
 
   const financialHealth = calculateFinancialHealth();
 
-  const expenseData = [
-    { name: 'Housing', value: 1200 },
-    { name: 'Food & Dining', value: 385 },
-    { name: 'Transportation', value: 280 },
-    { name: 'Entertainment', value: 145 },
-    { name: 'Utilities', value: 150 },
-    { name: 'Shopping', value: 95 },
-    { name: 'Healthcare', value: 85 },
-    { name: 'Other', value: 140 },
-  ];
-
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Welcome Section */}
       <div className="mb-8">
         <h1 className="text-3xl font-serif font-bold text-gray-900 dark:text-gray-100 mb-2">
-          Welcome back, {user?.name}!
+          Welcome back, {user?.name || 'User'}!
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
           Here's your financial overview for this month.
@@ -193,31 +230,31 @@ const Dashboard: React.FC = () => {
         <StatCard
           title="Net Worth"
           value={formatCurrency(netWorth, currency)}
-          change="+12.5% from last month"
-          changeType="positive"
+          change={dashboardStats?.netWorth?.changeText || "Calculating..."}
+          changeType={dashboardStats?.netWorth?.changeType || "neutral"}
           icon={DollarSign}
           iconColor="text-green-500"
         />
         <StatCard
           title="Portfolio Value"
           value={formatCurrency(portfolioValue, currency)}
-          change="+8.2% this month"
-          changeType="positive"
+          change={dashboardStats?.portfolio?.changeText || "Calculating..."}
+          changeType={dashboardStats?.portfolio?.changeType || "neutral"}
           icon={TrendingUp}
           iconColor="text-violet-500"
         />
         <StatCard
           title="Monthly Expenses"
           value={formatCurrency(totalExpenses, currency)}
-          change="-5.1% from last month"
-          changeType="positive"
+          change={dashboardStats?.expenses?.changeText || "Calculating..."}
+          changeType={dashboardStats?.expenses?.changeType || "neutral"}
           icon={CreditCard}
           iconColor="text-blue-500"
         />
         <StatCard
           title="Savings Goals"
           value={`${safeGoals.length} active`}
-          change="2 goals on track"
+          change={dashboardStats?.goals?.changeText || "Calculating..."}
           changeType="positive"
           icon={Target}
           iconColor="text-magenta-500"
@@ -231,7 +268,20 @@ const Dashboard: React.FC = () => {
         <Card>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Expense Breakdown</h3>
           <div className="h-[400px]">
-            <ExpenseList data={expenseData} />
+            {loadingStats ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-gray-500 dark:text-gray-400">Loading expense data...</div>
+              </div>
+            ) : expenseData.length > 0 ? (
+              <ExpenseList data={expenseData} />
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <p className="text-gray-500 dark:text-gray-400 mb-2">No expense data available</p>
+                  <p className="text-sm text-gray-400 dark:text-gray-500">Add some transactions to see your expense breakdown</p>
+                </div>
+              </div>
+            )}
           </div>
         </Card>
       </div>

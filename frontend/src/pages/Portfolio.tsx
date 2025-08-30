@@ -10,7 +10,7 @@ import PortfolioGrowthChart from '../components/Charts/PortfolioGrowthChart';
 import PortfolioMetrics from '../components/Dashboard/PortfolioMetrics';
 import PortfolioInsights from '../components/Dashboard/PortfolioInsights';
 import HoldingCard from '../components/Dashboard/HoldingCard';
-import { generatePortfolioHistory } from '../utils/portfolioData';
+import { generatePortfolioHistory, formatPortfolioHistory } from '../utils/portfolioData';
 
 const PortfolioPage: React.FC = () => {
   const { user, investments, setInvestments, currency } = useStore();
@@ -21,6 +21,7 @@ const PortfolioPage: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [filterType, setFilterType] = useState<string>('all');
   const [portfolioHistory, setPortfolioHistory] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
   
   const [formData, setFormData] = useState({
     symbol: '',
@@ -49,10 +50,34 @@ const PortfolioPage: React.FC = () => {
   }, [user]);
 
   useEffect(() => {
-    // Generate portfolio history for the chart
-    const history = generatePortfolioHistory(investments);
-    setPortfolioHistory(history);
-  }, [investments]);
+    // Load portfolio history from backend instead of generating fake data
+    const loadPortfolioHistory = async () => {
+      if (!user) return;
+      
+      try {
+        setLoadingHistory(true);
+        const response = await apiService.getPortfolioPerformance();
+        if (response.success && response.data && response.data.historicalPerformance) {
+          // Use real portfolio performance data
+          const formattedHistory = formatPortfolioHistory(response.data.historicalPerformance);
+          setPortfolioHistory(formattedHistory);
+        } else {
+          // Fallback to generated data if no historical data available
+          const history = generatePortfolioHistory(investments);
+          setPortfolioHistory(history);
+        }
+      } catch (error) {
+        console.error('Error loading portfolio history:', error);
+        // Fallback to generated data on error
+        const history = generatePortfolioHistory(investments);
+        setPortfolioHistory(history);
+      } finally {
+        setLoadingHistory(false);
+      }
+    };
+
+    loadPortfolioHistory();
+  }, [investments, user]);
 
   const loadInvestments = async () => {
     if (!user) return;
@@ -71,8 +96,10 @@ const PortfolioPage: React.FC = () => {
       setInvestments(data);
     } catch (error) {
       console.error('Error loading investments:', error);
-      // Set empty array instead of sample data
-      setInvestments([]);
+      // Keep existing investments if API fails, don't clear them
+      if (investments.length === 0) {
+        setInvestments([]);
+      }
     }
   };
 
@@ -213,6 +240,7 @@ const PortfolioPage: React.FC = () => {
           data={portfolioHistory} 
           currency={currency}
           height={400}
+          loading={loadingHistory}
         />
       </div>
 

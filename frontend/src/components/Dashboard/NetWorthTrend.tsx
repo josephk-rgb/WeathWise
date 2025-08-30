@@ -79,10 +79,15 @@ const NetWorthTrend: React.FC<NetWorthTrendProps> = ({
           setData(response.data.trend);
         } else {
           setError('Failed to load net worth data');
+          console.warn('Invalid net worth trend response:', response);
         }
       } catch (err) {
         console.error('Error fetching net worth data:', err);
         setError('Failed to load net worth data');
+        // Don't show error immediately, try to use cached/existing data
+        if (data.length === 0) {
+          setError('Unable to load net worth data. Please try again later.');
+        }
       } finally {
         setLoading(false);
       }

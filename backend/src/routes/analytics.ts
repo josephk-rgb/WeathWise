@@ -18,4 +18,7 @@ router.get('/financial-health', AnalyticsController.getFinancialHealth);
 // Get net worth trend data
 router.get('/net-worth-trend', AnalyticsController.getNetWorthTrend);
 
+// Get dashboard statistics with change calculations
+router.get('/dashboard-stats', AnalyticsController.getDashboardStats);
+
 export default router;
