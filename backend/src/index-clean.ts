@@ -58,8 +58,6 @@ import investmentRoutes from './routes/investments';
 import marketRoutes from './routes/market';
 import aiRoutes from './routes/ai';
 import goalRoutes from './routes/goals';
-import budgetRoutes from './routes/budgets';
-import analyticsRoutes from './routes/analytics';
 import authTestRoutes from './routes/auth-test';
 
 // Import middleware
@@ -111,8 +109,6 @@ app.use('/api/portfolio', authMiddleware, portfolioRoutes);
 app.use('/api/transactions', authMiddleware, transactionRoutes);
 app.use('/api/investments', authMiddleware, investmentRoutes);
 app.use('/api/goals', authMiddleware, goalRoutes);
-app.use('/api/budgets', authMiddleware, budgetRoutes);
-app.use('/api/analytics', authMiddleware, analyticsRoutes);
 app.use('/api/market', authMiddleware, marketRoutes);
 app.use('/api/ai', authMiddleware, aiRoutes);
 
@@ -206,7 +202,8 @@ process.on('SIGINT', () => {
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
-  logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  logger.error('Unhandled Promise Rejection:', reason);
+  logger.error('Promise:', promise);
   process.exit(1);
 });
 
@@ -216,5 +213,8 @@ process.on('uncaughtException', (error) => {
   process.exit(1);
 });
 
-startServer();
-
+// Start the server
+startServer().catch((error) => {
+  logger.error('Failed to start application:', error);
+  process.exit(1);
+});

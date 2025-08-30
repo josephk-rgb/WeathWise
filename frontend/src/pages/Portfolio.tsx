@@ -58,6 +58,12 @@ const PortfolioPage: React.FC = () => {
     if (!user) return;
     try {
       const data = await apiService.getInvestments(user.id);
+      // Ensure we always get an array for investments
+      if (!Array.isArray(data)) {
+        console.warn('Investments API returned non-array data:', data);
+        setInvestments(generateSampleInvestments());
+        return;
+      }
       // For demo purposes, use sample data if no investments exist
       if (data.length === 0) {
         setInvestments(generateSampleInvestments());
@@ -89,9 +95,9 @@ const PortfolioPage: React.FC = () => {
     };
 
     if (editingInvestment) {
-      setInvestments(investments.map(inv => inv.id === editingInvestment.id ? investmentData : inv));
+      setInvestments(safeInvestments.map(inv => inv.id === editingInvestment.id ? investmentData : inv));
     } else {
-      setInvestments([...investments, investmentData]);
+      setInvestments([...safeInvestments, investmentData]);
     }
 
     resetForm();
@@ -126,11 +132,14 @@ const PortfolioPage: React.FC = () => {
   };
 
   const handleDelete = (investmentId: string) => {
-    setInvestments(investments.filter(inv => inv.id !== investmentId));
+    setInvestments(safeInvestments.filter(inv => inv.id !== investmentId));
   };
 
+  // Ensure investments is always an array
+  const safeInvestments = Array.isArray(investments) ? investments : [];
+
   // Filter and sort investments
-  const filteredAndSortedInvestments = investments
+  const filteredAndSortedInvestments = safeInvestments
     .filter(inv => {
       const matchesSearch = inv.symbol.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           inv.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -162,7 +171,7 @@ const PortfolioPage: React.FC = () => {
     });
 
   const getAssetAllocation = () => {
-    const allocation = investments.reduce((acc, inv) => {
+    const allocation = safeInvestments.reduce((acc, inv) => {
       const value = inv.shares * inv.currentPrice;
       acc[inv.type] = (acc[inv.type] || 0) + value;
       return acc;

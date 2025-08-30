@@ -1,30 +1,19 @@
 import { Router } from 'express';
+import { PortfolioController } from '../controllers/portfolioController';
 
 const router = Router();
 
 // Get portfolio overview
-router.get('/overview', async (req, res) => {
-  try {
-    res.json({
-      message: 'Portfolio overview endpoint - implementation pending',
-      userId: req.user?.id
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+router.get('/overview', PortfolioController.getPortfolioOverview);
 
 // Get portfolio performance
-router.get('/performance', async (req, res) => {
-  try {
-    res.json({
-      message: 'Portfolio performance endpoint - implementation pending',
-      userId: req.user?.id
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+router.get('/performance', PortfolioController.getPortfolioPerformance);
+
+// Get portfolio metrics
+router.get('/metrics', PortfolioController.getPortfolioMetrics);
+
+// Get portfolio insights
+router.get('/insights', PortfolioController.getPortfolioInsights);
 
 export default router;
 

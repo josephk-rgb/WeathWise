@@ -33,9 +33,16 @@ const BudgetPage: React.FC = () => {
     if (!user) return;
     try {
       const data = await apiService.getBudgets(user.id);
+      // Ensure we always get an array for budgets
+      if (!Array.isArray(data)) {
+        console.warn('Budgets API returned non-array data:', data);
+        setBudgets([]);
+        return;
+      }
       setBudgets(data);
     } catch (error) {
       console.error('Error loading budgets:', error);
+      setBudgets([]); // Set empty array on error
     }
   };
 
@@ -71,9 +78,9 @@ const BudgetPage: React.FC = () => {
     };
 
     if (editingBudget) {
-      setBudgets(budgets.map(b => b.id === editingBudget.id ? budgetData : b));
+      setBudgets(safeBudgets.map(b => b.id === editingBudget.id ? budgetData : b));
     } else {
-      setBudgets([...budgets, budgetData]);
+      setBudgets([...safeBudgets, budgetData]);
     }
 
     resetForm();
@@ -100,11 +107,14 @@ const BudgetPage: React.FC = () => {
   };
 
   const handleDelete = (budgetId: string) => {
-    setBudgets(budgets.filter(b => b.id !== budgetId));
+    setBudgets(safeBudgets.filter(b => b.id !== budgetId));
   };
 
-  const totalAllocated = budgets.reduce((sum, budget) => sum + budget.allocated, 0);
-  const totalSpent = budgets.reduce((sum, budget) => sum + budget.spent, 0);
+  // Ensure budgets is always an array
+  const safeBudgets = Array.isArray(budgets) ? budgets : [];
+
+  const totalAllocated = safeBudgets.reduce((sum, budget) => sum + budget.allocated, 0);
+  const totalSpent = safeBudgets.reduce((sum, budget) => sum + budget.spent, 0);
   const remainingBudget = totalAllocated - totalSpent;
 
   return (
@@ -257,7 +267,7 @@ const BudgetPage: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {budgets.map((budget) => {
+            {safeBudgets.map((budget) => {
               const percentage = (budget.spent / budget.allocated) * 100;
               const isOverBudget = percentage > 100;
               const isNearLimit = percentage > 80 && percentage <= 100;

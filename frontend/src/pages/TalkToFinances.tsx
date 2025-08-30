@@ -1,10 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  MessageCircle, 
   Send, 
   Bot, 
   User, 
-  Upload, 
   Image, 
   Mic, 
   MicOff,
@@ -14,11 +12,7 @@ import {
   CreditCard,
   Lightbulb,
   History,
-  Bookmark,
-  Share2,
-  Download,
-  Filter,
-  Search
+  Bookmark
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { apiService } from '../services/api';
@@ -36,7 +30,6 @@ interface QuickAction {
 
 const TalkToFinances: React.FC = () => {
   const { 
-    user, 
     chatMessages, 
     addChatMessage, 
     transactions, 
@@ -50,7 +43,6 @@ const TalkToFinances: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(true);
-  const [conversationHistory, setConversationHistory] = useState<any[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -164,16 +156,20 @@ const TalkToFinances: React.FC = () => {
     // TODO: Implement voice recording functionality
   };
 
+  // Ensure arrays are always arrays for calculations
+  const safeTransactions = Array.isArray(transactions) ? transactions : [];
+  const safeInvestments = Array.isArray(investments) ? investments : [];
+
   // Calculate financial summary
-  const totalIncome = transactions
+  const totalIncome = safeTransactions
     .filter(t => t.type === 'income')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const totalExpenses = Math.abs(transactions
+  const totalExpenses = Math.abs(safeTransactions
     .filter(t => t.type === 'expense')
     .reduce((sum, t) => sum + t.amount, 0));
 
-  const portfolioValue = investments.reduce((sum, inv) => 
+  const portfolioValue = safeInvestments.reduce((sum, inv) => 
     sum + (inv.shares * inv.currentPrice), 0);
 
   const netWorth = totalIncome - totalExpenses + portfolioValue;
@@ -250,7 +246,7 @@ const TalkToFinances: React.FC = () => {
                   <div key={goal.id} className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        {goal.name}
+                        {goal.title}
                       </p>
                       <p className="text-xs text-gray-500">
                         {formatCurrency(goal.currentAmount, currency)} / {formatCurrency(goal.targetAmount, currency)}

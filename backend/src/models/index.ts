@@ -1,8 +1,67 @@
-// Export all models
-export { User, type IUser, type IUserProfile, type IUserPreferences, type IRiskProfile, type ISubscription, type IEncryption, type IUserMetadata } from './User';
-export { Account, type IAccount, type IAccountProvider, type IAccountInfo, type IConnectionStatus } from './Account';
-export { Transaction, type ITransaction, type ITransactionInfo, type ICategorization, type ILocation, type ITransactionMetadata, type ITransactionAudit } from './Transaction';
-export { Investment, type IInvestment, type ISecurityInfo, type IPosition, type IAcquisition, type IAnalytics, type IAlert } from './Investment';
+// User exports
+export { 
+  User, 
+  IUser, 
+  IUserProfile, 
+  IUserPreferences, 
+  IRiskProfile, 
+  ISubscription, 
+  IEncryption, 
+  IUserMetadata 
+} from './User';
 
-// Re-export mongoose for convenience
-export { mongoose } from 'mongoose';
+// Investment exports
+export { 
+  Investment, 
+  IInvestment, 
+  ISecurityInfo, 
+  IPosition, 
+  IAcquisition, 
+  IAnalytics, 
+  IAlert 
+} from './Investment';
+
+// Transaction exports
+export { 
+  Transaction, 
+  ITransaction,
+  ITransactionInfo,
+  ICategorization,
+  ILocation,
+  ITransactionMetadata,
+  ITransactionAudit
+} from './Transaction';
+
+// Account exports
+export { 
+  Account, 
+  IAccount, 
+  IAccountProvider, 
+  IAccountInfo, 
+  IConnectionStatus 
+} from './Account';
+
+// Goal exports
+export { 
+  Goal, 
+  IGoal 
+} from './Goal';
+
+// Budget exports
+export { 
+  Budget, 
+  IBudget 
+} from './Budget';
+
+// Debt exports
+export { 
+  Debt, 
+  IDebt, 
+  IDebtPayment 
+} from './Debt';
+
+// Recommendation exports
+export { 
+  Recommendation, 
+  IRecommendation 
+} from './Recommendation';

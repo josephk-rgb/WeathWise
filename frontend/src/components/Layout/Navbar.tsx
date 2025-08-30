@@ -16,10 +16,12 @@ import {
   Settings
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
+import { useAuth } from '../../hooks/useAuth';
 
 const Navbar: React.FC = () => {
   const location = useLocation();
-  const { user, setUser, darkMode, toggleDarkMode } = useStore();
+  const { user, darkMode, toggleDarkMode } = useStore();
+  const { logout } = useAuth();
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -33,7 +35,7 @@ const Navbar: React.FC = () => {
   ];
 
   const handleLogout = () => {
-    setUser(null);
+    logout();
   };
 
   return (

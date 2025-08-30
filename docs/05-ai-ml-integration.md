@@ -1265,12 +1265,15 @@ class FinancialDataService:
         """Fetch comprehensive financial context for AI analysis"""
         try:
             # Fetch all relevant user data in parallel
-            user, accounts, investments, transactions, goals = await asyncio.gather(
+            user, accounts, investments, transactions, goals, snapshots, recommendations, chat_sessions = await asyncio.gather(
                 self.get_user_profile(user_id),
                 self.get_user_accounts(user_id),
                 self.get_user_investments(user_id),
                 self.get_recent_transactions(user_id, days=90),
-                self.get_user_goals(user_id)
+                self.get_user_goals(user_id),
+                self.get_portfolio_snapshots(user_id, limit=5),
+                self.get_recommendations(user_id, limit=3),
+                self.get_chat_sessions(user_id, limit=2)
             )
             
             # Build comprehensive context
@@ -1281,6 +1284,9 @@ class FinancialDataService:
                 "investments": await self.aggregate_investment_data(investments),
                 "transactions": await self.analyze_transaction_patterns(transactions),
                 "goals": goals,
+                "portfolio_snapshots": snapshots,
+                "recommendations": recommendations,
+                "chat_sessions": chat_sessions,
                 "financial_health": await self.calculate_financial_health(user_id),
                 "generated_at": datetime.now().isoformat()
             }
@@ -1296,11 +1302,13 @@ class FinancialDataService:
         user = await self.db.users.find_one({"_id": user_id})
         if user:
             return {
-                "risk_profile": user.get("riskProfile", "moderate"),
+                "risk_profile": user.get("riskProfile", {}).get("level", "moderate"),
+                "risk_questionnaire": user.get("riskProfile", {}).get("questionnaire", {}),
                 "investment_goals": user.get("investmentGoals", []),
                 "time_horizon": user.get("timeHorizon", "medium"),
-                "income_level": user.get("incomeLevel", "middle"),
-                "financial_experience": user.get("financialExperience", "beginner")
+                "financial_experience": user.get("riskProfile", {}).get("questionnaire", {}).get("experience", "beginner"),
+                "preferences": user.get("preferences", {}),
+                "subscription": user.get("subscription", {})
             }
         return None
     
@@ -1336,8 +1344,17 @@ class FinancialDataService:
                 "shares": inv["position"]["shares"],
                 "current_price": inv["position"]["currentPrice"],
                 "total_cost": inv["position"]["totalCost"],
+                "average_cost": inv["position"]["averageCost"],
+                "market_value": inv["position"]["marketValue"],
+                "gain_loss": inv["position"]["gainLoss"],
+                "gain_loss_percent": inv["position"]["gainLossPercent"],
                 "type": inv["securityInfo"]["type"],
-                "sector": inv["securityInfo"].get("sector", "Unknown")
+                "exchange": inv["securityInfo"].get("exchange"),
+                "currency": inv["securityInfo"]["currency"],
+                "sector": inv["analytics"].get("sector", "Unknown") if "analytics" in inv else "Unknown",
+                "industry": inv["analytics"].get("industry") if "analytics" in inv else None,
+                "purchase_date": inv["acquisition"]["purchaseDate"],
+                "purchase_price": inv["acquisition"]["purchasePrice"]
             }
             for inv in investments
         ]
@@ -1357,8 +1374,17 @@ class FinancialDataService:
                 "amount": tx["transactionInfo"]["amount"],
                 "type": tx["transactionInfo"]["type"],
                 "category": tx["transactionInfo"]["category"],
+                "subcategory": tx["transactionInfo"].get("subcategory"),
                 "date": tx["transactionInfo"]["date"],
-                "description": tx["transactionInfo"]["description"]
+                "description": tx["transactionInfo"]["description"],
+                "currency": tx["transactionInfo"]["currency"],
+                "location": tx.get("location", {}),
+                "categorization": {
+                    "automatic": tx["categorization"]["automatic"],
+                    "confidence": tx["categorization"].get("confidence"),
+                    "user_overridden": tx["categorization"]["userOverridden"]
+                },
+                "metadata": tx.get("metadata", {})
             }
             for tx in transactions
         ]
@@ -1378,6 +1404,68 @@ class FinancialDataService:
                 "type": goal["type"]
             }
             for goal in goals
+        ]
+    
+    async def get_portfolio_snapshots(self, user_id: str, limit: int = 10) -> List[Dict]:
+        """Fetch recent portfolio snapshots for performance analysis"""
+        snapshots = await self.db.portfolios.find(
+            {"userId": user_id}
+        ).sort("snapshotDate", -1).limit(limit).to_list(length=None)
+        
+        return [
+            {
+                "id": str(snap["_id"]),
+                "snapshot_date": snap["snapshotDate"],
+                "portfolio": snap["portfolio"],
+                "allocation": snap["allocation"],
+                "performance": snap["performance"],
+                "risk_metrics": snap["riskMetrics"]
+            }
+            for snap in snapshots
+        ]
+    
+    async def get_recommendations(self, user_id: str, limit: int = 5) -> List[Dict]:
+        """Fetch recent AI-generated recommendations"""
+        recommendations = await self.db.recommendations.find(
+            {"userId": user_id, "status": {"$in": ["pending", "viewed"]}}
+        ).sort("createdAt", -1).limit(limit).to_list(length=None)
+        
+        return [
+            {
+                "id": str(rec["_id"]),
+                "type": rec["recommendation"]["type"],
+                "priority": rec["recommendation"]["priority"],
+                "title": rec["recommendation"]["title"],
+                "description": rec["recommendation"]["description"],
+                "reasoning": rec["recommendation"]["reasoning"],
+                "action_items": rec["recommendation"]["actionItems"],
+                "expected_impact": rec["recommendation"]["expectedImpact"],
+                "ml_model": rec["mlModel"],
+                "status": rec["status"],
+                "created_at": rec["createdAt"]
+            }
+            for rec in recommendations
+        ]
+    
+    async def get_chat_sessions(self, user_id: str, limit: int = 5) -> List[Dict]:
+        """Fetch recent chat sessions for context"""
+        sessions = await self.db.chat_sessions.find(
+            {"userId": user_id, "sessionInfo.isActive": True}
+        ).sort("sessionInfo.lastMessageAt", -1).limit(limit).to_list(length=None)
+        
+        return [
+            {
+                "id": str(session["_id"]),
+                "session_id": session["sessionId"],
+                "title": session["sessionInfo"].get("title"),
+                "started_at": session["sessionInfo"]["startedAt"],
+                "last_message_at": session["sessionInfo"]["lastMessageAt"],
+                "message_count": session["sessionInfo"]["messageCount"],
+                "focus_area": session["context"].get("focusArea"),
+                "user_intent": session["context"].get("userIntent"),
+                "recent_messages": session["messages"][-3:] if session["messages"] else []  # Last 3 messages
+            }
+            for session in sessions
         ]
     
     async def aggregate_account_data(self, accounts: List[Dict]) -> Dict:
@@ -1404,28 +1492,46 @@ class FinancialDataService:
         if not investments:
             return {"total_value": 0, "holdings": [], "allocation": {}}
         
-        total_value = sum(inv["shares"] * inv["current_price"] for inv in investments)
+        # Use actual market values from the database
+        total_value = sum(inv["market_value"] for inv in investments)
         total_cost = sum(inv["total_cost"] for inv in investments)
+        total_gain_loss = sum(inv["gain_loss"] for inv in investments)
         
         # Calculate allocation by type
-        allocation = {}
+        allocation_by_type = {}
+        allocation_by_sector = {}
+        
         for inv in investments:
             inv_type = inv["type"]
-            value = inv["shares"] * inv["current_price"]
-            allocation[inv_type] = allocation.get(inv_type, 0) + value
+            sector = inv["sector"]
+            value = inv["market_value"]
+            
+            # By type
+            allocation_by_type[inv_type] = allocation_by_type.get(inv_type, 0) + value
+            
+            # By sector
+            allocation_by_sector[sector] = allocation_by_sector.get(sector, 0) + value
         
         # Convert to percentages
         if total_value > 0:
-            allocation = {k: (v / total_value) * 100 for k, v in allocation.items()}
+            allocation_by_type = {k: (v / total_value) * 100 for k, v in allocation_by_type.items()}
+            allocation_by_sector = {k: (v / total_value) * 100 for k, v in allocation_by_sector.items()}
+        
+        # Top holdings by value
+        top_holdings = sorted(investments, key=lambda x: x["market_value"], reverse=True)[:5]
         
         return {
             "total_value": total_value,
             "total_cost": total_cost,
-            "total_gain_loss": total_value - total_cost,
-            "total_return_pct": ((total_value - total_cost) / total_cost * 100) if total_cost > 0 else 0,
+            "total_gain_loss": total_gain_loss,
+            "total_return_pct": ((total_gain_loss / total_cost) * 100) if total_cost > 0 else 0,
             "holdings": investments,
-            "allocation": allocation,
-            "holding_count": len(investments)
+            "allocation_by_type": allocation_by_type,
+            "allocation_by_sector": allocation_by_sector,
+            "top_holdings": top_holdings,
+            "holding_count": len(investments),
+            "sectors": list(allocation_by_sector.keys()),
+            "types": list(allocation_by_type.keys())
         }
     
     async def analyze_transaction_patterns(self, transactions: List[Dict]) -> Dict:
@@ -1438,21 +1544,47 @@ class FinancialDataService:
         
         # Category analysis
         category_spending = {}
+        subcategory_spending = {}
+        merchant_spending = {}
+        
         for expense in expenses:
             category = expense["category"]
-            category_spending[category] = category_spending.get(category, 0) + abs(expense["amount"])
+            subcategory = expense.get("subcategory", "Unknown")
+            merchant = expense.get("location", {}).get("merchant", "Unknown")
+            amount = abs(expense["amount"])
+            
+            category_spending[category] = category_spending.get(category, 0) + amount
+            subcategory_spending[subcategory] = subcategory_spending.get(subcategory, 0) + amount
+            merchant_spending[merchant] = merchant_spending.get(merchant, 0) + amount
         
-        # Monthly spending
+        # Monthly spending and income
         monthly_spending = sum(abs(exp["amount"]) for exp in expenses)
         monthly_income = sum(inc["amount"] for inc in income)
+        
+        # Categorization analysis
+        auto_categorized = sum(1 for tx in transactions if tx["categorization"]["automatic"])
+        user_overridden = sum(1 for tx in transactions if tx["categorization"]["user_overridden"])
+        
+        # Recurring transaction detection
+        recurring_transactions = [tx for tx in transactions if tx.get("metadata", {}).get("isRecurring", False)]
         
         return {
             "total_spending": monthly_spending,
             "total_income": monthly_income,
             "savings_rate": ((monthly_income - monthly_spending) / monthly_income * 100) if monthly_income > 0 else 0,
             "categories": category_spending,
+            "subcategories": subcategory_spending,
+            "merchants": merchant_spending,
             "top_categories": sorted(category_spending.items(), key=lambda x: x[1], reverse=True)[:5],
-            "transaction_count": len(transactions)
+            "top_merchants": sorted(merchant_spending.items(), key=lambda x: x[1], reverse=True)[:5],
+            "transaction_count": len(transactions),
+            "categorization_stats": {
+                "auto_categorized": auto_categorized,
+                "user_overridden": user_overridden,
+                "auto_categorization_rate": (auto_categorized / len(transactions) * 100) if transactions else 0
+            },
+            "recurring_transactions": len(recurring_transactions),
+            "currencies": list(set(tx["currency"] for tx in transactions))
         }
     
     async def calculate_financial_health(self, user_id: str) -> Dict:
@@ -1537,6 +1669,12 @@ async def enhanced_chat_with_ai(request: EnhancedChatRequest):
         sources = ["ollama_ai", "financial_knowledge_base"]
         if user_context:
             sources.extend(["user_portfolio_data", "spending_analysis", "financial_health_metrics"])
+            if user_context.get("portfolio_snapshots"):
+                sources.append("historical_performance_data")
+            if user_context.get("recommendations"):
+                sources.append("previous_recommendations")
+            if user_context.get("chat_sessions"):
+                sources.append("conversation_history")
         
         return EnhancedChatResponse(
             response=ai_response,
@@ -1592,9 +1730,13 @@ def build_financial_summary(context: Dict) -> str:
         summary_parts.append(f"Total Return: {inv_data['total_return_pct']:.1f}%")
         summary_parts.append(f"Holdings: {inv_data['holding_count']} investments")
         
-        if inv_data['allocation']:
-            allocation_str = ", ".join([f"{k}: {v:.1f}%" for k, v in inv_data['allocation'].items()])
+        if inv_data['allocation_by_type']:
+            allocation_str = ", ".join([f"{k}: {v:.1f}%" for k, v in inv_data['allocation_by_type'].items()])
             summary_parts.append(f"Asset Allocation: {allocation_str}")
+        
+        if inv_data['top_holdings']:
+            top_holdings = ", ".join([f"{h['symbol']} (${h['market_value']:,.0f})" for h in inv_data['top_holdings'][:3]])
+            summary_parts.append(f"Top Holdings: {top_holdings}")
     
     # Account summary
     if context.get("accounts"):
@@ -1612,6 +1754,10 @@ def build_financial_summary(context: Dict) -> str:
         if tx_data['top_categories']:
             top_cats = ", ".join([f"{cat}: ${amt:,.0f}" for cat, amt in tx_data['top_categories'][:3]])
             summary_parts.append(f"Top Spending Categories: {top_cats}")
+        
+        if tx_data['top_merchants']:
+            top_merchants = ", ".join([f"{merchant}: ${amt:,.0f}" for merchant, amt in tx_data['top_merchants'][:3]])
+            summary_parts.append(f"Top Merchants: {top_merchants}")
     
     # Financial health
     if context.get("financial_health"):
@@ -1626,6 +1772,26 @@ def build_financial_summary(context: Dict) -> str:
         summary_parts.append(f"Risk Profile: {profile['risk_profile']}")
         summary_parts.append(f"Experience Level: {profile['financial_experience']}")
         summary_parts.append(f"Time Horizon: {profile['time_horizon']}")
+        
+        if profile.get('risk_questionnaire'):
+            questionnaire = profile['risk_questionnaire']
+            summary_parts.append(f"Risk Tolerance Score: {questionnaire.get('riskTolerance', 'N/A')}/10")
+    
+    # Recent recommendations
+    if context.get("recommendations"):
+        recs = context["recommendations"]
+        if recs:
+            summary_parts.append(f"Recent Recommendations: {len(recs)} pending")
+            for rec in recs[:2]:
+                summary_parts.append(f"- {rec['title']} ({rec['priority']} priority)")
+    
+    # Portfolio performance
+    if context.get("portfolio_snapshots"):
+        snapshots = context["portfolio_snapshots"]
+        if snapshots:
+            latest = snapshots[0]
+            performance = latest.get("performance", {})
+            summary_parts.append(f"Portfolio Performance: 1M: {performance.get('oneMonth', 0):.1f}%, 3M: {performance.get('threeMonth', 0):.1f}%, 1Y: {performance.get('oneYear', 0):.1f}%")
     
     return "\n".join(summary_parts)
 
@@ -1635,7 +1801,9 @@ def extract_personalized_insights(ai_response: str, context: Dict) -> Dict:
         "portfolio_insights": [],
         "spending_insights": [],
         "goal_insights": [],
-        "risk_insights": []
+        "risk_insights": [],
+        "recommendation_insights": [],
+        "performance_insights": []
     }
     
     # Simple keyword-based insight extraction
@@ -1646,16 +1814,44 @@ def extract_personalized_insights(ai_response: str, context: Dict) -> Dict:
             insights["portfolio_insights"].append("Diversification analysis provided")
         if "allocation" in response_lower:
             insights["portfolio_insights"].append("Asset allocation recommendations made")
+        if "sector" in response_lower:
+            insights["portfolio_insights"].append("Sector analysis included")
+        if "holdings" in response_lower:
+            insights["portfolio_insights"].append("Top holdings analysis provided")
     
     if context.get("transactions"):
         if "spending" in response_lower:
             insights["spending_insights"].append("Spending pattern analysis included")
         if "savings" in response_lower:
             insights["spending_insights"].append("Savings rate optimization suggested")
+        if "merchant" in response_lower:
+            insights["spending_insights"].append("Merchant spending analysis included")
+        if "category" in response_lower:
+            insights["spending_insights"].append("Category spending analysis provided")
     
     if context.get("financial_health"):
         if "emergency" in response_lower:
             insights["risk_insights"].append("Emergency fund assessment provided")
+        if "health" in response_lower:
+            insights["risk_insights"].append("Financial health evaluation provided")
+    
+    if context.get("goals"):
+        if "goal" in response_lower:
+            insights["goal_insights"].append("Goal progress analysis included")
+        if "target" in response_lower:
+            insights["goal_insights"].append("Goal targeting recommendations made")
+    
+    if context.get("recommendations"):
+        if "recommendation" in response_lower:
+            insights["recommendation_insights"].append("Previous recommendations referenced")
+        if "priority" in response_lower:
+            insights["recommendation_insights"].append("Recommendation prioritization discussed")
+    
+    if context.get("portfolio_snapshots"):
+        if "performance" in response_lower:
+            insights["performance_insights"].append("Historical performance analysis included")
+        if "return" in response_lower:
+            insights["performance_insights"].append("Return analysis provided")
     
     return insights
 

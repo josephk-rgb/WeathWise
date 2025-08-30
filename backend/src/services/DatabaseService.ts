@@ -1,4 +1,4 @@
-import { User, IUser } from '../models/User';
+import { User, IUser } from '../models';
 import { logger } from '../utils/logger';
 
 export class DatabaseService {
@@ -22,7 +22,7 @@ export class DatabaseService {
    */
   async findUserByAuth0Id(auth0Id: string): Promise<IUser | null> {
     try {
-      const user = await User.findByAuth0Id(auth0Id);
+      const user = await User.findOne({ auth0Id });
       return user;
     } catch (error) {
       logger.error('Error finding user by Auth0 ID:', error);
@@ -35,7 +35,7 @@ export class DatabaseService {
    */
   async findUserByEmail(email: string): Promise<IUser | null> {
     try {
-      const user = await User.findByEmail(email);
+      const user = await User.findOne({ email: email.toLowerCase() });
       return user;
     } catch (error) {
       logger.error('Error finding user by email:', error);
@@ -98,27 +98,17 @@ export class DatabaseService {
   /**
    * Get all users with pagination
    */
-  async getUsers(page: number = 1, limit: number = 20): Promise<{ users: IUser[], total: number, page: number, totalPages: number }> {
+  async getUsers(page: number = 1, limit: number = 20): Promise<{ users: IUser[]; total: number }> {
     try {
       const skip = (page - 1) * limit;
+      const users = await User.find()
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 });
       
-      const [users, total] = await Promise.all([
-        User.find()
-          .sort({ createdAt: -1 })
-          .skip(skip)
-          .limit(limit)
-          .lean(),
-        User.countDocuments()
-      ]);
-
-      const totalPages = Math.ceil(total / limit);
-
-      return {
-        users,
-        total,
-        page,
-        totalPages
-      };
+      const total = await User.countDocuments();
+      
+      return { users, total };
     } catch (error) {
       logger.error('Error getting users:', error);
       throw error;
@@ -126,29 +116,98 @@ export class DatabaseService {
   }
 
   /**
-   * Get active users (with valid subscriptions)
+   * Search users
    */
-  async getActiveUsers(): Promise<IUser[]> {
+  async searchUsers(query: string, page: number = 1, limit: number = 20): Promise<{ users: IUser[]; total: number }> {
     try {
-      const users = await User.findActiveUsers();
-      return users;
+      const skip = (page - 1) * limit;
+      const searchRegex = new RegExp(query, 'i');
+      
+      const users = await User.find({
+        $or: [
+          { email: searchRegex },
+          { 'profile.firstName': searchRegex },
+          { 'profile.lastName': searchRegex }
+        ]
+      })
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 });
+      
+      const total = await User.countDocuments({
+        $or: [
+          { email: searchRegex },
+          { 'profile.firstName': searchRegex },
+          { 'profile.lastName': searchRegex }
+        ]
+      });
+      
+      return { users, total };
     } catch (error) {
-      logger.error('Error getting active users:', error);
+      logger.error('Error searching users:', error);
       throw error;
     }
   }
 
   /**
-   * Update user's last login
+   * Get user statistics
    */
-  async updateUserLastLogin(userId: string, ipAddress?: string, userAgent?: string): Promise<IUser | null> {
+  async getUserStats(): Promise<{
+    totalUsers: number;
+    activeUsers: number;
+    newUsersThisMonth: number;
+    usersByPlan: Record<string, number>;
+  }> {
     try {
-      const user = await User.findById(userId);
-      if (user) {
-        await user.updateLastLogin(ipAddress, userAgent);
-        return user;
-      }
-      return null;
+      const totalUsers = await User.countDocuments();
+      
+      const activeUsers = await User.countDocuments({
+        'metadata.lastLogin': { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
+      });
+      
+      const newUsersThisMonth = await User.countDocuments({
+        createdAt: { $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) }
+      });
+      
+      const usersByPlan = await User.aggregate([
+        {
+          $group: {
+            _id: '$subscription.plan',
+            count: { $sum: 1 }
+          }
+        }
+      ]);
+      
+      const planStats = usersByPlan.reduce((acc, plan) => {
+        acc[plan._id || 'free'] = plan.count;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      return {
+        totalUsers,
+        activeUsers,
+        newUsersThisMonth,
+        usersByPlan: planStats
+      };
+    } catch (error) {
+      logger.error('Error getting user stats:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update user last login
+   */
+  async updateUserLastLogin(userId: string, ipAddress?: string, userAgent?: string): Promise<void> {
+    try {
+      await User.findByIdAndUpdate(userId, {
+        $inc: { 'metadata.loginCount': 1 },
+        $set: { 
+          'metadata.lastLogin': new Date(),
+          ...(ipAddress && { 'metadata.ipAddress': ipAddress }),
+          ...(userAgent && { 'metadata.userAgent': userAgent })
+        }
+      });
     } catch (error) {
       logger.error('Error updating user last login:', error);
       throw error;
@@ -158,15 +217,11 @@ export class DatabaseService {
   /**
    * Complete user onboarding
    */
-  async completeUserOnboarding(userId: string): Promise<IUser | null> {
+  async completeUserOnboarding(userId: string): Promise<void> {
     try {
-      const user = await User.findById(userId);
-      if (user) {
-        await user.completeOnboarding();
-        logger.info(`User onboarding completed: ${user.email}`);
-        return user;
-      }
-      return null;
+      await User.findByIdAndUpdate(userId, {
+        $set: { 'metadata.onboardingCompleted': true }
+      });
     } catch (error) {
       logger.error('Error completing user onboarding:', error);
       throw error;
@@ -174,41 +229,29 @@ export class DatabaseService {
   }
 
   /**
-   * Accept terms and conditions
+   * Accept terms of service
    */
-  async acceptUserTerms(userId: string): Promise<IUser | null> {
+  async acceptTermsOfService(userId: string): Promise<void> {
     try {
-      const user = await User.findById(userId);
-      if (user) {
-        await user.acceptTerms();
-        logger.info(`User accepted terms: ${user.email}`);
-        return user;
-      }
-      return null;
+      await User.findByIdAndUpdate(userId, {
+        $set: { 'metadata.tosAcceptedAt': new Date() }
+      });
     } catch (error) {
-      logger.error('Error accepting user terms:', error);
+      logger.error('Error accepting terms of service:', error);
       throw error;
     }
   }
 
   /**
-   * Update user risk profile
+   * Accept privacy policy
    */
-  async updateUserRiskProfile(userId: string, riskProfile: Partial<IUser['riskProfile']>): Promise<IUser | null> {
+  async acceptPrivacyPolicy(userId: string): Promise<void> {
     try {
-      const user = await User.findByIdAndUpdate(
-        userId,
-        { riskProfile },
-        { new: true, runValidators: true }
-      );
-      
-      if (user) {
-        logger.info(`User risk profile updated: ${user.email}`);
-      }
-      
-      return user;
+      await User.findByIdAndUpdate(userId, {
+        $set: { 'metadata.privacyPolicyAcceptedAt': new Date() }
+      });
     } catch (error) {
-      logger.error('Error updating user risk profile:', error);
+      logger.error('Error accepting privacy policy:', error);
       throw error;
     }
   }
@@ -220,7 +263,7 @@ export class DatabaseService {
     try {
       const user = await User.findByIdAndUpdate(
         userId,
-        { preferences },
+        { $set: { preferences } },
         { new: true, runValidators: true }
       );
       
@@ -236,61 +279,50 @@ export class DatabaseService {
   }
 
   /**
-   * Update user subscription
+   * Update user risk profile
    */
-  async updateUserSubscription(userId: string, subscription: Partial<IUser['subscription']>): Promise<IUser | null> {
+  async updateUserRiskProfile(userId: string, riskProfile: Partial<IUser['riskProfile']>): Promise<IUser | null> {
     try {
       const user = await User.findByIdAndUpdate(
         userId,
-        { subscription },
+        { $set: { riskProfile } },
         { new: true, runValidators: true }
       );
       
       if (user) {
-        logger.info(`User subscription updated: ${user.email} - ${user.subscription.plan}`);
+        logger.info(`User risk profile updated: ${user.email}`);
       }
       
       return user;
     } catch (error) {
-      logger.error('Error updating user subscription:', error);
+      logger.error('Error updating user risk profile:', error);
       throw error;
     }
   }
 
   /**
-   * Get user statistics
+   * Get users by subscription plan
    */
-  async getUserStats(): Promise<{
-    total: number;
-    active: number;
-    premium: number;
-    enterprise: number;
-    newThisMonth: number;
-  }> {
+  async getUsersByPlan(plan: string): Promise<IUser[]> {
     try {
-      const now = new Date();
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-      const [total, active, premium, enterprise, newThisMonth] = await Promise.all([
-        User.countDocuments(),
-        User.countDocuments({ 'subscription.endDate': { $gt: now } }),
-        User.countDocuments({ 'subscription.plan': 'premium' }),
-        User.countDocuments({ 'subscription.plan': 'enterprise' }),
-        User.countDocuments({ createdAt: { $gte: startOfMonth } })
-      ]);
-
-      return {
-        total,
-        active,
-        premium,
-        enterprise,
-        newThisMonth
-      };
+      const users = await User.find({ 'subscription.plan': plan });
+      return users;
     } catch (error) {
-      logger.error('Error getting user stats:', error);
+      logger.error('Error getting users by plan:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get users by risk profile
+   */
+  async getUsersByRiskProfile(riskLevel: string): Promise<IUser[]> {
+    try {
+      const users = await User.find({ 'riskProfile.level': riskLevel });
+      return users;
+    } catch (error) {
+      logger.error('Error getting users by risk profile:', error);
       throw error;
     }
   }
 }
-
-export default DatabaseService;

@@ -38,9 +38,16 @@ const GoalsPage: React.FC = () => {
     if (!user) return;
     try {
       const data = await apiService.getGoals(user.id);
+      // Ensure we always get an array for goals
+      if (!Array.isArray(data)) {
+        console.warn('Goals API returned non-array data:', data);
+        setGoals([]);
+        return;
+      }
       setGoals(data);
     } catch (error) {
       console.error('Error loading goals:', error);
+      setGoals([]); // Set empty array on error
     }
   };
 
@@ -62,9 +69,9 @@ const GoalsPage: React.FC = () => {
     };
 
     if (editingGoal) {
-      setGoals(goals.map(g => g.id === editingGoal.id ? goalData : g));
+      setGoals(safeGoals.map(g => g.id === editingGoal.id ? goalData : g));
     } else {
-      setGoals([...goals, goalData]);
+      setGoals([...safeGoals, goalData]);
     }
 
     resetForm();
@@ -99,7 +106,7 @@ const GoalsPage: React.FC = () => {
   };
 
   const handleDelete = (goalId: string) => {
-    setGoals(goals.filter(g => g.id !== goalId));
+    setGoals(safeGoals.filter(g => g.id !== goalId));
     if (selectedGoal?.id === goalId) {
       setSelectedGoal(null);
     }
@@ -121,9 +128,12 @@ const GoalsPage: React.FC = () => {
     };
   };
 
-  const totalGoalAmount = goals.reduce((sum, goal) => sum + goal.targetAmount, 0);
-  const totalSaved = goals.reduce((sum, goal) => sum + goal.currentAmount, 0);
-  const completedGoals = goals.filter(goal => goal.currentAmount >= goal.targetAmount).length;
+  // Ensure goals is always an array
+  const safeGoals = Array.isArray(goals) ? goals : [];
+
+  const totalGoalAmount = safeGoals.reduce((sum, goal) => sum + goal.targetAmount, 0);
+  const totalSaved = safeGoals.reduce((sum, goal) => sum + goal.currentAmount, 0);
+  const completedGoals = safeGoals.filter(goal => goal.currentAmount >= goal.targetAmount).length;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -178,7 +188,7 @@ const GoalsPage: React.FC = () => {
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Completed Goals</p>
               <p className="text-2xl font-bold text-violet-600">
-                {completedGoals} / {goals.length}
+                {completedGoals} / {safeGoals.length}
               </p>
             </div>
             <div className="p-3 bg-violet-100 dark:bg-violet-900/20 rounded-lg">
@@ -319,7 +329,7 @@ const GoalsPage: React.FC = () => {
         <div>
           <Card>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Your Goals</h3>
-            {goals.length === 0 ? (
+            {safeGoals.length === 0 ? (
               <div className="text-center py-12">
                 <Target className="w-12 h-12 mx-auto text-gray-400 mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No goals set</h3>
@@ -333,7 +343,7 @@ const GoalsPage: React.FC = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {goals.map((goal) => {
+                {safeGoals.map((goal) => {
                   const progress = (goal.currentAmount / goal.targetAmount) * 100;
                   const isCompleted = progress >= 100;
                   const projection = calculateProjection(goal);

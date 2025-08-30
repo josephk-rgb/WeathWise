@@ -23,13 +23,23 @@ const Transactions: React.FC = () => {
     if (!user) return;
     try {
       const data = await apiService.getTransactions(user.id);
+      // Ensure we always get an array for transactions
+      if (!Array.isArray(data)) {
+        console.warn('Transactions API returned non-array data:', data);
+        setTransactions([]);
+        return;
+      }
       setTransactions(data);
     } catch (error) {
       console.error('Error loading transactions:', error);
+      setTransactions([]); // Set empty array on error
     }
   };
 
-  const filteredTransactions = transactions.filter(transaction => {
+  // Ensure transactions is always an array
+  const safeTransactions = Array.isArray(transactions) ? transactions : [];
+
+  const filteredTransactions = safeTransactions.filter(transaction => {
     const matchesSearch = transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          transaction.category.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = filterType === 'all' || transaction.type === filterType;
@@ -38,13 +48,13 @@ const Transactions: React.FC = () => {
     return matchesSearch && matchesType && matchesCategory;
   });
 
-  const categories = [...new Set(transactions.map(t => t.category))];
+  const categories = [...new Set(safeTransactions.map(t => t.category))];
 
-  const totalIncome = transactions
+  const totalIncome = safeTransactions
     .filter(t => t.type === 'income')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const totalExpenses = Math.abs(transactions
+  const totalExpenses = Math.abs(safeTransactions
     .filter(t => t.type === 'expense')
     .reduce((sum, t) => sum + t.amount, 0));
 

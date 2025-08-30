@@ -317,6 +317,15 @@ UserSchema.pre('save', function(next) {
   next();
 });
 
+// Static methods
+UserSchema.statics['findByAuth0Id'] = function(auth0Id: string) {
+  return this.findOne({ auth0Id });
+};
+
+UserSchema.statics['findByEmail'] = function(email: string) {
+  return this.findOne({ email: email.toLowerCase() });
+};
+
 export const User = mongoose.model<IUser>('User', UserSchema);
 
 export default User;

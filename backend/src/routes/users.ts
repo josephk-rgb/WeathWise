@@ -1,30 +1,16 @@
 import { Router } from 'express';
+import { UserController } from '../controllers/userController';
 
 const router = Router();
 
 // Get user profile
-router.get('/profile', async (req, res) => {
-  try {
-    res.json({
-      message: 'User profile endpoint - implementation pending',
-      userId: req.user?.id
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+router.get('/profile', UserController.getProfile);
 
 // Update user profile
-router.put('/profile', async (req, res) => {
-  try {
-    res.json({
-      message: 'Update profile endpoint - implementation pending',
-      userId: req.user?.id
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+router.put('/profile', UserController.updateProfile);
+
+// Create user (for Auth0 integration)
+router.post('/', UserController.createUser);
 
 export default router;
 

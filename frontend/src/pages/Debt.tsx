@@ -67,8 +67,11 @@ const DebtPage: React.FC = () => {
     return isFinite(months) ? months : 0;
   };
 
-  const totalDebt = debts.reduce((sum, debt) => sum + debt.remainingBalance, 0);
-  const totalMinimumPayments = debts.reduce((sum, debt) => sum + debt.minimumPayment, 0);
+  // Ensure debts is always an array
+  const safeDebts = Array.isArray(debts) ? debts : [];
+
+  const totalDebt = safeDebts.reduce((sum, debt) => sum + debt.remainingBalance, 0);
+  const totalMinimumPayments = safeDebts.reduce((sum, debt) => sum + debt.minimumPayment, 0);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -259,7 +262,7 @@ const DebtPage: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {debts.map((debt) => {
+            {safeDebts.map((debt) => {
               const payoffMonths = calculatePayoffTime(debt);
               const progressPercentage = ((debt.totalAmount - debt.remainingBalance) / debt.totalAmount) * 100;
               

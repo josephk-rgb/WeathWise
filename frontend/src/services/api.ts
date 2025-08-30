@@ -1,211 +1,334 @@
 import { User, Transaction, Budget, Goal, Investment, Recommendation } from '../types';
 
-// Mock API service - replace with actual API calls
+// Real API service that connects to the backend
 class ApiService {
-  private baseUrl = '/api';
+  private baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+  private token: string | null = null;
 
+  // Set authentication token
+  setToken(token: string) {
+    this.token = token;
+    localStorage.setItem('auth_token', token);
+  }
+
+  // Get authentication token
+  getToken(): string | null {
+    if (!this.token) {
+      this.token = localStorage.getItem('auth_token');
+    }
+    return this.token;
+  }
+
+  // Clear authentication token
+  clearToken() {
+    this.token = null;
+    localStorage.removeItem('auth_token');
+  }
+
+  // Helper method to make authenticated requests with retry logic
+  private async makeRequest(endpoint: string, options: RequestInit = {}, retryCount = 0): Promise<any> {
+    const maxRetries = 2;
+    const token = this.getToken();
+    const url = `${this.baseUrl}${endpoint}`;
+    
+    const config: RequestInit = {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { Authorization: `Bearer ${token}` }),
+        ...options.headers,
+      },
+      ...options,
+    };
+
+    console.log('Making API request:', {
+      url,
+      method: options.method || 'GET',
+      hasToken: !!token,
+      tokenPrefix: token ? token.substring(0, 30) + '...' : 'none',
+      retryAttempt: retryCount
+    });
+
+    try {
+      const response = await fetch(url, config);
+      
+      console.log('API response:', {
+        status: response.status,
+        statusText: response.statusText,
+        url: response.url
+      });
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          // Token expired or invalid - try to refresh if we haven't retried yet
+          if (retryCount < maxRetries) {
+            console.log('Token seems invalid, attempting to refresh...');
+            this.clearToken();
+            // Wait a bit for the auth hook to refresh the token
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            return this.makeRequest(endpoint, options, retryCount + 1);
+          } else {
+            console.error('Authentication failed after retries - clearing token');
+            this.clearToken();
+            throw new Error('Authentication required');
+          }
+        }
+        const errorText = await response.text();
+        console.error('API error response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('API request failed:', error);
+      throw error;
+    }
+  }
+
+  // Public method for testing authentication
+  async testAuth(): Promise<any> {
+    return this.makeRequest('/auth-test/test');
+  }
+
+  // Authentication methods
   async login(email: string, password: string): Promise<User> {
-    // Mock login - replace with actual OAuth/authentication
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          id: '1',
-          name: 'John Doe',
-          email: email,
-          riskProfile: 'moderate',
-          createdAt: new Date(),
-        });
-      }, 1000);
+    // This would typically be handled by Auth0 on the frontend
+    // For now, we'll simulate a successful login
+    const mockUser: User = {
+      id: '1',
+      name: 'John Doe',
+      email: email,
+      riskProfile: 'moderate',
+      currency: 'USD',
+      darkMode: false,
+      createdAt: new Date(),
+    };
+    
+    // In a real implementation, you would:
+    // 1. Use Auth0's loginWithRedirect or loginWithPopup
+    // 2. Get the access token from Auth0
+    // 3. Set the token in the API service
+    // 4. Fetch user profile from your backend
+    
+    return mockUser;
+  }
+
+  async logout(): Promise<void> {
+    this.clearToken();
+    // In a real implementation, you would also call Auth0's logout
+  }
+
+  // User profile methods
+  async getCurrentUser(): Promise<User> {
+    return this.makeRequest('/auth/me');
+  }
+
+  async updateProfile(profileData: Partial<User>): Promise<User> {
+    return this.makeRequest('/auth/profile', {
+      method: 'PUT',
+      body: JSON.stringify(profileData),
     });
   }
 
-  async getTransactions(userId: string): Promise<Transaction[]> {
-    // Mock data - replace with actual API call
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve([
-          {
-            id: '1',
-            userId,
-            amount: -85.50,
-            description: 'Grocery Store',
-            category: 'Food & Dining',
-            type: 'expense',
-            date: new Date('2024-01-15'),
-          },
-          {
-            id: '2',
-            userId,
-            amount: 3200.00,
-            description: 'Salary',
-            category: 'Income',
-            type: 'income',
-            date: new Date('2024-01-01'),
-          },
-          {
-            id: '3',
-            userId,
-            amount: -1200.00,
-            description: 'Rent Payment',
-            category: 'Housing',
-            type: 'expense',
-            date: new Date('2024-01-01'),
-          },
-        ]);
-      }, 500);
+  async updatePreferences(preferences: any): Promise<any> {
+    return this.makeRequest('/auth/preferences', {
+      method: 'PUT',
+      body: JSON.stringify(preferences),
     });
   }
 
+  async updateRiskProfile(riskProfile: any): Promise<any> {
+    return this.makeRequest('/auth/risk-profile', {
+      method: 'PUT',
+      body: JSON.stringify(riskProfile),
+    });
+  }
+
+  // Transaction methods
+  async getTransactions(userId: string, filters?: any): Promise<Transaction[]> {
+    const queryParams = new URLSearchParams();
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, String(value));
+        }
+      });
+    }
+    
+    const endpoint = `/transactions${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    return this.makeRequest(endpoint);
+  }
+
+  async createTransaction(transactionData: Omit<Transaction, 'id'>): Promise<Transaction> {
+    return this.makeRequest('/transactions', {
+      method: 'POST',
+      body: JSON.stringify(transactionData),
+    });
+  }
+
+  async updateTransaction(id: string, transactionData: Partial<Transaction>): Promise<Transaction> {
+    return this.makeRequest(`/transactions/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(transactionData),
+    });
+  }
+
+  async deleteTransaction(id: string): Promise<void> {
+    return this.makeRequest(`/transactions/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Budget methods
   async getBudgets(userId: string): Promise<Budget[]> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve([
-          {
-            id: '1',
-            userId,
-            category: 'Food & Dining',
-            allocated: 500,
-            spent: 385.50,
-            month: 'January',
-            year: 2024,
-          },
-          {
-            id: '2',
-            userId,
-            category: 'Transportation',
-            allocated: 300,
-            spent: 245.00,
-            month: 'January',
-            year: 2024,
-          },
-        ]);
-      }, 500);
+    return this.makeRequest('/budgets');
+  }
+
+  async createBudget(budgetData: Omit<Budget, 'id'>): Promise<Budget> {
+    return this.makeRequest('/budgets', {
+      method: 'POST',
+      body: JSON.stringify(budgetData),
     });
   }
 
+  async updateBudget(id: string, budgetData: Partial<Budget>): Promise<Budget> {
+    return this.makeRequest(`/budgets/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(budgetData),
+    });
+  }
+
+  async deleteBudget(id: string): Promise<void> {
+    return this.makeRequest(`/budgets/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Goal methods
   async getGoals(userId: string): Promise<Goal[]> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve([
-          {
-            id: '1',
-            userId,
-            title: 'Emergency Fund',
-            description: 'Build 6 months of expenses',
-            targetAmount: 15000,
-            currentAmount: 8500,
-            targetDate: new Date('2024-12-31'),
-            category: 'Emergency',
-            priority: 'high',
-          },
-          {
-            id: '2',
-            userId,
-            title: 'New Laptop',
-            description: 'MacBook Pro for work',
-            targetAmount: 2500,
-            currentAmount: 1200,
-            targetDate: new Date('2024-06-30'),
-            category: 'Technology',
-            priority: 'medium',
-          },
-        ]);
-      }, 500);
+    return this.makeRequest('/goals');
+  }
+
+  async createGoal(goalData: Omit<Goal, 'id'>): Promise<Goal> {
+    return this.makeRequest('/goals', {
+      method: 'POST',
+      body: JSON.stringify(goalData),
     });
   }
 
+  async updateGoal(id: string, goalData: Partial<Goal>): Promise<Goal> {
+    return this.makeRequest(`/goals/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(goalData),
+    });
+  }
+
+  async deleteGoal(id: string): Promise<void> {
+    return this.makeRequest(`/goals/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Investment methods
   async getInvestments(userId: string): Promise<Investment[]> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve([
-          {
-            id: '1',
-            userId,
-            symbol: 'AAPL',
-            name: 'Apple Inc.',
-            shares: 10,
-            purchasePrice: 150.00,
-            currentPrice: 175.50,
-            type: 'stock',
-            purchaseDate: new Date('2023-12-01'),
-          },
-          {
-            id: '2',
-            userId,
-            symbol: 'BTC',
-            name: 'Bitcoin',
-            shares: 0.5,
-            purchasePrice: 45000.00,
-            currentPrice: 52000.00,
-            type: 'crypto',
-            purchaseDate: new Date('2023-11-15'),
-          },
-        ]);
-      }, 500);
+    return this.makeRequest('/investments');
+  }
+
+  async createInvestment(investmentData: Omit<Investment, 'id'>): Promise<Investment> {
+    return this.makeRequest('/investments', {
+      method: 'POST',
+      body: JSON.stringify(investmentData),
     });
   }
 
-  async getRecommendations(userId: string): Promise<Recommendation[]> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve([
-          {
-            id: '1',
-            userId,
-            type: 'budget',
-            title: 'Reduce Dining Expenses',
-            description: 'You\'re spending 23% more on dining than similar users',
-            confidence: 0.85,
-            reasoning: [
-              'Dining expenses increased 15% this month',
-              'Similar income users spend $200 less monthly',
-              'Home cooking could save $150/month'
-            ],
-            actionItems: [
-              'Set a weekly dining budget of $75',
-              'Try meal planning on Sundays',
-              'Use grocery pickup to avoid impulse purchases'
-            ],
-            createdAt: new Date(),
-          },
-          {
-            id: '2',
-            userId,
-            type: 'investment',
-            title: 'Diversify Portfolio',
-            description: 'Consider adding bonds to reduce risk',
-            confidence: 0.72,
-            reasoning: [
-              'Current portfolio is 85% stocks',
-              'Market volatility is above average',
-              'Your risk profile suggests 70/30 stock/bond split'
-            ],
-            actionItems: [
-              'Research low-cost bond ETFs',
-              'Consider Treasury I-bonds for inflation protection',
-              'Rebalance quarterly'
-            ],
-            createdAt: new Date(),
-          },
-        ]);
-      }, 500);
+  async updateInvestment(id: string, investmentData: Partial<Investment>): Promise<Investment> {
+    return this.makeRequest(`/investments/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(investmentData),
     });
+  }
+
+  async deleteInvestment(id: string): Promise<void> {
+    return this.makeRequest(`/investments/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Portfolio methods
+  async getPortfolio(): Promise<any> {
+    return this.makeRequest('/portfolio');
+  }
+
+  async getPortfolioMetrics(): Promise<any> {
+    return this.makeRequest('/portfolio/metrics');
+  }
+
+  async getPortfolioInsights(): Promise<any> {
+    return this.makeRequest('/portfolio/insights');
+  }
+
+  // Market data methods
+  async getMarketData(symbols: string[]): Promise<any> {
+    const queryParams = new URLSearchParams();
+    symbols.forEach(symbol => queryParams.append('symbols', symbol));
+    return this.makeRequest(`/market/data?${queryParams.toString()}`);
+  }
+
+  async searchStocks(query: string): Promise<any> {
+    return this.makeRequest(`/market/search?q=${encodeURIComponent(query)}`);
+  }
+
+  // AI/Recommendation methods
+  async getRecommendations(userId: string): Promise<Recommendation[]> {
+    return this.makeRequest('/ai/recommendations');
   }
 
   async sendChatMessage(message: string, context?: any): Promise<string> {
-    // Mock AI response - replace with actual LLM API call
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const responses = [
-          "Based on your spending patterns, I recommend setting aside $200 more per month for your emergency fund.",
-          "Your portfolio is performing well! Consider rebalancing to maintain your target allocation.",
-          "I notice you're close to your dining budget. Would you like some tips for meal planning?",
-          "Great question! Let me analyze your financial data to provide personalized advice.",
-        ];
-        const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-        resolve(randomResponse);
-      }, 1500);
+    const response = await this.makeRequest('/ai/chat', {
+      method: 'POST',
+      body: JSON.stringify({ message, context }),
     });
+    return response.response;
+  }
+
+  async getFinancialInsights(): Promise<any> {
+    return this.makeRequest('/ai/insights');
+  }
+
+  async getRiskAssessment(): Promise<any> {
+    return this.makeRequest('/ai/risk-assessment');
+  }
+
+  // Analytics methods
+  async getAnalytics(period: string = '30d'): Promise<any> {
+    return this.makeRequest(`/analytics?period=${period}`);
+  }
+
+  async getSpendingAnalysis(): Promise<any> {
+    return this.makeRequest('/analytics/spending');
+  }
+
+  async getInvestmentPerformance(): Promise<any> {
+    return this.makeRequest('/analytics/investment-performance');
+  }
+
+  // Export methods
+  async exportTransactions(format: 'csv' | 'pdf' = 'csv'): Promise<Blob> {
+    const response = await fetch(`${this.baseUrl}/transactions/export?format=${format}`, {
+      headers: {
+        Authorization: `Bearer ${this.getToken()}`,
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Export failed: ${response.status}`);
+    }
+    
+    return response.blob();
+  }
+
+  // Health check
+  async healthCheck(): Promise<any> {
+    return this.makeRequest('/health');
   }
 }
 

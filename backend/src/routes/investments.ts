@@ -1,30 +1,25 @@
 import { Router } from 'express';
+import { InvestmentController } from '../controllers/investmentController';
 
 const router = Router();
 
 // Get all investments
-router.get('/', async (req, res) => {
-  try {
-    res.json({
-      message: 'Get investments endpoint - implementation pending',
-      userId: req.user?.id
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+router.get('/', InvestmentController.getInvestments);
+
+// Get single investment
+router.get('/:id', InvestmentController.getInvestment);
 
 // Add new investment
-router.post('/', async (req, res) => {
-  try {
-    res.json({
-      message: 'Add investment endpoint - implementation pending',
-      userId: req.user?.id
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+router.post('/', InvestmentController.createInvestment);
+
+// Update investment
+router.put('/:id', InvestmentController.updateInvestment);
+
+// Delete investment
+router.delete('/:id', InvestmentController.deleteInvestment);
+
+// Get portfolio summary
+router.get('/portfolio/summary', InvestmentController.getPortfolioSummary);
 
 export default router;
 
