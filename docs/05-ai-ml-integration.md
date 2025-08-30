@@ -1244,6 +1244,596 @@ export class InvestmentRecommendationEngine {
 }
 ```
 
+## 5.4 Database Integration and Implementation Strategy
+
+### Database Connection Layer
+
+```python
+# ml-services/services/database_service.py
+from motor.motor_asyncio import AsyncIOMotorClient
+from typing import Dict, List, Optional, Any
+import os
+from datetime import datetime, timedelta
+
+class FinancialDataService:
+    def __init__(self):
+        mongo_url = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
+        self.client = AsyncIOMotorClient(mongo_url)
+        self.db = self.client.wealthwise
+        
+    async def get_user_financial_context(self, user_id: str) -> Dict[str, Any]:
+        """Fetch comprehensive financial context for AI analysis"""
+        try:
+            # Fetch all relevant user data in parallel
+            user, accounts, investments, transactions, goals = await asyncio.gather(
+                self.get_user_profile(user_id),
+                self.get_user_accounts(user_id),
+                self.get_user_investments(user_id),
+                self.get_recent_transactions(user_id, days=90),
+                self.get_user_goals(user_id)
+            )
+            
+            # Build comprehensive context
+            context = {
+                "user_id": user_id,
+                "profile": user,
+                "accounts": await self.aggregate_account_data(accounts),
+                "investments": await self.aggregate_investment_data(investments),
+                "transactions": await self.analyze_transaction_patterns(transactions),
+                "goals": goals,
+                "financial_health": await self.calculate_financial_health(user_id),
+                "generated_at": datetime.now().isoformat()
+            }
+            
+            return context
+            
+        except Exception as e:
+            print(f"Error building financial context: {e}")
+            raise
+    
+    async def get_user_profile(self, user_id: str) -> Optional[Dict]:
+        """Fetch user profile and preferences"""
+        user = await self.db.users.find_one({"_id": user_id})
+        if user:
+            return {
+                "risk_profile": user.get("riskProfile", "moderate"),
+                "investment_goals": user.get("investmentGoals", []),
+                "time_horizon": user.get("timeHorizon", "medium"),
+                "income_level": user.get("incomeLevel", "middle"),
+                "financial_experience": user.get("financialExperience", "beginner")
+            }
+        return None
+    
+    async def get_user_accounts(self, user_id: str) -> List[Dict]:
+        """Fetch all user accounts with balances"""
+        accounts = await self.db.accounts.find(
+            {"userId": user_id, "isActive": True}
+        ).to_list(length=None)
+        
+        return [
+            {
+                "id": str(acc["_id"]),
+                "type": acc["type"],
+                "name": acc["accountInfo"]["name"],
+                "balance": acc["accountInfo"]["balance"],
+                "currency": acc["accountInfo"]["currency"],
+                "provider": acc["provider"]["name"]
+            }
+            for acc in accounts
+        ]
+    
+    async def get_user_investments(self, user_id: str) -> List[Dict]:
+        """Fetch user investment portfolio"""
+        investments = await self.db.investments.find(
+            {"userId": user_id, "isActive": True}
+        ).to_list(length=None)
+        
+        return [
+            {
+                "id": str(inv["_id"]),
+                "symbol": inv["securityInfo"]["symbol"],
+                "name": inv["securityInfo"]["name"],
+                "shares": inv["position"]["shares"],
+                "current_price": inv["position"]["currentPrice"],
+                "total_cost": inv["position"]["totalCost"],
+                "type": inv["securityInfo"]["type"],
+                "sector": inv["securityInfo"].get("sector", "Unknown")
+            }
+            for inv in investments
+        ]
+    
+    async def get_recent_transactions(self, user_id: str, days: int = 90) -> List[Dict]:
+        """Fetch recent transactions for spending analysis"""
+        cutoff_date = datetime.now() - timedelta(days=days)
+        
+        transactions = await self.db.transactions.find({
+            "userId": user_id,
+            "transactionInfo.date": {"$gte": cutoff_date}
+        }).sort("transactionInfo.date", -1).to_list(length=None)
+        
+        return [
+            {
+                "id": str(tx["_id"]),
+                "amount": tx["transactionInfo"]["amount"],
+                "type": tx["transactionInfo"]["type"],
+                "category": tx["transactionInfo"]["category"],
+                "date": tx["transactionInfo"]["date"],
+                "description": tx["transactionInfo"]["description"]
+            }
+            for tx in transactions
+        ]
+    
+    async def get_user_goals(self, user_id: str) -> List[Dict]:
+        """Fetch user financial goals"""
+        goals = await self.db.goals.find({"userId": user_id}).to_list(length=None)
+        
+        return [
+            {
+                "id": str(goal["_id"]),
+                "title": goal["title"],
+                "target_amount": goal["targetAmount"],
+                "current_amount": goal["currentAmount"],
+                "target_date": goal["targetDate"],
+                "priority": goal["priority"],
+                "type": goal["type"]
+            }
+            for goal in goals
+        ]
+    
+    async def aggregate_account_data(self, accounts: List[Dict]) -> Dict:
+        """Aggregate account information for AI context"""
+        total_balance = sum(acc["balance"] for acc in accounts)
+        account_types = {}
+        
+        for acc in accounts:
+            acc_type = acc["type"]
+            if acc_type not in account_types:
+                account_types[acc_type] = {"count": 0, "total_balance": 0}
+            account_types[acc_type]["count"] += 1
+            account_types[acc_type]["total_balance"] += acc["balance"]
+        
+        return {
+            "total_balance": total_balance,
+            "account_count": len(accounts),
+            "account_types": account_types,
+            "accounts": accounts
+        }
+    
+    async def aggregate_investment_data(self, investments: List[Dict]) -> Dict:
+        """Aggregate investment portfolio data"""
+        if not investments:
+            return {"total_value": 0, "holdings": [], "allocation": {}}
+        
+        total_value = sum(inv["shares"] * inv["current_price"] for inv in investments)
+        total_cost = sum(inv["total_cost"] for inv in investments)
+        
+        # Calculate allocation by type
+        allocation = {}
+        for inv in investments:
+            inv_type = inv["type"]
+            value = inv["shares"] * inv["current_price"]
+            allocation[inv_type] = allocation.get(inv_type, 0) + value
+        
+        # Convert to percentages
+        if total_value > 0:
+            allocation = {k: (v / total_value) * 100 for k, v in allocation.items()}
+        
+        return {
+            "total_value": total_value,
+            "total_cost": total_cost,
+            "total_gain_loss": total_value - total_cost,
+            "total_return_pct": ((total_value - total_cost) / total_cost * 100) if total_cost > 0 else 0,
+            "holdings": investments,
+            "allocation": allocation,
+            "holding_count": len(investments)
+        }
+    
+    async def analyze_transaction_patterns(self, transactions: List[Dict]) -> Dict:
+        """Analyze spending patterns for AI insights"""
+        if not transactions:
+            return {"total_spending": 0, "categories": {}, "patterns": {}}
+        
+        expenses = [tx for tx in transactions if tx["type"] == "expense"]
+        income = [tx for tx in transactions if tx["type"] == "income"]
+        
+        # Category analysis
+        category_spending = {}
+        for expense in expenses:
+            category = expense["category"]
+            category_spending[category] = category_spending.get(category, 0) + abs(expense["amount"])
+        
+        # Monthly spending
+        monthly_spending = sum(abs(exp["amount"]) for exp in expenses)
+        monthly_income = sum(inc["amount"] for inc in income)
+        
+        return {
+            "total_spending": monthly_spending,
+            "total_income": monthly_income,
+            "savings_rate": ((monthly_income - monthly_spending) / monthly_income * 100) if monthly_income > 0 else 0,
+            "categories": category_spending,
+            "top_categories": sorted(category_spending.items(), key=lambda x: x[1], reverse=True)[:5],
+            "transaction_count": len(transactions)
+        }
+    
+    async def calculate_financial_health(self, user_id: str) -> Dict:
+        """Calculate overall financial health metrics"""
+        accounts = await self.get_user_accounts(user_id)
+        investments = await self.get_user_investments(user_id)
+        transactions = await self.get_recent_transactions(user_id, days=30)
+        
+        # Emergency fund calculation
+        monthly_expenses = sum(abs(tx["amount"]) for tx in transactions if tx["type"] == "expense")
+        emergency_fund = sum(acc["balance"] for acc in accounts if acc["type"] in ["checking", "savings"])
+        emergency_fund_months = emergency_fund / monthly_expenses if monthly_expenses > 0 else 0
+        
+        # Investment diversification
+        total_investments = sum(inv["shares"] * inv["current_price"] for inv in investments)
+        diversification_score = len(investments) / 10 if investments else 0  # Simple metric
+        
+        return {
+            "emergency_fund_months": emergency_fund_months,
+            "diversification_score": min(diversification_score, 1.0),
+            "investment_ratio": total_investments / emergency_fund if emergency_fund > 0 else 0,
+            "overall_health_score": min((emergency_fund_months / 6 + diversification_score) / 2, 1.0)
+        }
+```
+
+### Enhanced AI Chat with Database Integration
+
+```python
+# ml-services/routes/enhanced_ai_chat.py
+from fastapi import APIRouter, HTTPException, Depends
+from pydantic import BaseModel
+from typing import Optional, Dict, Any
+import subprocess
+import json
+from services.database_service import FinancialDataService
+
+router = APIRouter()
+db_service = FinancialDataService()
+
+class EnhancedChatRequest(BaseModel):
+    user_id: str
+    message: str
+    model: str = "llama3.1:8b"
+    include_context: bool = True
+
+class EnhancedChatResponse(BaseModel):
+    response: str
+    confidence: float
+    sources: list
+    user_context: Optional[Dict] = None
+    personalized_insights: Optional[Dict] = None
+
+@router.post("/enhanced-chat", response_model=EnhancedChatResponse)
+async def enhanced_chat_with_ai(request: EnhancedChatRequest):
+    """Enhanced AI chat with database-driven personalization"""
+    try:
+        # Fetch user's financial context
+        user_context = None
+        if request.include_context:
+            user_context = await db_service.get_user_financial_context(request.user_id)
+        
+        # Build personalized prompt
+        personalized_prompt = build_personalized_prompt(
+            request.message, 
+            user_context, 
+            request.model
+        )
+        
+        # Call Ollama with enhanced context
+        ai_response = await call_ollama(personalized_prompt, request.model)
+        
+        # Extract personalized insights
+        personalized_insights = extract_personalized_insights(
+            ai_response, 
+            user_context
+        ) if user_context else None
+        
+        # Calculate confidence with context
+        confidence = calculate_enhanced_confidence(ai_response, user_context)
+        
+        # Determine sources
+        sources = ["ollama_ai", "financial_knowledge_base"]
+        if user_context:
+            sources.extend(["user_portfolio_data", "spending_analysis", "financial_health_metrics"])
+        
+        return EnhancedChatResponse(
+            response=ai_response,
+            confidence=confidence,
+            sources=sources,
+            user_context=user_context,
+            personalized_insights=personalized_insights
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+def build_personalized_prompt(message: str, context: Dict, model: str) -> str:
+    """Build personalized prompt with user's financial data"""
+    
+    if not context:
+        # Fallback to general financial advice
+        return f"""You are a helpful financial advisor AI assistant. 
+        Provide clear, accurate, and helpful advice about personal finance, investing, budgeting, and financial planning.
+        
+        User question: {message}
+        
+        Please provide a helpful and informative response:"""
+    
+    # Build comprehensive financial context
+    financial_summary = build_financial_summary(context)
+    
+    return f"""You are a personalized financial advisor AI assistant with access to the user's actual financial data.
+
+FINANCIAL PROFILE:
+{financial_summary}
+
+USER QUESTION: {message}
+
+INSTRUCTIONS:
+- Use the user's actual financial data to provide personalized advice
+- Reference specific numbers from their portfolio, spending, or accounts
+- Consider their risk profile, goals, and current financial situation
+- Provide actionable recommendations based on their data
+- Be specific about amounts, percentages, and timeframes
+- Always encourage consulting with qualified financial professionals for investment decisions
+
+Please provide personalized financial advice based on this user's actual financial situation:"""
+
+def build_financial_summary(context: Dict) -> str:
+    """Build a concise financial summary for AI prompt"""
+    summary_parts = []
+    
+    # Portfolio summary
+    if context.get("investments"):
+        inv_data = context["investments"]
+        summary_parts.append(f"Portfolio Value: ${inv_data['total_value']:,.2f}")
+        summary_parts.append(f"Total Return: {inv_data['total_return_pct']:.1f}%")
+        summary_parts.append(f"Holdings: {inv_data['holding_count']} investments")
+        
+        if inv_data['allocation']:
+            allocation_str = ", ".join([f"{k}: {v:.1f}%" for k, v in inv_data['allocation'].items()])
+            summary_parts.append(f"Asset Allocation: {allocation_str}")
+    
+    # Account summary
+    if context.get("accounts"):
+        acc_data = context["accounts"]
+        summary_parts.append(f"Total Account Balance: ${acc_data['total_balance']:,.2f}")
+        summary_parts.append(f"Accounts: {acc_data['account_count']} active accounts")
+    
+    # Spending summary
+    if context.get("transactions"):
+        tx_data = context["transactions"]
+        summary_parts.append(f"Monthly Spending: ${tx_data['total_spending']:,.2f}")
+        summary_parts.append(f"Monthly Income: ${tx_data['total_income']:,.2f}")
+        summary_parts.append(f"Savings Rate: {tx_data['savings_rate']:.1f}%")
+        
+        if tx_data['top_categories']:
+            top_cats = ", ".join([f"{cat}: ${amt:,.0f}" for cat, amt in tx_data['top_categories'][:3]])
+            summary_parts.append(f"Top Spending Categories: {top_cats}")
+    
+    # Financial health
+    if context.get("financial_health"):
+        health = context["financial_health"]
+        summary_parts.append(f"Emergency Fund: {health['emergency_fund_months']:.1f} months")
+        summary_parts.append(f"Diversification Score: {health['diversification_score']:.1f}/1.0")
+        summary_parts.append(f"Overall Health Score: {health['overall_health_score']:.1f}/1.0")
+    
+    # User profile
+    if context.get("profile"):
+        profile = context["profile"]
+        summary_parts.append(f"Risk Profile: {profile['risk_profile']}")
+        summary_parts.append(f"Experience Level: {profile['financial_experience']}")
+        summary_parts.append(f"Time Horizon: {profile['time_horizon']}")
+    
+    return "\n".join(summary_parts)
+
+def extract_personalized_insights(ai_response: str, context: Dict) -> Dict:
+    """Extract personalized insights from AI response"""
+    insights = {
+        "portfolio_insights": [],
+        "spending_insights": [],
+        "goal_insights": [],
+        "risk_insights": []
+    }
+    
+    # Simple keyword-based insight extraction
+    response_lower = ai_response.lower()
+    
+    if context.get("investments"):
+        if "diversification" in response_lower:
+            insights["portfolio_insights"].append("Diversification analysis provided")
+        if "allocation" in response_lower:
+            insights["portfolio_insights"].append("Asset allocation recommendations made")
+    
+    if context.get("transactions"):
+        if "spending" in response_lower:
+            insights["spending_insights"].append("Spending pattern analysis included")
+        if "savings" in response_lower:
+            insights["spending_insights"].append("Savings rate optimization suggested")
+    
+    if context.get("financial_health"):
+        if "emergency" in response_lower:
+            insights["risk_insights"].append("Emergency fund assessment provided")
+    
+    return insights
+
+def calculate_enhanced_confidence(response: str, context: Dict) -> float:
+    """Calculate confidence score with context consideration"""
+    base_confidence = 0.7
+    
+    # Adjust based on response quality
+    if len(response) > 200:
+        base_confidence += 0.1
+    if len(response) > 500:
+        base_confidence += 0.1
+    
+    # Boost confidence when we have user data
+    if context:
+        base_confidence += 0.1
+        
+        # Additional boost for comprehensive data
+        if context.get("investments") and context.get("transactions"):
+            base_confidence += 0.05
+    
+    return min(base_confidence, 0.95)
+
+async def call_ollama(prompt: str, model: str) -> str:
+    """Call Ollama with enhanced prompt"""
+    try:
+        result = subprocess.run(
+            ["ollama", "run", model, prompt],
+            capture_output=True,
+            text=True,
+            timeout=45  # Increased timeout for complex prompts
+        )
+        
+        if result.returncode == 0:
+            return result.stdout.strip()
+        else:
+            raise Exception(f"Ollama error: {result.stderr}")
+            
+    except subprocess.TimeoutExpired:
+        raise Exception("Ollama request timed out")
+    except Exception as e:
+        raise Exception(f"Error calling Ollama: {str(e)}")
+```
+
+## 5.5 Implementation Phases and Deployment Strategy
+
+### Phase 1: Database Integration
+
+#### 1.1 Setup Database Connection
+```bash
+# Install MongoDB dependencies
+pip install motor pymongo
+
+# Add environment variables
+echo "MONGODB_URI=mongodb://localhost:27017/wealthwise" >> .env
+```
+
+#### 1.2 Implement Data Services
+- Create `FinancialDataService` class
+- Implement user context building
+- Add data aggregation functions
+- Test database connectivity
+
+#### 1.3 Security and Authentication
+```python
+# ml-services/middleware/auth.py
+from fastapi import HTTPException, Depends
+from fastapi.security import HTTPBearer
+import jwt
+
+security = HTTPBearer()
+
+async def verify_user_token(token: str = Depends(security)):
+    """Verify user authentication token"""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        return payload["user_id"]
+    except:
+        raise HTTPException(status_code=401, detail="Invalid token")
+```
+
+### Phase 2: Enhanced AI Integration
+
+#### 2.1 Update AI Chat Routes
+- Integrate database service with existing AI chat
+- Add personalized prompt building
+- Implement context-aware responses
+- Add confidence scoring with data
+
+#### 2.2 Test with Real Data
+```bash
+# Test enhanced chat endpoint
+curl -X POST http://localhost:8000/api/ml/chat/enhanced-chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "test_user_id",
+    "message": "How am I doing with my savings goals?",
+    "include_context": true
+  }'
+```
+
+### Phase 3: Production Deployment
+
+#### 3.1 Environment Configuration
+```bash
+# Production environment setup
+export MONGODB_URI="mongodb://production-db:27017/wealthwise"
+export OLLAMA_HOST="http://ollama-service:11434"
+export JWT_SECRET="your-secret-key"
+```
+
+#### 3.2 Performance Optimization
+- Add response caching
+- Implement connection pooling
+- Add request rate limiting
+- Monitor response times
+
+#### 3.3 Monitoring and Logging
+```python
+# ml-services/utils/monitoring.py
+import logging
+from datetime import datetime
+
+def log_ai_interaction(user_id: str, message: str, response_time: float, confidence: float):
+    """Log AI interactions for monitoring"""
+    logging.info(f"AI Chat - User: {user_id}, Response Time: {response_time}s, Confidence: {confidence}")
+```
+
+### Phase 4: Advanced Features
+
+#### 4.1 Conversation Memory
+```python
+# Store conversation history for context
+async def store_conversation(user_id: str, message: str, response: str):
+    conversation = {
+        "user_id": user_id,
+        "message": message,
+        "response": response,
+        "timestamp": datetime.now(),
+        "context_used": True
+    }
+    await db.conversations.insert_one(conversation)
+```
+
+#### 4.2 Predictive Insights
+- Implement spending forecasting
+- Add portfolio performance predictions
+- Create goal achievement timelines
+- Generate risk alerts
+
+#### 4.3 Integration with Existing ML Models
+- Connect portfolio optimizer with real data
+- Integrate sentiment analysis with user holdings
+- Use recommendation engine with actual portfolios
+
+### Phase 5: Testing and Validation
+
+#### 5.1 Comprehensive Testing
+```bash
+# Run full test suite
+cd ml-services/tests
+pytest test_enhanced_ai_integration.py -v
+pytest test_database_integration.py -v
+pytest test_personalization.py -v
+```
+
+#### 5.2 Performance Testing
+- Load testing with multiple users
+- Response time optimization
+- Database query optimization
+- Memory usage monitoring
+
+#### 5.3 Security Testing
+- Authentication validation
+- Data privacy verification
+- Input sanitization testing
+- Rate limiting validation
+
 ## Next Steps
 
 Part 6 will cover Backend API Development:
