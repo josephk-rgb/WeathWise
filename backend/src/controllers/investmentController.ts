@@ -8,13 +8,23 @@ export class InvestmentController {
   static async getInvestments(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.user?.id;
+      logger.info('Get investments request:', { userId, userObj: req.user });
+      
       if (!userId) {
+        logger.error('User not authenticated for investments');
         res.status(401).json({ error: 'User not authenticated' });
         return;
       }
 
+      logger.info('Fetching investments for user:', userId);
       const investments = await Investment.find({ userId, isActive: true })
         .sort({ createdAt: -1 });
+
+      logger.info('Found investments:', { 
+        count: investments.length, 
+        userId,
+        investmentIds: investments.map(inv => inv._id)
+      });
 
       res.json({
         success: true,

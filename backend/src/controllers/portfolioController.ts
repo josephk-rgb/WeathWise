@@ -8,12 +8,17 @@ export class PortfolioController {
   static async getPortfolioOverview(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.user?.id;
+      logger.info('Portfolio overview request:', { userId, userObj: req.user });
+      
       if (!userId) {
+        logger.error('User not authenticated for portfolio overview');
         res.status(401).json({ error: 'User not authenticated' });
         return;
       }
 
+      logger.info('Fetching investments for user:', userId);
       const investments = await Investment.find({ userId, isActive: true });
+      logger.info('Found investments:', { count: investments.length, userId });
 
       // Calculate portfolio metrics
       let totalValue = 0;
@@ -43,17 +48,21 @@ export class PortfolioController {
           (assetAllocation[type] / totalValue) * 100 : 0;
       });
 
+      const portfolioData = {
+        totalValue,
+        totalCost,
+        totalGainLoss,
+        totalReturn,
+        investmentCount: investments.length,
+        assetAllocation: assetAllocationPercent,
+        lastUpdated: new Date()
+      };
+
+      logger.info('Portfolio overview calculated:', portfolioData);
+
       res.json({
         success: true,
-        data: {
-          totalValue,
-          totalCost,
-          totalGainLoss,
-          totalReturn,
-          investmentCount: investments.length,
-          assetAllocation: assetAllocationPercent,
-          lastUpdated: new Date()
-        }
+        data: portfolioData
       });
     } catch (error) {
       logger.error('Error getting portfolio overview:', error);

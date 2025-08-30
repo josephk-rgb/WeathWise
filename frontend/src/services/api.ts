@@ -90,26 +90,10 @@ class ApiService {
   }
 
   // Authentication methods
-  async login(email: string, password: string): Promise<User> {
-    // This would typically be handled by Auth0 on the frontend
-    // For now, we'll simulate a successful login
-    const mockUser: User = {
-      id: '1',
-      name: 'John Doe',
-      email: email,
-      riskProfile: 'moderate',
-      currency: 'USD',
-      darkMode: false,
-      createdAt: new Date(),
-    };
-    
-    // In a real implementation, you would:
-    // 1. Use Auth0's loginWithRedirect or loginWithPopup
-    // 2. Get the access token from Auth0
-    // 3. Set the token in the API service
-    // 4. Fetch user profile from your backend
-    
-    return mockUser;
+  async login(_email: string, _password: string): Promise<User> {
+    // This should be handled by Auth0 on the frontend
+    // Throw an error since we shouldn't be using this mock login
+    throw new Error('Login should be handled by Auth0, not this mock method');
   }
 
   async logout(): Promise<void> {
@@ -144,7 +128,7 @@ class ApiService {
   }
 
   // Transaction methods
-  async getTransactions(userId: string, filters?: any): Promise<Transaction[]> {
+  async getTransactions(_userId: string, filters?: any): Promise<Transaction[]> {
     const queryParams = new URLSearchParams();
     if (filters) {
       Object.entries(filters).forEach(([key, value]) => {
@@ -179,7 +163,7 @@ class ApiService {
   }
 
   // Budget methods
-  async getBudgets(userId: string): Promise<Budget[]> {
+  async getBudgets(_userId: string): Promise<Budget[]> {
     return this.makeRequest('/budgets');
   }
 
@@ -204,7 +188,7 @@ class ApiService {
   }
 
   // Goal methods
-  async getGoals(userId: string): Promise<Goal[]> {
+  async getGoals(_userId: string): Promise<Goal[]> {
     return this.makeRequest('/goals');
   }
 
@@ -229,8 +213,18 @@ class ApiService {
   }
 
   // Investment methods
-  async getInvestments(userId: string): Promise<Investment[]> {
-    return this.makeRequest('/investments');
+  async getInvestments(_userId: string): Promise<Investment[]> {
+    const response = await this.makeRequest('/investments');
+    // Handle the API response structure - backend returns { success: true, data: Investment[] }
+    if (response && response.success && Array.isArray(response.data)) {
+      return response.data;
+    }
+    // Fallback if response is already an array
+    if (Array.isArray(response)) {
+      return response;
+    }
+    // If no valid data, return empty array
+    return [];
   }
 
   async createInvestment(investmentData: Omit<Investment, 'id'>): Promise<Investment> {
@@ -255,15 +249,23 @@ class ApiService {
 
   // Portfolio methods
   async getPortfolio(): Promise<any> {
-    return this.makeRequest('/portfolio');
+    const response = await this.makeRequest('/portfolio/overview');
+    return response.success ? response.data : response;
   }
 
   async getPortfolioMetrics(): Promise<any> {
-    return this.makeRequest('/portfolio/metrics');
+    const response = await this.makeRequest('/portfolio/metrics');
+    return response.success ? response.data : response;
   }
 
   async getPortfolioInsights(): Promise<any> {
-    return this.makeRequest('/portfolio/insights');
+    const response = await this.makeRequest('/portfolio/insights');
+    return response.success ? response.data : response;
+  }
+
+  async getPortfolioPerformance(): Promise<any> {
+    const response = await this.makeRequest('/portfolio/performance');
+    return response.success ? response.data : response;
   }
 
   // Market data methods
@@ -278,7 +280,7 @@ class ApiService {
   }
 
   // AI/Recommendation methods
-  async getRecommendations(userId: string): Promise<Recommendation[]> {
+  async getRecommendations(_userId: string): Promise<Recommendation[]> {
     return this.makeRequest('/ai/recommendations');
   }
 
@@ -309,6 +311,10 @@ class ApiService {
 
   async getInvestmentPerformance(): Promise<any> {
     return this.makeRequest('/analytics/investment-performance');
+  }
+
+  async getNetWorthTrend(period: string = '6m', interval: string = 'weekly'): Promise<any> {
+    return this.makeRequest(`/analytics/net-worth-trend?period=${period}&interval=${interval}`);
   }
 
   // Export methods

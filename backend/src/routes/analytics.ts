@@ -15,4 +15,7 @@ router.get('/investment-performance', AnalyticsController.getInvestmentPerforman
 // Get financial health score
 router.get('/financial-health', AnalyticsController.getFinancialHealth);
 
+// Get net worth trend data
+router.get('/net-worth-trend', AnalyticsController.getNetWorthTrend);
+
 export default router;

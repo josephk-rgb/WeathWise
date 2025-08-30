@@ -61,6 +61,7 @@ import goalRoutes from './routes/goals';
 import budgetRoutes from './routes/budgets';
 import analyticsRoutes from './routes/analytics';
 import authTestRoutes from './routes/auth-test';
+import testPortfolioRoutes from './routes/test-portfolio';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -115,6 +116,7 @@ app.use('/api/budgets', authMiddleware, budgetRoutes);
 app.use('/api/analytics', authMiddleware, analyticsRoutes);
 app.use('/api/market', authMiddleware, marketRoutes);
 app.use('/api/ai', authMiddleware, aiRoutes);
+app.use('/api/test-portfolio', authMiddleware, testPortfolioRoutes);
 
 // WebSocket setup for real-time data
 const wss = new WebSocketServer({ server });

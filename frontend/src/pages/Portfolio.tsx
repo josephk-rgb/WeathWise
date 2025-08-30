@@ -10,7 +10,7 @@ import PortfolioGrowthChart from '../components/Charts/PortfolioGrowthChart';
 import PortfolioMetrics from '../components/Dashboard/PortfolioMetrics';
 import PortfolioInsights from '../components/Dashboard/PortfolioInsights';
 import HoldingCard from '../components/Dashboard/HoldingCard';
-import { generatePortfolioHistory, generateSampleInvestments } from '../utils/portfolioData';
+import { generatePortfolioHistory } from '../utils/portfolioData';
 
 const PortfolioPage: React.FC = () => {
   const { user, investments, setInvestments, currency } = useStore();
@@ -58,22 +58,21 @@ const PortfolioPage: React.FC = () => {
     if (!user) return;
     try {
       const data = await apiService.getInvestments(user.id);
+      console.log('Loaded investments from API:', data);
+      
       // Ensure we always get an array for investments
       if (!Array.isArray(data)) {
         console.warn('Investments API returned non-array data:', data);
-        setInvestments(generateSampleInvestments());
+        setInvestments([]);
         return;
       }
-      // For demo purposes, use sample data if no investments exist
-      if (data.length === 0) {
-        setInvestments(generateSampleInvestments());
-      } else {
-        setInvestments(data);
-      }
+      
+      console.log('Successfully loaded', data.length, 'investments');
+      setInvestments(data);
     } catch (error) {
       console.error('Error loading investments:', error);
-      // Fallback to sample data
-      setInvestments(generateSampleInvestments());
+      // Set empty array instead of sample data
+      setInvestments([]);
     }
   };
 
@@ -209,15 +208,13 @@ const PortfolioPage: React.FC = () => {
       </div>
 
       {/* Portfolio Growth Chart */}
-      {portfolioHistory.length > 0 && (
-        <div className="mb-8">
-          <PortfolioGrowthChart 
-            data={portfolioHistory} 
-            currency={currency}
-            height={400}
-          />
-        </div>
-      )}
+      <div className="mb-8">
+        <PortfolioGrowthChart 
+          data={portfolioHistory} 
+          currency={currency}
+          height={400}
+        />
+      </div>
 
       {/* Enhanced Metrics */}
       <div className="mb-8">
