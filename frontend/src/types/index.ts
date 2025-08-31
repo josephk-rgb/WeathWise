@@ -1,3 +1,118 @@
+// 🚀 NEW: Enhanced Market Data Types
+export interface MarketData {
+  symbol: string;
+  name: string;
+  currentPrice: number;
+  change: number;
+  changePercent: number;
+  volume: number;
+  marketCap?: number;
+  peRatio?: number;
+  dividendYield?: number;
+  high: number;
+  low: number;
+  open: number;
+  previousClose: number;
+  lastUpdated: Date;
+}
+
+// 🚀 NEW: Financial News Types
+export interface NewsArticle {
+  id: string;
+  title: string;
+  description: string;
+  url: string;
+  publishedAt: string;
+  source: string;
+  sentiment?: 'positive' | 'negative' | 'neutral';
+  relevance?: number;
+}
+
+export interface NewsResponse {
+  articles: NewsArticle[];
+  source: string;
+  rateLimitInfo: {
+    provider: string;
+    remaining: number;
+    isAvailable: boolean;
+  };
+}
+
+// 🚀 NEW: Advanced Portfolio Analytics Types
+export interface RiskMetrics {
+  beta: number;
+  volatility: number;
+  sharpeRatio: number;
+  valueAtRisk: number;
+  correlation?: number;
+}
+
+export interface AdvancedPortfolioAnalytics {
+  portfolioMetrics: RiskMetrics;
+  individualAssets: Array<{
+    symbol: string;
+    analytics: RiskMetrics;
+    weight: number;
+  }>;
+  composition: Array<{
+    type: string;
+    value: number;
+    percentage: number;
+  }>;
+  riskAnalysis: {
+    overall: 'low' | 'medium' | 'high';
+    diversification: number;
+    concentration: number;
+  };
+}
+
+// 🚀 NEW: Real-time Portfolio Value
+export interface RealtimePortfolioValue {
+  totalValue: number;
+  totalCost: number;
+  totalGainLoss: number;
+  totalGainLossPercent: number;
+  lastUpdated: Date;
+  marketData: Array<Investment & {
+    currentPrice: number;
+    value: number;
+    cost: number;
+    gainLoss: number;
+    gainLossPercent: number;
+    marketData: MarketData;
+  }>;
+}
+
+// 🚀 NEW: WebSocket Message Types
+export interface WebSocketMessage {
+  type: 'market-data' | 'portfolio-update' | 'news-alert' | 'auth' | 'error';
+  data?: any;
+  timestamp: Date;
+}
+
+// 🚀 NEW: Provider Status Types
+export interface NewsProvider {
+  name: string;
+  isAvailable: boolean;
+  rateLimitRemaining: number;
+  lastReset: Date;
+  hasApiKey: boolean;
+}
+
+export interface ServiceStatus {
+  websocket?: {
+    totalClients: number;
+    authenticatedClients: number;
+  };
+  aiService?: {
+    circuitBreaker: {
+      status: 'CLOSED' | 'OPEN' | 'HALF_OPEN';
+      canMakeRequest: boolean;
+    };
+  };
+  newsProviders?: Record<string, NewsProvider>;
+}
+
 export interface User {
   id: string;
   name: string;

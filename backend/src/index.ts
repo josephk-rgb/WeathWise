@@ -33,12 +33,6 @@ if (!envLoaded) {
   dotenv.config();
 }
 
-console.log('Final environment Debug:');
-console.log('AUTH0_DOMAIN:', process.env['AUTH0_DOMAIN']);
-console.log('AUTH0_AUDIENCE:', process.env['AUTH0_AUDIENCE']);
-console.log('NODE_ENV:', process.env['NODE_ENV']);
-console.log('PORT:', process.env['PORT']);
-
 // NOW import everything else after env vars are loaded
 import express from 'express';
 import cors from 'cors';
@@ -61,13 +55,14 @@ import goalRoutes from './routes/goals';
 import budgetRoutes from './routes/budgets';
 import analyticsRoutes from './routes/analytics';
 import authTestRoutes from './routes/auth-test';
-import testPortfolioRoutes from './routes/test-portfolio';
+import testApisRoutes from './routes/test-apis';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
 import { authMiddleware } from './middleware/auth';
 import { logger } from './utils/logger';
 import { connectDB } from './utils/database';
+import { WebSocketService } from './services/websocketService';
 
 const app = express();
 const server = createServer(app);
@@ -104,6 +99,15 @@ app.get('/health', (_req, res) => {
   });
 });
 
+// WebSocket status endpoint
+app.get('/api/websocket/status', authMiddleware, (_req, res) => {
+  res.json({
+    status: 'OK',
+    websocket: wsService.getStats(),
+    timestamp: new Date().toISOString()
+  });
+});
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/auth-test', authMiddleware, authTestRoutes);
@@ -116,42 +120,34 @@ app.use('/api/budgets', authMiddleware, budgetRoutes);
 app.use('/api/analytics', authMiddleware, analyticsRoutes);
 app.use('/api/market', authMiddleware, marketRoutes);
 app.use('/api/ai', authMiddleware, aiRoutes);
-app.use('/api/test-portfolio', authMiddleware, testPortfolioRoutes);
+app.use('/api/test-apis', testApisRoutes); // No auth required for testing
 
 // WebSocket setup for real-time data
 const wss = new WebSocketServer({ server });
+const wsService = new WebSocketService();
 
-wss.on('connection', (ws, _req) => {
+wss.on('connection', (ws, req) => {
   logger.info('New WebSocket connection established');
   
+  // Extract user ID from query params or headers if available
+  const url = new URL(req.url || '', `http://${req.headers.host}`);
+  const userId = url.searchParams.get('userId') || undefined;
+  
+  // Register client with WebSocket service
+  wsService.addClient(ws, userId);
+  
   ws.on('message', (message) => {
-    try {
-      const data = JSON.parse(message.toString());
-      logger.info('WebSocket message received:', data);
-      
-      // Handle different message types
-      switch (data.type) {
-        case 'subscribe_market_data':
-          // Subscribe to market data updates
-          break;
-        case 'portfolio_update':
-          // Handle portfolio updates
-          break;
-        default:
-          ws.send(JSON.stringify({ error: 'Unknown message type' }));
-      }
-    } catch (error) {
-      logger.error('WebSocket message parsing error:', error);
-      ws.send(JSON.stringify({ error: 'Invalid message format' }));
-    }
+    wsService.handleMessage(ws, message.toString());
   });
   
   ws.on('close', () => {
     logger.info('WebSocket connection closed');
+    wsService.removeClient(ws);
   });
   
   ws.on('error', (error) => {
     logger.error('WebSocket error:', error);
+    wsService.removeClient(ws);
   });
 });
 

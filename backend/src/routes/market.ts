@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import { MarketDataService } from '../services/marketDataService';
+import { EnhancedNewsService } from '../services/enhancedNewsService';
 
 const router = Router();
 const marketService = new MarketDataService();
+const newsService = new EnhancedNewsService();
 
 // Get market data for a symbol
 router.get('/data/:symbol', async (req, res): Promise<void> => {
@@ -103,14 +105,22 @@ router.get('/news', async (req, res): Promise<void> => {
   try {
     const { query, limit = 20 } = req.query;
     
-    const news = await marketService.getMarketNews(
+    const result = await newsService.getNews(
       query as string, 
       Number(limit)
     );
     
     res.json({
       success: true,
-      data: news
+      data: {
+        articles: result.articles,
+        source: result.source,
+        rateLimitInfo: {
+          provider: result.rateLimitInfo.name,
+          remaining: result.rateLimitInfo.rateLimitRemaining,
+          isAvailable: result.rateLimitInfo.isAvailable
+        }
+      }
     });
   } catch (error) {
     res.status(500).json({ error: 'Internal server error' });
@@ -123,11 +133,41 @@ router.get('/news/:symbol', async (req, res): Promise<void> => {
     const { symbol } = req.params;
     const { limit = 10 } = req.query;
     
-    const news = await marketService.getSymbolNews(symbol, Number(limit));
+    const result = await newsService.getNews(`${symbol}`, Number(limit));
     
     res.json({
       success: true,
-      data: news
+      data: {
+        articles: result.articles,
+        source: result.source,
+        symbol: symbol,
+        rateLimitInfo: {
+          provider: result.rateLimitInfo.name,
+          remaining: result.rateLimitInfo.rateLimitRemaining,
+          isAvailable: result.rateLimitInfo.isAvailable
+        }
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get news provider status
+router.get('/news/status/providers', async (req, res): Promise<void> => {
+  try {
+    const status = newsService.getProviderStatus();
+    
+    res.json({
+      success: true,
+      data: {
+        providers: status,
+        summary: {
+          totalProviders: Object.keys(status).length,
+          availableProviders: Object.values(status).filter(p => p.isAvailable).length,
+          providersWithKeys: Object.values(status).filter(p => p.hasApiKey).length
+        }
+      }
     });
   } catch (error) {
     res.status(500).json({ error: 'Internal server error' });

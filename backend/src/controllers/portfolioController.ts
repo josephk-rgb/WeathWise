@@ -2,8 +2,11 @@ import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { Investment, IInvestment } from '../models';
 import { logger } from '../utils/logger';
+import { MarketAnalyticsService } from '../services/marketAnalyticsService';
 
 export class PortfolioController {
+  private static analyticsService = new MarketAnalyticsService();
+
   // Get portfolio overview
   static async getPortfolioOverview(req: Request, res: Response): Promise<void> {
     try {
@@ -256,6 +259,27 @@ export class PortfolioController {
       const annualizedReturn = weightedAge > 0 ? 
         Math.pow(totalCurrentValue / totalCost, 1 / weightedAge) * 100 - 100 : 0;
 
+      // Calculate real risk metrics using market analytics
+      let riskMetrics = { beta: 1.0, volatility: 15.0 };
+      
+      try {
+        // Prepare holdings data for portfolio analytics
+        const holdings = investments.map(investment => ({
+          symbol: investment.securityInfo.symbol,
+          weight: (investment.position.shares * investment.position.currentPrice) / totalCurrentValue
+        }));
+
+        // Get real portfolio risk metrics
+        const portfolioMetrics = await PortfolioController.analyticsService.calculatePortfolioMetrics(holdings);
+        riskMetrics = {
+          beta: portfolioMetrics.beta,
+          volatility: portfolioMetrics.volatility
+        };
+      } catch (analyticsError) {
+        logger.warn('Failed to calculate real risk metrics, using defaults:', analyticsError);
+        // Keep default values on error
+      }
+
       res.json({
         success: true,
         data: {
@@ -268,10 +292,7 @@ export class PortfolioController {
               percentage: (typeDistribution[type] / totalValue) * 100
             }))
           },
-          riskMetrics: {
-            beta: 1.0, // Placeholder - would need market data for real calculation
-            volatility: 15.0 // Placeholder - would need historical data
-          },
+          riskMetrics,
           performanceMetrics: {
             totalReturn: Math.round(totalReturn * 100) / 100,
             annualizedReturn: Math.round(annualizedReturn * 100) / 100,
@@ -388,5 +409,157 @@ export class PortfolioController {
       logger.error('Error getting portfolio insights:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
+  }
+
+  // Get advanced portfolio analytics
+  static async getAdvancedAnalytics(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({ error: 'User ID is required' });
+        return;
+      }
+
+      const investments = await Investment.find({ userId, isActive: true });
+
+      if (investments.length === 0) {
+        res.json({
+          success: true,
+          data: {
+            riskMetrics: { beta: 0, volatility: 0, sharpeRatio: 0, maxDrawdown: 0, var95: 0, correlation: 0 },
+            individualAssets: [],
+            portfolioComposition: []
+          }
+        });
+        return;
+      }
+
+      // Calculate total portfolio value
+      const totalValue = investments.reduce((sum, inv) => 
+        sum + (inv.position.shares * inv.position.currentPrice), 0);
+
+      // Prepare holdings data
+      const holdings = investments.map(investment => ({
+        symbol: investment.securityInfo.symbol,
+        weight: (investment.position.shares * investment.position.currentPrice) / totalValue,
+        currentValue: investment.position.shares * investment.position.currentPrice
+      }));
+
+      // Calculate comprehensive portfolio metrics
+      const portfolioMetrics = await PortfolioController.analyticsService.calculatePortfolioMetrics(holdings);
+
+      // Get individual asset analytics
+      const individualAnalytics = await Promise.all(
+        holdings.map(async (holding) => {
+          try {
+            const assetMetrics = await PortfolioController.analyticsService.calculateRiskMetrics(holding.symbol);
+            return {
+              symbol: holding.symbol,
+              weight: holding.weight,
+              value: holding.currentValue,
+              ...assetMetrics
+            };
+          } catch (error) {
+            logger.warn(`Failed to get analytics for ${holding.symbol}:`, error);
+            return {
+              symbol: holding.symbol,
+              weight: holding.weight,
+              value: holding.currentValue,
+              beta: 1.0,
+              volatility: 20.0,
+              sharpeRatio: 0.0,
+              maxDrawdown: 0.0,
+              var95: 0.0,
+              correlation: 0.5
+            };
+          }
+        })
+      );
+
+      // Portfolio composition analysis
+      const compositionAnalysis = holdings.map(holding => {
+        const investment = investments.find(inv => inv.securityInfo.symbol === holding.symbol);
+        return {
+          symbol: holding.symbol,
+          name: investment?.securityInfo.name || holding.symbol,
+          type: investment?.securityInfo.type || 'unknown',
+          weight: Math.round(holding.weight * 10000) / 100, // Percentage with 2 decimals
+          value: holding.currentValue,
+          beta: individualAnalytics.find(a => a.symbol === holding.symbol)?.beta || 1.0,
+          volatility: individualAnalytics.find(a => a.symbol === holding.symbol)?.volatility || 20.0
+        };
+      });
+
+      // Risk concentration analysis
+      const riskConcentration = {
+        topHoldings: compositionAnalysis
+          .sort((a, b) => b.weight - a.weight)
+          .slice(0, 5)
+          .map(holding => ({
+            symbol: holding.symbol,
+            name: holding.name,
+            weight: holding.weight
+          })),
+        concentrationRisk: Math.max(...holdings.map(h => h.weight)) > 0.3 ? 'High' : 
+                          Math.max(...holdings.map(h => h.weight)) > 0.2 ? 'Medium' : 'Low'
+      };
+
+      // Sector/Type diversification
+      const typeDistribution = compositionAnalysis.reduce((acc, holding) => {
+        acc[holding.type] = (acc[holding.type] || 0) + holding.weight;
+        return acc;
+      }, {} as { [key: string]: number });
+
+      res.json({
+        success: true,
+        data: {
+          portfolioMetrics: {
+            ...portfolioMetrics,
+            totalValue,
+            assetCount: investments.length,
+            lastUpdated: new Date().toISOString()
+          },
+          individualAssets: individualAnalytics,
+          composition: compositionAnalysis,
+          riskAnalysis: {
+            concentration: riskConcentration,
+            diversification: {
+              byType: Object.entries(typeDistribution).map(([type, weight]) => ({
+                type,
+                weight: Math.round(weight * 100) / 100
+              })),
+              score: PortfolioController.calculateDiversificationScore(typeDistribution)
+            }
+          },
+          benchmarkComparison: {
+            benchmark: 'SPY',
+            portfolioBeta: portfolioMetrics.beta,
+            portfolioCorrelation: portfolioMetrics.correlation,
+            relativeVolatility: portfolioMetrics.volatility > 15 ? 'Higher' : 
+                               portfolioMetrics.volatility < 10 ? 'Lower' : 'Similar'
+          }
+        }
+      });
+    } catch (error) {
+      logger.error('Error getting advanced portfolio analytics:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+
+  // Helper method for diversification score calculation
+  private static calculateDiversificationScore(typeDistribution: { [key: string]: number }): number {
+    const types = Object.keys(typeDistribution).length;
+    const maxTypes = 6; // Maximum expected asset types
+    const typeScore = Math.min(types / maxTypes, 1) * 50;
+
+    // Calculate distribution evenness (lower variance = better diversification)
+    const weights = Object.values(typeDistribution);
+    const averageWeight = 1 / types;
+    const variance = weights.reduce((sum, weight) => 
+      sum + Math.pow(weight - averageWeight, 2), 0) / types;
+    
+    const distributionScore = Math.max(0, 50 - (variance * 200));
+    
+    return Math.round(typeScore + distributionScore);
   }
 }

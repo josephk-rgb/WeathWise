@@ -1,62 +1,39 @@
 import { Router } from 'express';
-import axios from 'axios';
+import { AIServiceManager } from '../services/aiServiceManager';
 
 const router = Router();
-
-// ML service URL
-const ML_SERVICE_URL = process.env['ML_SERVICE_URL'] || 'http://localhost:8000';
+const aiService = new AIServiceManager();
 
 // Chat with AI
 router.post('/chat', async (req, res) => {
   try {
     const { message, context, model = 'llama3.1:8b' } = req.body;
     
-    // Check if ML service is available
     try {
-      const healthCheck = await axios.get(`${ML_SERVICE_URL}/health`, { timeout: 2000 });
-    } catch (healthError) {
-      // ML service not available, return fallback response
-      console.log('ML service not available, returning fallback response');
-      return res.json({
+      const response = await aiService.chat(message, context, model);
+      
+      res.json({
         success: true,
-        data: {
-          response: "I apologize, but the AI service is currently unavailable. Please try again later.",
-          confidence: 0.5
-        },
+        data: response,
         userId: req.user?.id,
-        source: 'fallback'
+        source: 'ai'
+      });
+    } catch (error: any) {
+      console.log('AI service unavailable, returning fallback response');
+      
+      const fallbackResponse = aiService.generateFallbackResponse('chat', { message });
+      
+      res.json({
+        success: true,
+        data: fallbackResponse,
+        userId: req.user?.id,
+        source: 'fallback',
+        note: 'AI service temporarily unavailable'
       });
     }
-    
-    // Forward request to Python ML service
-    const response = await axios.post(`${ML_SERVICE_URL}/chat`, {
-      message,
-      context,
-      model
-    }, {
-      timeout: 35000 // 35 second timeout
-    });
-
-    res.json({
-      success: true,
-      data: response.data,
-      userId: req.user?.id,
-      source: 'ai'
-    });
   } catch (error: any) {
     console.error('AI Chat Error:', error.message);
-    
-    // Return fallback response instead of error
-    res.json({
-      success: true,
-      data: {
-        response: "I apologize, but I'm having trouble processing your request right now. Please try again later.",
-        confidence: 0.5
-      },
-      userId: req.user?.id,
-      source: 'fallback',
-      note: 'AI service temporarily unavailable'
-    });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -64,60 +41,35 @@ router.post('/chat', async (req, res) => {
 router.get('/recommendations', async (req, res) => {
   try {
     const { userId } = req.query;
+    const portfolioData = req.body.portfolio; // Optional portfolio data
     
-    // Check if ML service is available
     try {
-      const healthCheck = await axios.get(`${ML_SERVICE_URL}/health`, { timeout: 2000 });
-    } catch (healthError) {
-      // ML service not available, return mock recommendations
-      console.log('ML service not available, returning mock recommendations');
-      return res.json({
+      const response = await aiService.getRecommendations(userId as string, portfolioData);
+      
+      res.json({
         success: true,
-        recommendations: [
-          "Create an emergency fund covering 3-6 months of expenses",
-          "Diversify your investment portfolio across different asset classes",
-          "Review and optimize your spending patterns monthly"
-        ],
-        confidence: 0.8,
+        recommendations: response.response || response,
+        confidence: response.confidence || 0.8,
         userId: req.user?.id,
-        source: 'fallback'
+        source: 'ai'
+      });
+    } catch (error: any) {
+      console.log('AI service unavailable, returning fallback recommendations');
+      
+      const fallbackResponse = aiService.generateFallbackResponse('recommendations', { portfolio: portfolioData });
+      
+      res.json({
+        success: true,
+        recommendations: fallbackResponse.recommendations,
+        confidence: fallbackResponse.confidence,
+        userId: req.user?.id,
+        source: 'fallback',
+        note: 'AI service temporarily unavailable, showing default recommendations'
       });
     }
-    
-    // This could be enhanced to use portfolio data for personalized recommendations
-    const recommendationPrompt = "Based on general financial best practices, what are 3 key recommendations for improving financial health?";
-    
-    const response = await axios.post(`${ML_SERVICE_URL}/chat`, {
-      message: recommendationPrompt,
-      context: { user_id: userId },
-      model: 'llama3.1:8b'
-    }, {
-      timeout: 30000
-    });
-
-    res.json({
-      success: true,
-      recommendations: response.data.response,
-      confidence: response.data.confidence,
-      userId: req.user?.id,
-      source: 'ai'
-    });
   } catch (error: any) {
     console.error('AI Recommendations Error:', error.message);
-    
-    // Return fallback recommendations instead of error
-    res.json({
-      success: true,
-      recommendations: [
-        "Create an emergency fund covering 3-6 months of expenses",
-        "Diversify your investment portfolio across different asset classes", 
-        "Review and optimize your spending patterns monthly"
-      ],
-      confidence: 0.7,
-      userId: req.user?.id,
-      source: 'fallback',
-      note: 'AI service temporarily unavailable, showing default recommendations'
-    });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -126,93 +78,134 @@ router.post('/sentiment', async (req, res) => {
   try {
     const { message } = req.body;
     
-    // Check if ML service is available
     try {
-      const healthCheck = await axios.get(`${ML_SERVICE_URL}/health`, { timeout: 2000 });
-    } catch (healthError) {
-      // ML service not available, return neutral sentiment
-      console.log('ML service not available, returning neutral sentiment');
-      return res.json({
+      const response = await aiService.analyzeSentiment(message);
+      
+      res.json({
         success: true,
-        data: {
-          sentiment: 'neutral',
-          confidence: 0.5,
-          score: 0.0
-        },
+        data: response,
         userId: req.user?.id,
-        source: 'fallback'
+        source: 'ai'
+      });
+    } catch (error: any) {
+      console.log('AI service unavailable, returning neutral sentiment');
+      
+      const fallbackResponse = aiService.generateFallbackResponse('sentiment');
+      
+      res.json({
+        success: true,
+        data: fallbackResponse,
+        userId: req.user?.id,
+        source: 'fallback',
+        note: 'AI service temporarily unavailable'
       });
     }
-    
-    const response = await axios.post(`${ML_SERVICE_URL}/analyze-sentiment`, {
-      message,
-      model: 'llama3.1:8b'
-    }, {
-      timeout: 15000
-    });
-
-    res.json({
-      success: true,
-      data: response.data,
-      userId: req.user?.id,
-      source: 'ai'
-    });
   } catch (error: any) {
     console.error('Sentiment Analysis Error:', error.message);
-    
-    // Return neutral sentiment instead of error
-    res.json({
-      success: true,
-      data: {
-        sentiment: 'neutral',
-        confidence: 0.5,
-        score: 0.0
-      },
-      userId: req.user?.id,
-      source: 'fallback',
-      note: 'AI service temporarily unavailable'
-    });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// List available models
-router.get('/models', async (req, res) => {
+// Get portfolio insights
+router.post('/insights', async (req, res) => {
   try {
-    // Check if ML service is available
+    const { portfolio } = req.body;
+    
     try {
-      const healthCheck = await axios.get(`${ML_SERVICE_URL}/health`, { timeout: 2000 });
-    } catch (healthError) {
-      // ML service not available, return default models
-      console.log('ML service not available, returning default models');
-      return res.json({
+      const response = await aiService.getPortfolioInsights(portfolio, req.user?.id);
+      
+      res.json({
         success: true,
-        models: ['llama3.1:8b', 'fallback'],
+        insights: response,
         userId: req.user?.id,
-        source: 'fallback'
+        source: 'ai'
+      });
+    } catch (error: any) {
+      console.log('AI service unavailable, returning fallback insights');
+      
+      const fallbackResponse = aiService.generateFallbackResponse('insights', { portfolio });
+      
+      res.json({
+        success: true,
+        insights: fallbackResponse.insights,
+        confidence: fallbackResponse.confidence,
+        userId: req.user?.id,
+        source: 'fallback',
+        note: 'AI service temporarily unavailable'
       });
     }
-    
-    const response = await axios.get(`${ML_SERVICE_URL}/models`, {
-      timeout: 5000
-    });
+  } catch (error: any) {
+    console.error('Portfolio Insights Error:', error.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
+// Get risk assessment
+router.post('/risk-assessment', async (req, res) => {
+  try {
+    const { portfolio, userProfile } = req.body;
+    
+    try {
+      const response = await aiService.getRiskAssessment(portfolio, userProfile);
+      
+      res.json({
+        success: true,
+        assessment: response,
+        userId: req.user?.id,
+        source: 'ai'
+      });
+    } catch (error: any) {
+      console.log('AI service unavailable, returning fallback risk assessment');
+      
+      const fallbackResponse = aiService.generateFallbackResponse('risk');
+      
+      res.json({
+        success: true,
+        assessment: fallbackResponse,
+        userId: req.user?.id,
+        source: 'fallback',
+        note: 'AI service temporarily unavailable'
+      });
+    }
+  } catch (error: any) {
+    console.error('Risk Assessment Error:', error.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get AI service status
+router.get('/status', async (req, res) => {
+  try {
+    const status = aiService.getStatus();
+    const isAvailable = await aiService.isServiceAvailable();
+    
     res.json({
       success: true,
-      models: response.data.models,
-      userId: req.user?.id,
-      source: 'ai'
+      status: {
+        ...status,
+        isAvailable,
+        timestamp: new Date().toISOString()
+      }
     });
   } catch (error: any) {
-    console.error('Models List Error:', error.message);
+    console.error('AI Status Error:', error.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Reset circuit breaker (admin endpoint)
+router.post('/reset-circuit-breaker', async (req, res) => {
+  try {
+    aiService.resetCircuitBreaker();
     
-    // Return default models instead of error
     res.json({
       success: true,
-      models: ['llama3.1:8b', 'fallback'],
-      userId: req.user?.id,
-      source: 'fallback',
-      note: 'AI service temporarily unavailable'
+      message: 'Circuit breaker reset successfully',
+      timestamp: new Date().toISOString()
     });
+  } catch (error: any) {
+    console.error('Circuit Breaker Reset Error:', error.message);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
