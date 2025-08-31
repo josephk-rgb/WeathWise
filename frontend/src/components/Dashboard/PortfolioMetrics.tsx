@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp, TrendingDown, DollarSign, BarChart3, PieChart, Target, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, PieChart, Target, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { Investment } from '../../types';
 import { formatCurrency } from '../../utils/currency';
 

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Bot, User, Upload, Image } from 'lucide-react';
+import { MessageCircle, X, Send, Bot, User, Image } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { apiService } from '../../services/api';
 import Button from '../UI/Button';

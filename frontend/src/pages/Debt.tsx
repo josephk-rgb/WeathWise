@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, CreditCard, TrendingDown, Calendar, DollarSign, Percent, AlertTriangle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, CreditCard, Calendar, AlertTriangle } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import { formatCurrency } from '../utils/currency';
-import { Debt, DebtPayment } from '../types';
+import { Debt } from '../types';
 
 const DebtPage: React.FC = () => {
-  const { user, debts, setDebts, addDebt, currency } = useStore();
+  const { user, debts, addDebt, currency } = useStore();
   const [showAddForm, setShowAddForm] = useState(false);
   const [formData, setFormData] = useState({
     name: '',

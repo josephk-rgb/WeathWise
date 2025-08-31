@@ -1,4 +1,3 @@
-import React from "react";
 import {
   BarChart,
   Bar,
@@ -14,10 +13,8 @@ const COLORS = ["#7c3aed", "#ec4899", "#06b6d4", "#10b981", "#f59e0b", "#ef4444"
 
 const ExpenseBarChart = ({
   data,
-  height = 400,
 }: {
   data: any[];
-  height?: number;
 }) => {
   const format = new Intl.NumberFormat();
   const total = data.reduce((sum, item) => sum + item.value, 0);
@@ -62,14 +59,13 @@ const ExpenseBarChart = ({
               fontSize: "12px",
               fontWeight: "500",
             }}
-            className="dark:bg-gray-800 dark:border-gray-600"
           />
           
           <Bar 
             dataKey="value" 
             radius={[0, 4, 4, 0]}
           >
-            {data.map((entry, index) => (
+            {data.map((_entry, index) => (
               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
             ))}
           </Bar>

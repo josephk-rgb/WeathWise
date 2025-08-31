@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, Target, Shield, PieChart, BarChart3, AlertTriangle, RefreshCw } from 'lucide-react';
-import { apiService } from '../../services/enhancedApi';
+import { apiService } from '../../services/api';
 import { AdvancedPortfolioAnalytics } from '../../types';
 
 interface AdvancedAnalyticsProps {
@@ -23,6 +23,10 @@ const AdvancedAnalyticsComponent: React.FC<AdvancedAnalyticsProps> = ({ classNam
 
     try {
       const data = await apiService.getAdvancedPortfolioAnalytics();
+      console.log('🔍 Raw analytics data received:', data);
+      console.log('🔍 Data type:', typeof data);
+      console.log('🔍 Data keys:', data ? Object.keys(data) : 'null/undefined');
+      console.log('🔍 portfolioMetrics exists?', data?.portfolioMetrics);
       setAnalytics(data);
       setLastUpdate(new Date());
     } catch (error: any) {
@@ -93,7 +97,28 @@ const AdvancedAnalyticsComponent: React.FC<AdvancedAnalyticsProps> = ({ classNam
     return null;
   }
 
-  const { portfolioMetrics, individualAssets, composition, riskAnalysis } = analytics;
+  // Add debugging and defensive programming
+  console.log('🔍 Analytics in render:', analytics);
+  
+  // Safely destructure with defaults
+  const { 
+    portfolioMetrics = { 
+      beta: 0, 
+      volatility: 0, 
+      sharpeRatio: 0, 
+      valueAtRisk: 0, 
+      correlation: 0 
+    }, 
+    individualAssets = [], 
+    composition = [], 
+    riskAnalysis = { 
+      overall: 'low' as const, 
+      diversification: 0, 
+      concentration: 0 
+    } 
+  } = analytics || {};
+
+  console.log('🔍 portfolioMetrics after destructuring:', portfolioMetrics);
 
   return (
     <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 ${className}`}>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Search, Filter, Plus, ArrowUpRight, ArrowDownRight, Calendar } from 'lucide-react';
+import { Search, Plus, ArrowUpRight, ArrowDownRight, Calendar } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { apiService } from '../services/api';
 import Card from '../components/UI/Card';

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Target, Calendar, DollarSign, TrendingUp, Edit2, Trash2, CheckCircle } from 'lucide-react';
+import { Plus, Target, DollarSign, TrendingUp, Edit2, Trash2, CheckCircle } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { apiService } from '../services/api';
 import Card from '../components/UI/Card';

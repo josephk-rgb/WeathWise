@@ -9,18 +9,18 @@ interface PortfolioInsightsProps {
 
 const PortfolioInsights: React.FC<PortfolioInsightsProps> = ({
   investments,
-  currency,
+  currency: _currency, // Marked as unused
 }) => {
   const calculateInsights = () => {
     if (investments.length === 0) return [];
 
-    const totalValue = investments.reduce((sum, inv) => sum + (inv.shares * inv.currentPrice), 0);
-    const totalCost = investments.reduce((sum, inv) => sum + (inv.shares * inv.purchasePrice), 0);
+    const totalValue = investments.reduce((sum: number, inv: Investment) => sum + (inv.shares * inv.currentPrice), 0);
+    const totalCost = investments.reduce((sum: number, inv: Investment) => sum + (inv.shares * inv.purchasePrice), 0);
     const totalReturn = totalValue - totalCost;
     const totalReturnPercent = totalCost > 0 ? (totalReturn / totalCost) * 100 : 0;
 
     // Asset allocation
-    const allocation = investments.reduce((acc, inv) => {
+    const allocation = investments.reduce((acc: Record<string, number>, inv: Investment) => {
       const value = inv.shares * inv.currentPrice;
       acc[inv.type] = (acc[inv.type] || 0) + value;
       return acc;
@@ -60,7 +60,7 @@ const PortfolioInsights: React.FC<PortfolioInsightsProps> = ({
     }
 
     // Concentration risk
-    const largestHolding = investments.reduce((max, inv) => {
+    const largestHolding = investments.reduce((max: {symbol: string, value: number}, inv: Investment) => {
       const value = inv.shares * inv.currentPrice;
       return value > max.value ? { symbol: inv.symbol, value } : max;
     }, { symbol: '', value: 0 });
@@ -76,10 +76,10 @@ const PortfolioInsights: React.FC<PortfolioInsightsProps> = ({
     }
 
     // Best and worst performers
-    const performers = investments.map(inv => {
+    const performers = investments.map((inv: Investment) => {
       const returnPercent = ((inv.currentPrice - inv.purchasePrice) / inv.purchasePrice) * 100;
       return { symbol: inv.symbol, returnPercent };
-    }).sort((a, b) => b.returnPercent - a.returnPercent);
+    }).sort((a: {symbol: string, returnPercent: number}, b: {symbol: string, returnPercent: number}) => b.returnPercent - a.returnPercent);
 
     if (performers.length > 0) {
       const best = performers[0];

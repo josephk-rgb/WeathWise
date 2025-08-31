@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -16,7 +16,7 @@ import Import from './pages/Import';
 import TalkToFinances from './pages/TalkToFinances';
 import ProfileCompletionWrapper from './components/ProfileCompletion/ProfileCompletionWrapper';
 import { useStore } from './store/useStore';
-import { useAuth } from './hooks/useAuth';
+import { useUser } from './contexts/UserContext';
 
 // Callback component to handle Auth0 redirect
 const Callback: React.FC = () => {
@@ -43,8 +43,7 @@ const Callback: React.FC = () => {
 
 // Debug component to show current state
 const DebugInfo: React.FC = () => {
-  const { isAuthenticated, user, isLoading } = useAuth();
-  const { user: storeUser } = useStore();
+  const { isAuthenticated, user, isLoading, userProfile, isProfileLoading, profileError } = useUser();
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-navy-900 via-violet-900 to-magenta-900">
@@ -54,7 +53,9 @@ const DebugInfo: React.FC = () => {
           <p><strong>Auth0 Authenticated:</strong> {isAuthenticated ? 'Yes' : 'No'}</p>
           <p><strong>Auth0 Loading:</strong> {isLoading ? 'Yes' : 'No'}</p>
           <p><strong>Auth0 User:</strong> {user ? 'Present' : 'None'}</p>
-          <p><strong>Store User:</strong> {storeUser ? 'Present' : 'None'}</p>
+          <p><strong>Profile Loading:</strong> {isProfileLoading ? 'Yes' : 'No'}</p>
+          <p><strong>Profile:</strong> {userProfile ? 'Present' : 'None'}</p>
+          <p><strong>Profile Error:</strong> {profileError || 'None'}</p>
           <p><strong>Current URL:</strong> {window.location.href}</p>
         </div>
         <div className="mt-4">
@@ -82,32 +83,8 @@ const LayoutWrapper: React.FC = () => {
 };
 
 function App() {
-  const { isAuthenticated, user, isLoading } = useAuth();
-  const { darkMode, setUser } = useStore();
-  const hasSetUser = useRef(false);
-
-  useEffect(() => {
-    console.log('Auth state:', { isAuthenticated, isLoading, user });
-    console.log('Current URL:', window.location.href);
-    
-    if (isAuthenticated && user && !isLoading && !hasSetUser.current) {
-      console.log('User authenticated, syncing with store...');
-      
-      // Sync Auth0 user with our store
-      const userData = {
-        id: user.sub || user.user_id,
-        name: user.name || user.nickname || 'User',
-        email: user.email || '',
-        riskProfile: 'moderate' as const, // Default value
-        currency: 'USD', // Default currency
-        darkMode: false, // Default dark mode
-        createdAt: new Date(),
-      };
-      console.log('Setting user data:', userData);
-      setUser(userData);
-      hasSetUser.current = true;
-    }
-  }, [isAuthenticated, user?.sub, isLoading, setUser]);
+  const { isAuthenticated } = useUser();
+  const { darkMode } = useStore();
 
   // Show debug info if we're on the root path and authenticated
   if (isAuthenticated && window.location.pathname === '/') {

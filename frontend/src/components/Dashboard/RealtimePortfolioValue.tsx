@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { RefreshCw, TrendingUp, TrendingDown, Clock, Signal, Wifi, WifiOff } from 'lucide-react';
-import { apiService } from '../../services/enhancedApi';
+import { apiService } from '../../services/api';
 import { RealtimePortfolioValue, Investment } from '../../types';
 import { formatCurrency } from '../../utils/currency';
 
@@ -42,7 +42,7 @@ const RealtimePortfolioValueComponent: React.FC<RealtimePortfolioValueProps> = (
     setError(null);
 
     try {
-      const realtimeData = await apiService.calculateRealtimePortfolioValue(investments);
+      const realtimeData = await apiService.getRealtimePortfolioValue();
       setPortfolioValue(realtimeData);
       setLastUpdate(new Date());
       setIsRealtime(true);

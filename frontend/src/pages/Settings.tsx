@@ -1,5 +1,5 @@
 import React from 'react';
-import { Moon, Sun, Globe, Bell, Shield, Palette, Database } from 'lucide-react';
+import { Globe, Bell, Shield, Palette, Database } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';

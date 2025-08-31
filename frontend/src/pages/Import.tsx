@@ -15,7 +15,7 @@ interface ImportFile {
 }
 
 const Import: React.FC = () => {
-  const { user } = useStore();
+  const { } = useStore();
   const [dragActive, setDragActive] = useState(false);
   const [selectedType, setSelectedType] = useState<'bank' | 'broker' | 'mpesa'>('bank');
   const [importHistory, setImportHistory] = useState<ImportFile[]>([

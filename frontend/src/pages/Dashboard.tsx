@@ -7,8 +7,11 @@ import StatCard from '../components/UI/StatCard';
 import NetWorthTrend from '../components/Dashboard/NetWorthTrend';
 import ExpenseList from '../components/Charts/ExpenseList';
 import FinancialHealthScore from '../components/Dashboard/FinancialHealthScore';
+import RealtimePortfolioValue from '../components/Dashboard/RealtimePortfolioValue';
+import MarketNewsWidget from '../components/Dashboard/MarketNewsWidget';
+import AdvancedAnalytics from '../components/Dashboard/AdvancedAnalytics';
 import { formatCurrency } from '../utils/currency';
-import { useAuth } from '../hooks/useAuth';
+import { useUser } from '../contexts/UserContext';
 
 const Dashboard: React.FC = () => {
   const { 
@@ -24,7 +27,7 @@ const Dashboard: React.FC = () => {
     currency
   } = useStore();
 
-  const { isAuthenticated, isLoading: authLoading, tokenReady } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, userProfile } = useUser();
   const [dashboardStats, setDashboardStats] = useState<any>(null);
   const [expenseData, setExpenseData] = useState<any[]>([]);
   const [loadingStats, setLoadingStats] = useState(true);
@@ -34,16 +37,16 @@ const Dashboard: React.FC = () => {
       hasUser: !!user,
       isAuthenticated,
       authLoading,
-      tokenReady
+      hasUserProfile: !!userProfile
     });
 
-    if (user && isAuthenticated && !authLoading && tokenReady) {
+    if (user && isAuthenticated && !authLoading && userProfile) {
       console.log('Loading real dashboard data...');
       loadDashboardData();
     } else {
-      console.log('User not authenticated or loading...');
+      console.log('User not authenticated or profile not loaded...');
     }
-  }, [user, isAuthenticated, authLoading, tokenReady]);
+  }, [user, isAuthenticated, authLoading, userProfile]);
 
   const loadDashboardData = async () => {
     if (!user) {
@@ -325,6 +328,17 @@ const Dashboard: React.FC = () => {
             )}
           </div>
         </Card>
+      </div>
+
+      {/* 🚀 NEW: Enhanced Yahoo Finance & News Integration */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <RealtimePortfolioValue investments={safeInvestments} currency={currency} />
+        <MarketNewsWidget />
+      </div>
+
+      {/* 🚀 NEW: Advanced Portfolio Analytics */}
+      <div className="mb-8">
+        <AdvancedAnalytics />
       </div>
 
       {/* Recent Transactions and Goals */}

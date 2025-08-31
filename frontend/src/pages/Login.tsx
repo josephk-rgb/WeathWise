@@ -1,10 +1,10 @@
 import React from 'react';
 import { LogIn } from 'lucide-react';
-import { useAuth } from '../hooks/useAuth';
+import { useUser } from '../contexts/UserContext';
 import Button from '../components/UI/Button';
 
 const Login: React.FC = () => {
-  const { login, isLoading } = useAuth();
+  const { login, isLoading } = useUser();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-navy-900 via-violet-900 to-magenta-900 flex items-center justify-center p-4">

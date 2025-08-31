@@ -13,166 +13,42 @@ import {
   NewsProvider
 } from '../types';
 
-// Enhanced API service - stateless authentication
+// Enhanced API service with Yahoo Finance and News integration
 class ApiService {
   private baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+  private token: string | null = null;
   private ws: WebSocket | null = null;
   private wsReconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private wsListeners: Map<string, Function[]> = new Map();
-  private pendingRequests: Map<string, Promise<any>> = new Map(); // For request deduplication
-  private cache: Map<string, { data: any; timestamp: number; ttl: number }> = new Map(); // Response cache with TTL
-  private requestTimestamps: Map<string, number> = new Map(); // For rate limiting
-  private cacheCleanupInterval: NodeJS.Timeout | null = null;
-  private debugMode = import.meta.env.DEV; // Enable debug mode in development
-  
-  // Token management - no longer stored, always fetched fresh
-  private currentToken: string | null = null;
 
-  constructor() {
-    // Clean up expired cache entries every 2 minutes
-    this.cacheCleanupInterval = setInterval(() => {
-      this.cleanExpiredCache();
-    }, 120000);
-    
-    if (this.debugMode) {
-      console.log('🔧 API Service initialized');
-    }
-  }
-
-  // Set authentication token (temporary for WebSocket)
+  // Set authentication token
   setToken(token: string) {
-    this.currentToken = token;
-    // Initialize WebSocket with token if needed
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      this.initializeWebSocket();
-    }
+    this.token = token;
+    localStorage.setItem('auth_token', token);
+    this.initializeWebSocket();
   }
 
-  // Get current token
-  getCurrentToken(): string | null {
-    return this.currentToken;
+  // Get authentication token
+  getToken(): string | null {
+    if (!this.token) {
+      this.token = localStorage.getItem('auth_token');
+    }
+    return this.token;
   }
 
   // Clear authentication token
   clearToken() {
-    this.currentToken = null;
+    this.token = null;
+    localStorage.removeItem('auth_token');
     this.disconnectWebSocket();
-    this.clearCache();
   }
 
-  // Cache management methods
-  clearCache() {
-    this.cache.clear();
-    this.pendingRequests.clear();
-    this.requestTimestamps.clear();
-    if (this.debugMode) {
-      console.log('🧹 API cache cleared');
-    }
-  }
-
-  // Clean expired cache entries
-  private cleanExpiredCache() {
-    const now = Date.now();
-    const initialSize = this.cache.size;
-    for (const [key, value] of this.cache.entries()) {
-      if (now - value.timestamp > value.ttl) {
-        this.cache.delete(key);
-      }
-    }
-    const removed = initialSize - this.cache.size;
-    if (removed > 0 && this.debugMode) {
-      console.log(`🗑️ Cleaned ${removed} expired cache entries`);
-    }
-  }
-
-  // Destroy the API service instance
-  destroy() {
-    this.disconnectWebSocket();
-    this.clearCache();
-    if (this.cacheCleanupInterval) {
-      clearInterval(this.cacheCleanupInterval);
-      this.cacheCleanupInterval = null;
-    }
-  }
-
-  // Debug methods
-  getCacheStats() {
-    return {
-      cacheSize: this.cache.size,
-      pendingRequests: this.pendingRequests.size,
-      recentRequests: this.requestTimestamps.size,
-      debugMode: this.debugMode
-    };
-  }
-
-  logCacheContents() {
-    if (!this.debugMode) return;
-    console.log('📊 Cache contents:', Array.from(this.cache.entries()).map(([key, value]) => ({
-      key,
-      age: Date.now() - value.timestamp,
-      ttl: value.ttl,
-      expired: (Date.now() - value.timestamp) > value.ttl
-    })));
-  }
-
-  // Expose debugging utilities to global scope in development
-  enableGlobalDebug() {
-    if (this.debugMode && typeof window !== 'undefined') {
-      (window as any).apiDebug = {
-        stats: () => this.getCacheStats(),
-        cache: () => this.logCacheContents(),
-        clear: () => this.clearCache()
-      };
-      console.log('🛠️ API debug tools available at window.apiDebug');
-    }
-  }
-
-  // Helper method to make authenticated requests with retry logic, caching, and enhanced deduplication
-  private async makeRequest(endpoint: string, options: RequestInit = {}, retryCount = 0, cacheTTL: number = 60000): Promise<any> {
-    const token = this.currentToken;
+  // Helper method to make authenticated requests with retry logic
+  private async makeRequest(endpoint: string, options: RequestInit = {}, retryCount = 0): Promise<any> {
+    const maxRetries = 2;
+    const token = this.getToken();
     const url = `${this.baseUrl}${endpoint}`;
-    
-    // Create a request key for deduplication and caching
-    const method = options.method || 'GET';
-    const requestKey = `${method}:${endpoint}`;
-    const body = options.body ? JSON.stringify(JSON.parse(options.body as string)) : '';
-    const cacheKey = `${requestKey}:${body}`;
-    
-    // Check cache first for GET requests
-    if (method === 'GET') {
-      const cached = this.cache.get(cacheKey);
-      if (cached && (Date.now() - cached.timestamp) < cached.ttl) {
-        if (this.debugMode) {
-          console.log('✅ Returning cached response for:', requestKey);
-        }
-        return cached.data;
-      }
-    }
-    
-    // Enhanced rate limiting - simplified for better reliability
-    const isAuthEndpoint = endpoint.includes('/auth/');
-    const minInterval = isAuthEndpoint ? 200 : 100;
-    const lastRequestTime = this.requestTimestamps.get(requestKey) || 0;
-    const timeSinceLastRequest = Date.now() - lastRequestTime;
-    
-    if (timeSinceLastRequest < minInterval) {
-      if (this.debugMode) {
-        console.log('⏳ Request throttled:', requestKey, 'Time since last:', timeSinceLastRequest + 'ms');
-      }
-      await new Promise(resolve => setTimeout(resolve, minInterval - timeSinceLastRequest));
-    }
-    
-    // For GET requests, check if the same request is already pending
-    if (method === 'GET' && this.pendingRequests.has(requestKey)) {
-      if (this.debugMode) {
-        console.log('🔄 Deduplicating request:', requestKey);
-      }
-      return this.pendingRequests.get(requestKey);
-    }
-    
-    // Update request timestamp
-    this.requestTimestamps.set(requestKey, Date.now());
     
     const config: RequestInit = {
       headers: {
@@ -183,67 +59,32 @@ class ApiService {
       ...options,
     };
 
-    if (this.debugMode) {
-      console.log('🚀 Making API request:', {
-        url,
-        method,
-        hasToken: !!token,
-        tokenPrefix: token ? token.substring(0, 30) + '...' : 'none',
-        retryAttempt: retryCount,
-        cached: method === 'GET' ? this.cache.has(cacheKey) : false,
-        rateLimited: timeSinceLastRequest < 100,
-        pendingRequest: method === 'GET' ? this.pendingRequests.has(requestKey) : false
-      });
-    }
+    console.log('Making API request:', {
+      url,
+      method: options.method || 'GET',
+      hasToken: !!token,
+      tokenPrefix: token ? token.substring(0, 30) + '...' : 'none',
+      retryAttempt: retryCount
+    });
 
-    const requestPromise = this.executeRequest(url, config, endpoint, options, retryCount, cacheKey, cacheTTL);
-    
-    // Store the promise for deduplication (only for GET requests)
-    if (method === 'GET') {
-      this.pendingRequests.set(requestKey, requestPromise);
-      
-      // Clean up after request completes
-      requestPromise.finally(() => {
-        this.pendingRequests.delete(requestKey);
-      });
-    }
-    
-    return requestPromise;
-  }
-
-  private async executeRequest(url: string, config: RequestInit, endpoint: string, options: RequestInit, retryCount: number, cacheKey?: string, cacheTTL?: number): Promise<any> {
     try {
       const response = await fetch(url, config);
       
-      if (this.debugMode) {
-        console.log('📡 API response status:', response.status);
-      }
+      console.log('API response status:', response.status);
 
       if (!response.ok) {
         if (response.status === 401) {
-          console.log('🔐 Authentication failed');
+          console.log('Authentication failed');
           this.clearToken();
           throw new Error('Authentication failed');
-        }
-        
-        // Handle rate limiting with exponential backoff - REDUCED delays for auth endpoints
-        if (response.status === 429 && retryCount < 3) {
-          const retryAfter = response.headers.get('Retry-After');
-          const isAuthEndpoint = endpoint.includes('/auth/');
-          const baseDelay = retryAfter ? parseInt(retryAfter) * 1000 : (isAuthEndpoint ? 1000 : 2000); // Reduced delay for auth
-          const delay = Math.min(baseDelay * Math.pow(2, retryCount), 15000); // Reduced max to 15 seconds
-          
-          console.log(`⏱️ Rate limited, retrying in ${delay}ms... (${retryCount + 1}/3)`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-          return this.makeRequest(endpoint, options, retryCount + 1);
         }
         
         if (response.status >= 400 && response.status < 500) {
           throw new Error(`Request failed with status ${response.status}`);
         }
         
-        if (response.status >= 500 && retryCount < 3) {
-          console.log(`🔄 Server error, retrying... (${retryCount + 1}/3)`);
+        if (response.status >= 500 && retryCount < maxRetries) {
+          console.log(`Server error, retrying... (${retryCount + 1}/${maxRetries})`);
           await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
           return this.makeRequest(endpoint, options, retryCount + 1);
         }
@@ -252,110 +93,58 @@ class ApiService {
       }
 
       const result = await response.json();
-      
-      if (this.debugMode) {
-        console.log('📦 API response data received:', !!result);
-      }
-      
-      // Cache successful GET responses
-      if (cacheKey && cacheTTL && (options.method || 'GET') === 'GET') {
-        this.cache.set(cacheKey, {
-          data: result,
-          timestamp: Date.now(),
-          ttl: cacheTTL
-        });
-        if (this.debugMode) {
-          console.log('💾 Cached response for:', cacheKey, 'TTL:', cacheTTL + 'ms');
-        }
-      }
-      
+      console.log('API response data:', result);
       return result;
     } catch (error) {
-      console.error('❌ API request failed:', error);
+      console.error('API request failed:', error);
       throw error;
     }
   }
 
-  // 🚀 WebSocket Management (Optional Enhancement)
+  // 🚀 NEW: WebSocket Management
   private initializeWebSocket() {
-    if (!this.currentToken) return;
-    
-    // Prevent multiple WebSocket connections
-    if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
-      console.log('WebSocket already connecting, skipping...');
-      return;
-    }
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      console.log('WebSocket already connected, skipping...');
-      return;
-    }
+    if (!this.token) return;
 
-    try {
-      const wsUrl = this.baseUrl.replace('http', 'ws').replace('/api', '/ws');
-      this.ws = new WebSocket(wsUrl);
+    const wsUrl = this.baseUrl.replace('http', 'ws').replace('/api', '/ws');
+    this.ws = new WebSocket(wsUrl);
 
-      this.ws.onopen = () => {
-        console.log('WebSocket connected');
-        this.wsReconnectAttempts = 0;
-        
-        // Wait a bit to ensure connection is fully ready before sending auth
-        setTimeout(() => {
-          if (this.ws && this.ws.readyState === WebSocket.OPEN && this.currentToken) {
-            this.ws.send(JSON.stringify({
-              type: 'auth',
-              token: this.currentToken
-            }));
-          }
-        }, 100);
-      };
+    this.ws.onopen = () => {
+      console.log('WebSocket connected');
+      this.wsReconnectAttempts = 0;
+      
+      this.ws?.send(JSON.stringify({
+        type: 'auth',
+        token: this.token
+      }));
+    };
 
-      this.ws.onmessage = (event) => {
-        try {
-          const message: WebSocketMessage = JSON.parse(event.data);
-          this.handleWebSocketMessage(message);
-        } catch (error) {
-          console.error('WebSocket message parsing error:', error);
-        }
-      };
+    this.ws.onmessage = (event) => {
+      try {
+        const message: WebSocketMessage = JSON.parse(event.data);
+        this.handleWebSocketMessage(message);
+      } catch (error) {
+        console.error('WebSocket message parsing error:', error);
+      }
+    };
 
-      this.ws.onclose = (event) => {
-        console.log('WebSocket disconnected', event.code, event.reason);
-        // Only attempt reconnect for certain error codes and if we have a token
-        if (event.code !== 1000 && event.code !== 1001 && this.currentToken && this.wsReconnectAttempts < this.maxReconnectAttempts) {
-          this.attemptReconnect();
-        }
-      };
+    this.ws.onclose = () => {
+      console.log('WebSocket disconnected');
+      this.attemptReconnect();
+    };
 
-      this.ws.onerror = (error) => {
-        console.warn('WebSocket error (non-critical):', error);
-        // WebSocket errors are non-critical for the main app functionality
-      };
-    } catch (error) {
-      console.warn('Failed to initialize WebSocket (non-critical):', error);
-      // WebSocket initialization failure should not block the app
-    }
+    this.ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
   }
 
   private attemptReconnect() {
-    // Don't attempt reconnection if we're already at max attempts
-    if (this.wsReconnectAttempts >= this.maxReconnectAttempts) {
-      console.log('Max WebSocket reconnection attempts reached');
-      return;
+    if (this.wsReconnectAttempts < this.maxReconnectAttempts) {
+      this.wsReconnectAttempts++;
+      setTimeout(() => {
+        console.log(`Attempting WebSocket reconnection (${this.wsReconnectAttempts}/${this.maxReconnectAttempts})`);
+        this.initializeWebSocket();
+      }, 1000 * this.wsReconnectAttempts);
     }
-    
-    if (!this.currentToken) {
-      console.log('No token available for WebSocket reconnection');
-      return;
-    }
-    
-    this.wsReconnectAttempts++;
-    const delay = Math.min(1000 * this.wsReconnectAttempts, 10000); // Max 10 seconds
-    
-    console.log(`Attempting WebSocket reconnection (${this.wsReconnectAttempts}/${this.maxReconnectAttempts}) in ${delay}ms`);
-    
-    setTimeout(() => {
-      this.initializeWebSocket();
-    }, delay);
   }
 
   private handleWebSocketMessage(message: WebSocketMessage) {
@@ -380,12 +169,10 @@ class ApiService {
 
   private disconnectWebSocket() {
     if (this.ws) {
-      // Close cleanly to prevent reconnection
-      this.ws.close(1000, 'Client disconnecting');
+      this.ws.close();
       this.ws = null;
     }
     this.wsListeners.clear();
-    this.wsReconnectAttempts = 0; // Reset reconnection attempts
   }
 
   // Public method for testing authentication
@@ -400,26 +187,11 @@ class ApiService {
 
   // User profile methods
   async getCurrentUser(): Promise<User> {
-    console.log('📡 Calling getCurrentUser API...');
-    try {
-      const result = await this.makeRequest('/auth/me');
-      console.log('✅ getCurrentUser successful:', !!result);
-      return result;
-    } catch (error) {
-      console.error('❌ getCurrentUser failed:', error);
-      throw error;
-    }
+    return this.makeRequest('/auth/me');
   }
 
   async updateProfile(profileData: Partial<User>): Promise<User> {
     return this.makeRequest('/auth/profile', {
-      method: 'PUT',
-      body: JSON.stringify(profileData),
-    });
-  }
-
-  async completeProfile(profileData: Partial<User>): Promise<User> {
-    return this.makeRequest('/auth/complete-profile', {
       method: 'PUT',
       body: JSON.stringify(profileData),
     });
@@ -621,16 +393,14 @@ class ApiService {
     return response.data?.data || response.data || response;
   }
 
-  // 🚀 NEW: Financial News Methods with caching
+  // 🚀 NEW: Financial News Methods
   async getFinancialNews(limit: number = 20): Promise<NewsResponse> {
-    // Cache news for 5 minutes (300000ms) since market news doesn't change that frequently
-    const response = await this.makeRequest(`/market/news?limit=${limit}`, {}, 0, 300000);
+    const response = await this.makeRequest(`/market/news?limit=${limit}`);
     return response;
   }
 
   async getSymbolNews(symbol: string, limit: number = 10): Promise<NewsResponse> {
-    // Cache symbol-specific news for 3 minutes
-    const response = await this.makeRequest(`/market/news/${symbol}?limit=${limit}`, {}, 0, 180000);
+    const response = await this.makeRequest(`/market/news/${symbol}?limit=${limit}`);
     return response;
   }
 
@@ -697,7 +467,7 @@ class ApiService {
   async exportTransactions(format: 'csv' | 'pdf' = 'csv'): Promise<Blob> {
     const response = await fetch(`${this.baseUrl}/transactions/export?format=${format}`, {
       headers: {
-        Authorization: `Bearer ${this.currentToken}`,
+        Authorization: `Bearer ${this.getToken()}`,
       },
     });
     
@@ -728,10 +498,4 @@ class ApiService {
 }
 
 export const apiService = new ApiService();
-
-// Enable global debugging in development
-if (import.meta.env.DEV) {
-  apiService.enableGlobalDebug();
-}
-
 export default apiService;

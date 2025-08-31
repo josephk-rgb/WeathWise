@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Newspaper, ExternalLink, Clock, TrendingUp, TrendingDown, Minus, RefreshCw } from 'lucide-react';
-import { apiService } from '../../services/enhancedApi';
-import { NewsArticle, NewsResponse } from '../../types';
+import { useNews } from '../../hooks/useNews';
 
 interface MarketNewsWidgetProps {
   symbols?: string[]; // If provided, show symbol-specific news
@@ -16,72 +15,20 @@ const MarketNewsWidget: React.FC<MarketNewsWidgetProps> = ({
   refreshInterval = 300000, // 5 minutes
   className = ''
 }) => {
-  const [news, setNews] = useState<NewsArticle[]>([]);
-  const [newsSource, setNewsSource] = useState<string>('');
-  const [rateLimitInfo, setRateLimitInfo] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
-
-  useEffect(() => {
-    loadNews();
+  // In development mode with React.StrictMode, reduce refresh interval to prevent excessive requests
+  const adjustedRefreshInterval = import.meta.env.DEV 
+    ? Math.max(refreshInterval, 600000) // Minimum 10 minutes in dev
+    : refreshInterval;
     
-    // Set up auto-refresh
-    const interval = setInterval(() => {
-      if (!loading) {
-        loadNews(true); // Silent refresh
-      }
-    }, refreshInterval);
+  const { data: newsData, loading, error, lastUpdate, refetch } = useNews({
+    symbols,
+    limit,
+    refreshInterval: adjustedRefreshInterval
+  });
 
-    return () => clearInterval(interval);
-  }, [symbols, limit, refreshInterval]);
-
-  const loadNews = async (silent = false) => {
-    if (!silent) setLoading(true);
-    setError(null);
-
-    try {
-      let newsData: NewsResponse;
-      
-      if (symbols.length > 0) {
-        // Get news for specific symbols
-        const symbolNews = await Promise.all(
-          symbols.slice(0, 3).map(symbol => // Limit to first 3 symbols to avoid rate limits
-            apiService.getSymbolNews(symbol, Math.ceil(limit / symbols.length))
-          )
-        );
-        
-        // Combine and deduplicate news from multiple symbols
-        const allArticles = symbolNews.flatMap(response => response.articles || []);
-        const uniqueArticles = allArticles.filter((article, index, self) =>
-          index === self.findIndex(a => a.url === article.url)
-        );
-        
-        newsData = {
-          articles: uniqueArticles.slice(0, limit),
-          source: symbolNews[0]?.source || 'Mixed Sources',
-          rateLimitInfo: symbolNews[0]?.rateLimitInfo || null
-        };
-      } else {
-        // Get general market news
-        newsData = await apiService.getMarketNews('financial markets technology', limit);
-      }
-
-      setNews(newsData.articles || []);
-      setNewsSource(newsData.source || 'Unknown');
-      setRateLimitInfo(newsData.rateLimitInfo);
-      setLastUpdate(new Date());
-    } catch (error: any) {
-      console.error('Error loading market news:', error);
-      setError(error.message);
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  };
-
-  const handleManualRefresh = () => {
-    loadNews();
-  };
+  const news = newsData?.articles || [];
+  const newsSource = newsData?.source || 'Unknown';
+  const rateLimitInfo = newsData?.rateLimitInfo;
 
   const getSentimentIcon = (sentiment?: string) => {
     switch (sentiment) {
@@ -144,7 +91,7 @@ const MarketNewsWidget: React.FC<MarketNewsWidgetProps> = ({
             
             {/* Refresh Button */}
             <button
-              onClick={handleManualRefresh}
+              onClick={refetch}
               disabled={loading}
               className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               title="Refresh news"
@@ -179,7 +126,7 @@ const MarketNewsWidget: React.FC<MarketNewsWidgetProps> = ({
             <div className="text-red-500 mb-2">Failed to load news</div>
             <div className="text-xs text-gray-500 mb-4">{error}</div>
             <button
-              onClick={handleManualRefresh}
+              onClick={refetch}
               className="text-blue-600 hover:text-blue-700 text-sm font-medium"
             >
               Try Again

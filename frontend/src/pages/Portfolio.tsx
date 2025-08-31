@@ -10,6 +10,8 @@ import PortfolioGrowthChart from '../components/Charts/PortfolioGrowthChart';
 import PortfolioMetrics from '../components/Dashboard/PortfolioMetrics';
 import PortfolioInsights from '../components/Dashboard/PortfolioInsights';
 import HoldingCard from '../components/Dashboard/HoldingCard';
+import RealtimePortfolioValue from '../components/Dashboard/RealtimePortfolioValue';
+import AdvancedAnalytics from '../components/Dashboard/AdvancedAnalytics';
 import { generatePortfolioHistory, formatPortfolioHistory } from '../utils/portfolioData';
 
 const PortfolioPage: React.FC = () => {
@@ -247,6 +249,21 @@ const PortfolioPage: React.FC = () => {
       {/* Enhanced Metrics */}
       <div className="mb-8">
         <PortfolioMetrics investments={investments} currency={currency} />
+      </div>
+
+      {/* 🚀 NEW: Enhanced Yahoo Finance Integration */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <RealtimePortfolioValue investments={investments} currency={currency} />
+        
+        {/* Portfolio Insights */}
+        <div className="lg:col-span-1">
+          <PortfolioInsights investments={investments} currency={currency} />
+        </div>
+      </div>
+
+      {/* 🚀 NEW: Advanced Portfolio Analytics */}
+      <div className="mb-8">
+        <AdvancedAnalytics />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

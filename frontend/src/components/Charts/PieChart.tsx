@@ -1,4 +1,3 @@
-import React from "react";
 import {
   PieChart as RechartsPieChart,
   Pie,
@@ -9,13 +8,9 @@ import {
 
 const COLORS = ["#7c3aed", "#ec4899", "#06b6d4", "#10b981", "#f59e0b", "#ef4444"];
 
-
-
 const PieChart = ({
   data,
   dataKey = "value",
-  nameKey = "name",
-  height = 320,
 }: any) => {
   const total = data.reduce((a: number, b: any) => a + b[dataKey], 0);
   const format = new Intl.NumberFormat();
@@ -33,7 +28,7 @@ const PieChart = ({
               outerRadius={100}
               paddingAngle={2}
               dataKey={dataKey}
-              label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+              label={({ percent }: { percent?: number }) => `${((percent || 0) * 100).toFixed(0)}%`}
               labelLine={false}
             >
               {data.map((_: any, i: number) => (

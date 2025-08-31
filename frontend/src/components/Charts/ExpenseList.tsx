@@ -1,5 +1,3 @@
-import React from "react";
-
 const COLORS = ["#7c3aed", "#ec4899", "#06b6d4", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#f97316"];
 
 const ExpenseList = ({

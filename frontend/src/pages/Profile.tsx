@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Mail, Shield, Calendar, Edit2, Save, X } from 'lucide-react';
+import { User, Mail, Shield, Edit2, Save, X } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
@@ -137,7 +137,7 @@ const Profile: React.FC = () => {
                   {isEditing ? (
                     <select
                       value={formData.riskProfile}
-                      onChange={(e) => setFormData({ ...formData, riskProfile: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, riskProfile: e.target.value as "conservative" | "moderate" | "aggressive" })}
                       className="input-field"
                     >
                       <option value="conservative">Conservative - Low risk, stable returns</option>

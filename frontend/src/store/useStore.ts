@@ -54,7 +54,7 @@ interface Store {
   setTransactionModalOpen: (open: boolean) => void;
 }
 
-export const useStore = create<Store>((set, get) => ({
+export const useStore = create<Store>((set) => ({
   // User state
   user: null,
   setUser: (user) => set({ user }),

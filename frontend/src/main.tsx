@@ -1,6 +1,8 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { Auth0Provider } from '@auth0/auth0-react';
+import { UserProvider } from './contexts/UserContext';
+import ErrorBoundary from './components/ErrorBoundary';
 import App from './App.tsx'
 import './index.css'
 
@@ -10,15 +12,19 @@ const audience = import.meta.env.VITE_AUTH0_AUDIENCE;
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <Auth0Provider
-      domain={domain}
-      clientId={clientId}
-      authorizationParams={{
-        redirect_uri: `${window.location.origin}/callback`,
-        audience: audience,
-      }}
-    >
-      <App />
-    </Auth0Provider>
+    <ErrorBoundary>
+      <Auth0Provider
+        domain={domain}
+        clientId={clientId}
+        authorizationParams={{
+          redirect_uri: `${window.location.origin}/callback`,
+          audience: audience,
+        }}
+      >
+        <UserProvider>
+          <App />
+        </UserProvider>
+      </Auth0Provider>
+    </ErrorBoundary>
   </React.StrictMode>,
 )

@@ -246,7 +246,70 @@ router.post('/legal/accept-privacy', authMiddleware, async (req: Request, res: R
   }
 });
 
-// Delete account
+// Complete profile and onboarding in one operation
+router.put('/complete-profile', authMiddleware, [
+  body('firstName').optional().trim().isLength({ min: 1, max: 50 }),
+  body('lastName').optional().trim().isLength({ min: 1, max: 50 }),
+  body('phone').optional().isMobilePhone('any'),
+  body('dateOfBirth').optional().isISO8601(),
+  body('address').optional().isObject(),
+], async (req: Request, res: Response): Promise<void> => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({ errors: errors.array() });
+      return;
+    }
+
+    if (!isAuthenticatedUser(req.user)) {
+      res.status(401).json({ error: 'User not authenticated' });
+      return;
+    }
+
+    const updateData: any = {
+      'metadata.onboardingCompleted': true,
+      'metadata.lastUpdated': new Date()
+    };
+    
+    // Only update profile if data is provided
+    if (req.body.firstName || req.body.lastName || req.body.phone || req.body.dateOfBirth || req.body.address) {
+      updateData.profile = {
+        ...(req.body.firstName && { firstName: req.body.firstName }),
+        ...(req.body.lastName && { lastName: req.body.lastName }),
+        ...(req.body.phone && { phone: req.body.phone }),
+        ...(req.body.dateOfBirth && { dateOfBirth: new Date(req.body.dateOfBirth) }),
+        ...(req.body.address && { address: req.body.address })
+      };
+    }
+
+    const updatedUser = await databaseService.updateUser(req.user.id, updateData);
+    
+    if (!updatedUser) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    res.json({
+      message: 'Profile completed successfully',
+      user: {
+        id: updatedUser._id,
+        email: updatedUser.email,
+        profile: updatedUser.profile,
+        preferences: updatedUser.preferences,
+        metadata: {
+          onboardingCompleted: updatedUser.metadata.onboardingCompleted,
+          lastLogin: updatedUser.metadata.lastLogin,
+          loginCount: updatedUser.metadata.loginCount
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Complete profile error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Delete user account
 router.delete('/account', authMiddleware, async (req: Request, res: Response): Promise<void> => {
   try {
     if (!isAuthenticatedUser(req.user)) {
