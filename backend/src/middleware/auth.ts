@@ -161,8 +161,14 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
               auth0Id,
               email: email ? email.toLowerCase() : `user-${auth0Id.replace('auth0|', '')}@temp.placeholder.com`, // Valid email format
               profile: {
-                firstName: tokenPayload?.['https://wealthwise.com/firstName'] || tokenPayload?.given_name || 'TempUser',
-                lastName: tokenPayload?.['https://wealthwise.com/lastName'] || tokenPayload?.family_name || 'Placeholder',
+                firstName: tokenPayload?.['https://wealthwise.com/firstName'] || 
+                          tokenPayload?.given_name || 
+                          tokenPayload?.name?.split(' ')[0] || 
+                          'User',
+                lastName: tokenPayload?.['https://wealthwise.com/lastName'] || 
+                         tokenPayload?.family_name || 
+                         tokenPayload?.name?.split(' ').slice(1).join(' ') || 
+                         '',
               },
               metadata: {
                 lastLogin: new Date(),

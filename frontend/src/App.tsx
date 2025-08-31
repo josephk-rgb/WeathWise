@@ -14,6 +14,7 @@ import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import Import from './pages/Import';
 import TalkToFinances from './pages/TalkToFinances';
+import ProfileCompletionWrapper from './components/ProfileCompletion/ProfileCompletionWrapper';
 import { useStore } from './store/useStore';
 import { useAuth } from './hooks/useAuth';
 
@@ -72,9 +73,11 @@ const DebugInfo: React.FC = () => {
 // Layout wrapper component that uses Outlet
 const LayoutWrapper: React.FC = () => {
   return (
-    <Layout>
-      <Outlet />
-    </Layout>
+    <ProfileCompletionWrapper>
+      <Layout>
+        <Outlet />
+      </Layout>
+    </ProfileCompletionWrapper>
   );
 };
 

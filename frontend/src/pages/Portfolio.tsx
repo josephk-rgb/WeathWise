@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, TrendingUp, TrendingDown, DollarSign, PieChart, BarChart3, Edit2, Trash2, Filter, Search, SortAsc, SortDesc } from 'lucide-react';
+import { Plus, TrendingUp, PieChart, Search, SortAsc, SortDesc } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { apiService } from '../services/api';
 import Card from '../components/UI/Card';

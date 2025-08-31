@@ -200,6 +200,35 @@ router.post('/legal/accept-tos', authMiddleware, async (req: Request, res: Respo
   }
 });
 
+// Complete onboarding
+router.post('/complete-onboarding', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!isAuthenticatedUser(req.user)) {
+      res.status(401).json({ error: 'User not authenticated' });
+      return;
+    }
+
+    const updatedUser = await databaseService.updateUser(req.user.id, {
+      metadata: {
+        onboardingCompleted: true
+      }
+    } as any);
+    
+    if (!updatedUser) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    res.json({
+      message: 'Onboarding completed successfully',
+      onboardingCompleted: true
+    });
+  } catch (error) {
+    console.error('Complete onboarding error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Accept privacy policy
 router.post('/legal/accept-privacy', authMiddleware, async (req: Request, res: Response): Promise<void> => {
   try {

@@ -5,8 +5,6 @@ import { apiService } from '../services/api';
 import Card from '../components/UI/Card';
 import StatCard from '../components/UI/StatCard';
 import NetWorthTrend from '../components/Dashboard/NetWorthTrend';
-import PieChart from '../components/Charts/PieChart';
-import ExpenseBarChart from '../components/Charts/ExpenseBarChart';
 import ExpenseList from '../components/Charts/ExpenseList';
 import FinancialHealthScore from '../components/Dashboard/FinancialHealthScore';
 import { formatCurrency } from '../utils/currency';

@@ -320,6 +320,14 @@ class ApiService {
     return this.makeRequest('/analytics/financial-health');
   }
 
+  // Profile completion methods
+  async completeOnboarding(): Promise<any> {
+    return this.makeRequest('/auth/complete-onboarding', {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+  }
+
   // Export methods
   async exportTransactions(format: 'csv' | 'pdf' = 'csv'): Promise<Blob> {
     const response = await fetch(`${this.baseUrl}/transactions/export?format=${format}`, {
