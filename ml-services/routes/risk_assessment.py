@@ -65,3 +65,5 @@ async def stress_test_portfolio(request: RiskRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+

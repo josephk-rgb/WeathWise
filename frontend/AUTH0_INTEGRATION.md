@@ -378,3 +378,5 @@ Enable MFA in Auth0:
 1. Configure MFA settings in Auth0 dashboard
 2. Handle MFA challenges in the frontend
 3. Provide fallback authentication methods
+
+

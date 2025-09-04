@@ -147,3 +147,5 @@ If you're still having issues:
 1. Check the Auth0 documentation: [auth0.com/docs](https://auth0.com/docs)
 2. Verify your Auth0 application settings
 3. Check the browser console for detailed error messages
+
+
