@@ -13,7 +13,8 @@ export class WebSocketService {
   private clients: Map<WebSocket, WebSocketClient> = new Map();
   private marketDataService: MarketDataService;
   private marketDataInterval?: NodeJS.Timeout;
-  private readonly HEARTBEAT_INTERVAL = 30000; // 30 seconds
+  private readonly HEARTBEAT_INTERVAL = 45000; // 45 seconds (increased for stability)
+  private readonly STALE_CLIENT_TIMEOUT = 120000; // 2 minutes (more generous timeout)
   private readonly MARKET_UPDATE_INTERVAL = 5000; // 5 seconds
 
   constructor() {
@@ -85,6 +86,10 @@ export class WebSocketService {
         
         case 'ping':
           this.handlePing(client);
+          break;
+        
+        case 'pong':
+          this.handlePong(client);
           break;
         
         default:
@@ -193,6 +198,13 @@ export class WebSocketService {
   }
 
   /**
+   * Handle pong response from client
+   */
+  private handlePong(client: WebSocketClient): void {
+    client.lastPing = new Date();
+  }
+
+  /**
    * Get market data for multiple symbols
    */
   private async getMarketDataForSymbols(symbols: string[]): Promise<any[]> {
@@ -264,12 +276,17 @@ export class WebSocketService {
       this.clients.forEach((client, ws) => {
         const timeSinceLastPing = now.getTime() - client.lastPing.getTime();
         
-        if (timeSinceLastPing > this.HEARTBEAT_INTERVAL * 2) {
-          // Client hasn't responded to ping in too long
+        if (timeSinceLastPing > this.STALE_CLIENT_TIMEOUT) {
+          // Client hasn't responded to ping in too long (2+ minutes)
           staleClients.push(ws);
         } else if (timeSinceLastPing > this.HEARTBEAT_INTERVAL) {
-          // Send ping
-          this.sendToClient(ws, { type: 'ping', timestamp: now.toISOString() });
+          // Send ping only if client is active and connection is open
+          if (ws.readyState === WebSocket.OPEN) {
+            this.sendToClient(ws, { type: 'ping', timestamp: now.toISOString() });
+          } else {
+            // Connection is not open, mark as stale
+            staleClients.push(ws);
+          }
         }
       });
 

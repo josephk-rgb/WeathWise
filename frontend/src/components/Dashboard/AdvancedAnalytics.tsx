@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { TrendingUp, Target, Shield, PieChart, BarChart3, AlertTriangle, RefreshCw } from 'lucide-react';
 import { apiService } from '../../services/api';
 import { AdvancedPortfolioAnalytics } from '../../types';
@@ -352,4 +352,4 @@ const AdvancedAnalyticsComponent: React.FC<AdvancedAnalyticsProps> = ({ classNam
   );
 };
 
-export default AdvancedAnalyticsComponent;
+export default memo(AdvancedAnalyticsComponent);

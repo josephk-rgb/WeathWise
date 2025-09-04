@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { apiService } from '../services/api';
 import { NewsResponse } from '../types';
 
@@ -30,6 +30,9 @@ export const useNews = ({
   
   const mountedRef = useRef(true);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Memoize symbols array to prevent unnecessary re-renders
+  const stableSymbols = useMemo(() => symbols.sort().join(','), [symbols]);
 
   const fetchNews = useCallback(async (silent = false) => {
     if (!enabled || !mountedRef.current) return;
@@ -78,7 +81,7 @@ export const useNews = ({
         setLoading(false);
       }
     }
-  }, [symbols, limit, enabled]);
+  }, [stableSymbols, limit, enabled]); // Use stable symbols string instead of array
 
   // Manual refetch function
   const refetch = useCallback(() => {

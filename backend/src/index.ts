@@ -41,7 +41,6 @@ import morgan from 'morgan';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import { createServer } from 'http';
-import { WebSocketServer } from 'ws';
 
 // Import routes
 import authRoutes from './routes/auth';
@@ -62,7 +61,6 @@ import { errorHandler } from './middleware/errorHandler';
 import { authMiddleware } from './middleware/auth';
 import { logger } from './utils/logger';
 import { connectDB } from './utils/database';
-import { WebSocketService } from './services/websocketService';
 
 const app = express();
 const server = createServer(app);
@@ -93,20 +91,23 @@ app.use(limiter);
 
 // Health check endpoint
 app.get('/health', (_req, res) => {
+  const dbStatus = require('mongoose').connection.readyState;
+  const dbStates = {
+    0: 'disconnected',
+    1: 'connected',
+    2: 'connecting',
+    3: 'disconnecting'
+  };
+  
   res.status(200).json({
     status: 'OK',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     environment: process.env['NODE_ENV'],
-  });
-});
-
-// WebSocket status endpoint
-app.get('/api/websocket/status', authMiddleware, (_req, res) => {
-  res.json({
-    status: 'OK',
-    websocket: wsService.getStats(),
-    timestamp: new Date().toISOString()
+    database: {
+      status: dbStates[dbStatus as keyof typeof dbStates] || 'unknown',
+      ready: dbStatus === 1
+    }
   });
 });
 
@@ -124,35 +125,6 @@ app.use('/api/market', authMiddleware, marketRoutes);
 app.use('/api/ai', authMiddleware, aiRoutes);
 app.use('/api/test-apis', testApisRoutes); // No auth required for testing
 
-// WebSocket setup for real-time data
-const wss = new WebSocketServer({ server });
-const wsService = new WebSocketService();
-
-wss.on('connection', (ws, req) => {
-  logger.info('New WebSocket connection established');
-  
-  // Extract user ID from query params or headers if available
-  const url = new URL(req.url || '', `http://${req.headers.host}`);
-  const userId = url.searchParams.get('userId') || undefined;
-  
-  // Register client with WebSocket service
-  wsService.addClient(ws, userId);
-  
-  ws.on('message', (message) => {
-    wsService.handleMessage(ws, message.toString());
-  });
-  
-  ws.on('close', () => {
-    logger.info('WebSocket connection closed');
-    wsService.removeClient(ws);
-  });
-  
-  ws.on('error', (error) => {
-    logger.error('WebSocket error:', error);
-    wsService.removeClient(ws);
-  });
-});
-
 // Error handling middleware
 app.use(errorHandler);
 
@@ -167,39 +139,63 @@ app.use('*', (req, res) => {
 // Start server
 async function startServer() {
   try {
-    // Try to connect to database, but continue without it for Auth0 testing
-    try {
-      await connectDB();
-      logger.info('Database connected successfully');
-    } catch (dbError) {
-      logger.warn('Database connection failed, continuing without DB for Auth0 testing:', dbError);
-    }
+    logger.info('🚀 Starting WeathWise backend server...');
     
-    // Start HTTP server
+    // FIRST: Connect to MongoDB and wait for it to be ready
+    logger.info('📊 Connecting to MongoDB...');
+    await connectDB();
+    logger.info('✅ MongoDB connected successfully');
+    
+    // ONLY start the server AFTER database is ready
     server.listen(PORT, () => {
-      logger.info(`Server running on port ${PORT}`);
-      logger.info(`Environment: ${process.env['NODE_ENV']}`);
-      logger.info(`Health check: http://localhost:${PORT}/health`);
+      logger.info(`🚀 Server running on port ${PORT}`);
+      logger.info(`📊 Database: ${process.env['NODE_ENV']}`);
+      logger.info(`🌐 Environment: ${process.env['NODE_ENV']}`);
+      logger.info(`📡 API Base URL: http://localhost:${PORT}/api`);
+      logger.info(`🏥 Health check: http://localhost:${PORT}/health`);
+      logger.info('✅ Server is ready to accept requests');
     });
   } catch (error) {
-    logger.error('Failed to start server:', error);
+    logger.error('❌ Failed to start server:', error);
+    
+    // Log specific MongoDB connection errors
+    if (error && typeof error === 'object' && 'name' in error) {
+      logger.error('📊 Database connection error details:', {
+        name: (error as any).name,
+        message: (error as any).message,
+        uri: process.env['MONGODB_URI'] ? 'URI configured' : 'No URI found'
+      });
+    }
+    
     process.exit(1);
   }
 }
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
-  logger.info('SIGTERM received, shutting down gracefully');
+process.on('SIGTERM', async () => {
+  logger.info('🛑 SIGTERM received, shutting down gracefully...');
+  try {
+    await require('mongoose').connection.close();
+    logger.info('📊 Database connection closed');
+  } catch (error) {
+    logger.error('Error closing database connection:', error);
+  }
   server.close(() => {
-    logger.info('Process terminated');
+    logger.info('🛑 Process terminated');
     process.exit(0);
   });
 });
 
-process.on('SIGINT', () => {
-  logger.info('SIGINT received, shutting down gracefully');
+process.on('SIGINT', async () => {
+  logger.info('🛑 SIGINT received, shutting down gracefully...');
+  try {
+    await require('mongoose').connection.close();
+    logger.info('📊 Database connection closed');
+  } catch (error) {
+    logger.error('Error closing database connection:', error);
+  }
   server.close(() => {
-    logger.info('Process terminated');
+    logger.info('🛑 Process terminated');
     process.exit(0);
   });
 });

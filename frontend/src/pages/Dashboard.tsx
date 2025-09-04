@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { DollarSign, TrendingUp, Target, CreditCard, ArrowUpRight, ArrowDownRight, Lightbulb } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { apiService } from '../services/api';
@@ -32,33 +32,17 @@ const Dashboard: React.FC = () => {
   const [expenseData, setExpenseData] = useState<any[]>([]);
   const [loadingStats, setLoadingStats] = useState(true);
 
-  useEffect(() => {
-    console.log('Dashboard useEffect triggered:', {
-      hasUser: !!user,
-      isAuthenticated,
-      authLoading,
-      hasUserProfile: !!userProfile
-    });
-
-    if (user && isAuthenticated && !authLoading && userProfile) {
-      console.log('Loading real dashboard data...');
-      loadDashboardData();
-    } else {
-      console.log('User not authenticated or profile not loaded...');
-    }
-  }, [user, isAuthenticated, authLoading, userProfile]);
-
-  const loadDashboardData = async () => {
-    if (!user) {
-      console.log('No user available for loadDashboardData');
+  const loadDashboardData = useCallback(async () => {
+    if (!userProfile) {
+      console.log('No userProfile available for loadDashboardData');
       return;
     }
 
-    console.log('Starting to load dashboard data for user:', user.id);
+    console.log('Starting to load dashboard data for user:', userProfile.id);
 
     console.log('Making parallel API calls...');
     const [transactionsData, goalsData, investmentsData, recommendationsData, dashboardStatsData, spendingData, financialHealthData] = await Promise.all([
-      apiService.getTransactions(user.id).then(data => {
+      apiService.getTransactions(userProfile.id).then(data => {
         // Ensure we always get an array for transactions
         if (!Array.isArray(data)) {
           console.warn('Transactions API returned non-array data:', data);
@@ -69,7 +53,7 @@ const Dashboard: React.FC = () => {
         console.error('Failed to load transactions:', err);
         return []; // Return empty array on error
       }),
-      apiService.getGoals(user.id).then(data => {
+      apiService.getGoals(userProfile.id).then(data => {
         // Ensure we always get an array for goals
         if (!Array.isArray(data)) {
           console.warn('Goals API returned non-array data:', data);
@@ -80,7 +64,7 @@ const Dashboard: React.FC = () => {
         console.error('Failed to load goals:', err);
         return []; // Return empty array on error
       }),
-      apiService.getInvestments(user.id).then(data => {
+      apiService.getInvestments(userProfile.id).then(data => {
         // Ensure we always get an array for investments
         if (!Array.isArray(data)) {
           console.warn('Investments API returned non-array data:', data);
@@ -91,7 +75,7 @@ const Dashboard: React.FC = () => {
         console.error('Failed to load investments:', err);
         return []; // Return empty array on error
       }),
-      apiService.getRecommendations(user.id).then(data => {
+      apiService.getRecommendations(userProfile.id).then(data => {
         // Ensure we always get an array for recommendations
         if (!Array.isArray(data)) {
           console.warn('Recommendations API returned non-array data:', data);
@@ -149,7 +133,23 @@ const Dashboard: React.FC = () => {
     setDashboardStats(enhancedStats);
     setExpenseData(spendingData);
     setLoadingStats(false);
-  };
+  }, [userProfile, setTransactions, setGoals, setInvestments, setRecommendations]);
+
+  useEffect(() => {
+    console.log('Dashboard useEffect triggered:', {
+      hasUserProfile: !!userProfile,
+      isAuthenticated,
+      authLoading,
+      userId: userProfile?.id
+    });
+
+    if (isAuthenticated && !authLoading && userProfile?.id) {
+      console.log('Loading real dashboard data...');
+      loadDashboardData();
+    } else {
+      console.log('User not authenticated or profile not loaded...');
+    }
+  }, [isAuthenticated, authLoading, userProfile?.id, loadDashboardData]);
 
   // Calculate metrics - ensure transactions is always an array
   const safeTransactions = Array.isArray(transactions) ? transactions : [];

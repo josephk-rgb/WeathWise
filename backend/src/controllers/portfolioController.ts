@@ -63,6 +63,27 @@ export class PortfolioController {
 
       logger.info('Portfolio overview calculated:', portfolioData);
 
+      // Set caching headers for polling optimization
+      const lastModified = new Date().toUTCString();
+      res.set({
+        'Last-Modified': lastModified,
+        'Cache-Control': 'public, max-age=30', // 30 seconds cache
+        'ETag': `"portfolio-${userId}-${Date.now()}"`
+      });
+
+      // Check if client has current version
+      const ifModifiedSince = req.headers['if-modified-since'];
+      if (ifModifiedSince) {
+        const clientDate = new Date(ifModifiedSince);
+        const dataAge = Date.now() - portfolioData.lastUpdated.getTime();
+        
+        // If data is less than 30 seconds old, return 304
+        if (dataAge < 30000) {
+          res.status(304).end();
+          return;
+        }
+      }
+
       res.json({
         success: true,
         data: portfolioData

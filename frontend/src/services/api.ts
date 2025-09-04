@@ -9,17 +9,12 @@ import {
   NewsResponse,
   RealtimePortfolioValue,
   AdvancedPortfolioAnalytics,
-  WebSocketMessage,
   NewsProvider
 } from '../types';
 
 // Enhanced API service - stateless authentication
 class ApiService {
   private baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-  private ws: WebSocket | null = null;
-  private wsReconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
-  private wsListeners: Map<string, Function[]> = new Map();
   private pendingRequests: Map<string, Promise<any>> = new Map(); // For request deduplication
   private cache: Map<string, { data: any; timestamp: number; ttl: number }> = new Map(); // Response cache with TTL
   private requestTimestamps: Map<string, number> = new Map(); // For rate limiting
@@ -40,13 +35,9 @@ class ApiService {
     }
   }
 
-  // Set authentication token (temporary for WebSocket)
+  // Set authentication token
   setToken(token: string) {
     this.currentToken = token;
-    // Initialize WebSocket with token if needed
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      this.initializeWebSocket();
-    }
   }
 
   // Get current token
@@ -57,7 +48,6 @@ class ApiService {
   // Clear authentication token
   clearToken() {
     this.currentToken = null;
-    this.disconnectWebSocket();
     this.clearCache();
   }
 
@@ -88,7 +78,6 @@ class ApiService {
 
   // Destroy the API service instance
   destroy() {
-    this.disconnectWebSocket();
     this.clearCache();
     if (this.cacheCleanupInterval) {
       clearInterval(this.cacheCleanupInterval);
@@ -129,7 +118,8 @@ class ApiService {
   }
 
   // Helper method to make authenticated requests with retry logic, caching, and enhanced deduplication
-  private async makeRequest(endpoint: string, options: RequestInit = {}, retryCount = 0, cacheTTL: number = 60000): Promise<any> {
+  // Default cache TTL increased from 1 minute to 3 minutes for better performance
+  private async makeRequest(endpoint: string, options: RequestInit = {}, retryCount = 0, cacheTTL: number = 180000): Promise<any> {
     const token = this.currentToken;
     const url = `${this.baseUrl}${endpoint}`;
     
@@ -276,118 +266,6 @@ class ApiService {
     }
   }
 
-  // 🚀 WebSocket Management (Optional Enhancement)
-  private initializeWebSocket() {
-    if (!this.currentToken) return;
-    
-    // Prevent multiple WebSocket connections
-    if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
-      console.log('WebSocket already connecting, skipping...');
-      return;
-    }
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      console.log('WebSocket already connected, skipping...');
-      return;
-    }
-
-    try {
-      const wsUrl = this.baseUrl.replace('http', 'ws').replace('/api', '/ws');
-      this.ws = new WebSocket(wsUrl);
-
-      this.ws.onopen = () => {
-        console.log('WebSocket connected');
-        this.wsReconnectAttempts = 0;
-        
-        // Wait a bit to ensure connection is fully ready before sending auth
-        setTimeout(() => {
-          if (this.ws && this.ws.readyState === WebSocket.OPEN && this.currentToken) {
-            this.ws.send(JSON.stringify({
-              type: 'auth',
-              token: this.currentToken
-            }));
-          }
-        }, 100);
-      };
-
-      this.ws.onmessage = (event) => {
-        try {
-          const message: WebSocketMessage = JSON.parse(event.data);
-          this.handleWebSocketMessage(message);
-        } catch (error) {
-          console.error('WebSocket message parsing error:', error);
-        }
-      };
-
-      this.ws.onclose = (event) => {
-        console.log('WebSocket disconnected', event.code, event.reason);
-        // Only attempt reconnect for certain error codes and if we have a token
-        if (event.code !== 1000 && event.code !== 1001 && this.currentToken && this.wsReconnectAttempts < this.maxReconnectAttempts) {
-          this.attemptReconnect();
-        }
-      };
-
-      this.ws.onerror = (error) => {
-        console.warn('WebSocket error (non-critical):', error);
-        // WebSocket errors are non-critical for the main app functionality
-      };
-    } catch (error) {
-      console.warn('Failed to initialize WebSocket (non-critical):', error);
-      // WebSocket initialization failure should not block the app
-    }
-  }
-
-  private attemptReconnect() {
-    // Don't attempt reconnection if we're already at max attempts
-    if (this.wsReconnectAttempts >= this.maxReconnectAttempts) {
-      console.log('Max WebSocket reconnection attempts reached');
-      return;
-    }
-    
-    if (!this.currentToken) {
-      console.log('No token available for WebSocket reconnection');
-      return;
-    }
-    
-    this.wsReconnectAttempts++;
-    const delay = Math.min(1000 * this.wsReconnectAttempts, 10000); // Max 10 seconds
-    
-    console.log(`Attempting WebSocket reconnection (${this.wsReconnectAttempts}/${this.maxReconnectAttempts}) in ${delay}ms`);
-    
-    setTimeout(() => {
-      this.initializeWebSocket();
-    }, delay);
-  }
-
-  private handleWebSocketMessage(message: WebSocketMessage) {
-    const listeners = this.wsListeners.get(message.type) || [];
-    listeners.forEach(listener => listener(message.data));
-  }
-
-  public onWebSocketMessage(type: string, callback: Function) {
-    if (!this.wsListeners.has(type)) {
-      this.wsListeners.set(type, []);
-    }
-    this.wsListeners.get(type)!.push(callback);
-  }
-
-  public offWebSocketMessage(type: string, callback: Function) {
-    const listeners = this.wsListeners.get(type) || [];
-    const index = listeners.indexOf(callback);
-    if (index > -1) {
-      listeners.splice(index, 1);
-    }
-  }
-
-  private disconnectWebSocket() {
-    if (this.ws) {
-      // Close cleanly to prevent reconnection
-      this.ws.close(1000, 'Client disconnecting');
-      this.ws = null;
-    }
-    this.wsListeners.clear();
-    this.wsReconnectAttempts = 0; // Reset reconnection attempts
-  }
-
   // Public method for testing authentication
   async testAuth(): Promise<any> {
     return this.makeRequest('/auth-test/test');
@@ -402,7 +280,8 @@ class ApiService {
   async getCurrentUser(): Promise<User> {
     console.log('📡 Calling getCurrentUser API...');
     try {
-      const result = await this.makeRequest('/auth/me');
+      // Cache user profile for 10 minutes since it rarely changes
+      const result = await this.makeRequest('/auth/me', {}, 0, 600000);
       console.log('✅ getCurrentUser successful:', !!result);
       return result;
     } catch (error) {
@@ -588,7 +467,7 @@ class ApiService {
     return this.makeRequest(`/market/search?q=${encodeURIComponent(query)}`);
   }
 
-  // 🚀 NEW: Enhanced Yahoo Finance Market Data Methods
+  // Enhanced Yahoo Finance Market Data Methods
   async getYahooMarketData(symbols: string[]): Promise<MarketData[]> {
     const response = await this.makeRequest('/market/yahoo-data', {
       method: 'POST',
@@ -607,31 +486,31 @@ class ApiService {
     return response.data || response;
   }
 
-  // 🚀 NEW: Real-time Portfolio Value with Yahoo Finance
+  // Real-time Portfolio Value with Yahoo Finance
   async getRealtimePortfolioValue(): Promise<RealtimePortfolioValue> {
-    const response = await this.makeRequest('/portfolio/realtime-value');
+    const response = await this.makeRequest('/investments/portfolio/summary');
     return response.data || response;
   }
 
-  // 🚀 NEW: Advanced Portfolio Analytics
+  // Advanced Portfolio Analytics
   async getAdvancedPortfolioAnalytics(): Promise<AdvancedPortfolioAnalytics> {
-    const response = await this.makeRequest('/portfolio/analytics');
-    // Backend returns { success: true, data: { portfolioMetrics, ... } }
+    // Cache analytics for 5 minutes - increased from default 3 minutes
+    const response = await this.makeRequest('/portfolio/analytics', {}, 0, 300000);
     // Extract the nested data
     return response.data?.data || response.data || response;
   }
 
-  // 🚀 NEW: Financial News Methods with caching
+  // Financial News Methods with caching
   async getFinancialNews(limit: number = 20): Promise<NewsResponse> {
-    // Cache news for 5 minutes (300000ms) since market news doesn't change that frequently
-    const response = await this.makeRequest(`/market/news?limit=${limit}`, {}, 0, 300000);
-    return response;
+    // Cache news for 15 minutes (900000ms) - increased from 5 minutes for better cache reuse
+    const response = await this.makeRequest(`/market/news?limit=${limit}`, {}, 0, 900000);
+    return response.data || response;
   }
 
   async getSymbolNews(symbol: string, limit: number = 10): Promise<NewsResponse> {
-    // Cache symbol-specific news for 3 minutes
-    const response = await this.makeRequest(`/market/news/${symbol}?limit=${limit}`, {}, 0, 180000);
-    return response;
+    // Cache symbol-specific news for 10 minutes - increased from 3 minutes
+    const response = await this.makeRequest(`/market/news/${symbol}?limit=${limit}`, {}, 0, 600000);
+    return response.data || response;
   }
 
   async getNewsProviders(): Promise<NewsProvider[]> {
@@ -678,11 +557,13 @@ class ApiService {
   }
 
   async getDashboardStats(): Promise<any> {
-    return this.makeRequest('/analytics/dashboard-stats');
+    // Cache dashboard stats for 5 minutes - increased from default 3 minutes
+    return this.makeRequest('/analytics/dashboard-stats', {}, 0, 300000);
   }
 
   async getFinancialHealth(): Promise<any> {
-    return this.makeRequest('/analytics/financial-health');
+    // Cache financial health for 10 minutes since it changes infrequently
+    return this.makeRequest('/analytics/financial-health', {}, 0, 600000);
   }
 
   // Profile completion methods
@@ -713,17 +594,9 @@ class ApiService {
     return this.makeRequest('/health');
   }
 
-  // 🚀 NEW: WebSocket Status
-  getWebSocketStatus(): 'connected' | 'disconnected' | 'connecting' {
-    if (!this.ws) return 'disconnected';
-    switch (this.ws.readyState) {
-      case WebSocket.CONNECTING:
-        return 'connecting';
-      case WebSocket.OPEN:
-        return 'connected';
-      default:
-        return 'disconnected';
-    }
+  // Public method for making authenticated requests (used by polling manager)
+  async makeAuthenticatedRequest(endpoint: string, cacheTTL?: number): Promise<any> {
+    return this.makeRequest(endpoint, {}, 0, cacheTTL);
   }
 }
 

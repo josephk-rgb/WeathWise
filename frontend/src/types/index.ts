@@ -83,14 +83,7 @@ export interface RealtimePortfolioValue {
   }>;
 }
 
-// 🚀 NEW: WebSocket Message Types
-export interface WebSocketMessage {
-  type: 'market-data' | 'portfolio-update' | 'news-alert' | 'auth' | 'error';
-  data?: any;
-  timestamp: Date;
-}
-
-// 🚀 NEW: Provider Status Types
+// Provider Status Types
 export interface NewsProvider {
   name: string;
   isAvailable: boolean;
@@ -100,10 +93,6 @@ export interface NewsProvider {
 }
 
 export interface ServiceStatus {
-  websocket?: {
-    totalClients: number;
-    authenticatedClients: number;
-  };
   aiService?: {
     circuitBreaker: {
       status: 'CLOSED' | 'OPEN' | 'HALF_OPEN';

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { expressjwt as jwt } from 'express-jwt';
 import jwksRsa from 'jwks-rsa';
+import mongoose from 'mongoose';
 import { DatabaseService } from '../services/DatabaseService';
 
 // Extend Request interface to include user
@@ -47,6 +48,17 @@ const checkJwt = jwt({
 
 export const authMiddleware = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   return new Promise<void>((resolve) => {
+    // First check database connection
+    if (mongoose.connection.readyState !== 1) {
+      console.error('Database not ready for auth middleware');
+      res.status(503).json({ 
+        error: 'Database not ready',
+        status: 'service_unavailable',
+        message: 'Please try again in a moment'
+      });
+      return resolve();
+    }
+    
     // Check if authorization header exists
     if (!req.headers.authorization) {
       console.error('No authorization header found');

@@ -103,10 +103,34 @@ router.get('/summary', async (_req, res): Promise<void> => {
 // Get market news
 router.get('/news', async (req, res): Promise<void> => {
   try {
-    const { query, limit = 20 } = req.query;
+    const { query, symbols, limit = 20 } = req.query;
+    
+    // Use symbols if provided, otherwise use query
+    const searchQuery = symbols ? (symbols as string) : (query as string);
+    
+    // Set caching headers for polling optimization
+    const lastModified = new Date().toUTCString();
+    res.set({
+      'Last-Modified': lastModified,
+      'Cache-Control': 'public, max-age=600', // 10 minutes cache for news
+      'ETag': `"news-${searchQuery || 'general'}-${Date.now()}"`
+    });
+
+    // Check if client has current version (news changes slowly)
+    const ifModifiedSince = req.headers['if-modified-since'];
+    if (ifModifiedSince) {
+      const clientDate = new Date(ifModifiedSince);
+      const tenMinutesAgo = Date.now() - (10 * 60 * 1000);
+      
+      // If data is less than 10 minutes old, return 304
+      if (clientDate.getTime() > tenMinutesAgo) {
+        res.status(304).end();
+        return;
+      }
+    }
     
     const result = await newsService.getNews(
-      query as string, 
+      searchQuery, 
       Number(limit)
     );
     
@@ -119,7 +143,8 @@ router.get('/news', async (req, res): Promise<void> => {
           provider: result.rateLimitInfo.name,
           remaining: result.rateLimitInfo.rateLimitRemaining,
           isAvailable: result.rateLimitInfo.isAvailable
-        }
+        },
+        lastUpdated: new Date()
       }
     });
   } catch (error) {
@@ -132,6 +157,26 @@ router.get('/news/:symbol', async (req, res): Promise<void> => {
   try {
     const { symbol } = req.params;
     const { limit = 10 } = req.query;
+
+    // Set caching headers for polling optimization
+    const lastModified = new Date().toUTCString();
+    res.set({
+      'Last-Modified': lastModified,
+      'Cache-Control': 'public, max-age=600', // 10 minutes cache for news
+      'ETag': `"news-${symbol}-${Date.now()}"`
+    });
+
+    // Check if client has current version
+    const ifModifiedSince = req.headers['if-modified-since'];
+    if (ifModifiedSince) {
+      const clientDate = new Date(ifModifiedSince);
+      const tenMinutesAgo = Date.now() - (10 * 60 * 1000);
+      
+      if (clientDate.getTime() > tenMinutesAgo) {
+        res.status(304).end();
+        return;
+      }
+    }
     
     const result = await newsService.getNews(`${symbol}`, Number(limit));
     
@@ -145,7 +190,8 @@ router.get('/news/:symbol', async (req, res): Promise<void> => {
           provider: result.rateLimitInfo.name,
           remaining: result.rateLimitInfo.rateLimitRemaining,
           isAvailable: result.rateLimitInfo.isAvailable
-        }
+        },
+        lastUpdated: new Date()
       }
     });
   } catch (error) {

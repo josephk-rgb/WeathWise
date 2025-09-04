@@ -1,34 +1,33 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Newspaper, ExternalLink, Clock, TrendingUp, TrendingDown, Minus, RefreshCw } from 'lucide-react';
-import { useNews } from '../../hooks/useNews';
+import { useNewsPolling } from '../../hooks/usePolling';
 
 interface MarketNewsWidgetProps {
   symbols?: string[]; // If provided, show symbol-specific news
   limit?: number;
-  refreshInterval?: number; // in milliseconds
   className?: string;
 }
 
 const MarketNewsWidget: React.FC<MarketNewsWidgetProps> = ({
   symbols = [],
-  limit = 10,
-  refreshInterval = 300000, // 5 minutes
+  limit = 3, // Changed from 10 to 3 for most important news only
   className = ''
 }) => {
-  // In development mode with React.StrictMode, reduce refresh interval to prevent excessive requests
-  const adjustedRefreshInterval = import.meta.env.DEV 
-    ? Math.max(refreshInterval, 600000) // Minimum 10 minutes in dev
-    : refreshInterval;
-    
-  const { data: newsData, loading, error, lastUpdate, refetch } = useNews({
-    symbols,
-    limit,
-    refreshInterval: adjustedRefreshInterval
-  });
+  // Use polling hook for news data (10 minutes interval)
+  const { 
+    data: newsData, 
+    isLoading: loading, 
+    error, 
+    lastUpdated: lastUpdate, 
+    refresh: refetch 
+  } = useNewsPolling(symbols, true);
 
-  const news = newsData?.articles || [];
-  const newsSource = newsData?.source || 'Unknown';
-  const rateLimitInfo = newsData?.rateLimitInfo;
+  // Debug logging
+  console.log('🗞️ News polling data:', { newsData, symbols, enabled: true });
+
+  const news = newsData?.data?.articles || newsData?.articles || [];
+  const newsSource = newsData?.data?.source || newsData?.source || 'Unknown';
+  const rateLimitInfo = newsData?.data?.rateLimitInfo || newsData?.rateLimitInfo;
 
   const getSentimentIcon = (sentiment?: string) => {
     switch (sentiment) {
@@ -124,7 +123,7 @@ const MarketNewsWidget: React.FC<MarketNewsWidgetProps> = ({
         ) : error ? (
           <div className="text-center py-6">
             <div className="text-red-500 mb-2">Failed to load news</div>
-            <div className="text-xs text-gray-500 mb-4">{error}</div>
+            <div className="text-xs text-gray-500 mb-4">{error.message}</div>
             <button
               onClick={refetch}
               className="text-blue-600 hover:text-blue-700 text-sm font-medium"
@@ -139,7 +138,7 @@ const MarketNewsWidget: React.FC<MarketNewsWidgetProps> = ({
           </div>
         ) : (
           <div className="space-y-4">
-            {news.map((article, index) => (
+            {news.slice(0, limit).map((article: any, index: number) => (
               <div
                 key={article.id || index}
                 className={`border-l-4 pl-4 pb-4 ${getSentimentColor(article.sentiment)} ${
@@ -205,4 +204,4 @@ const MarketNewsWidget: React.FC<MarketNewsWidgetProps> = ({
   );
 };
 
-export default MarketNewsWidget;
+export default memo(MarketNewsWidget);

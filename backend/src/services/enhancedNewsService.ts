@@ -86,13 +86,14 @@ export class EnhancedNewsService {
    * NewsAPI.org implementation
    */
   private async fetchFromNewsAPI(query?: string, limit: number = 20): Promise<{ articles: NewsArticle[] }> {
-    const searchQuery = query || 'stock market finance';
+    // Enhanced search query for most important financial news
+    const searchQuery = query || 'stock market OR finance OR economy OR "federal reserve" OR earnings OR "market update"';
     const response = await axios.get('https://newsapi.org/v2/everything', {
       params: {
         q: searchQuery,
         language: 'en',
-        sortBy: 'publishedAt',
-        pageSize: limit,
+        sortBy: 'publishedAt', // Get recent articles first
+        pageSize: Math.min(limit * 3, 50), // Fetch more to filter for quality
         apiKey: this.newsApiKey
       },
       timeout: 10000
@@ -102,16 +103,24 @@ export class EnhancedNewsService {
       // Update rate limit info
       this.providers.newsapi.rateLimitRemaining = parseInt(response.headers['x-ratelimit-remaining'] || '1000');
       
-      const articles = response.data.articles.map((article: any, index: number) => ({
-        id: `newsapi_${Date.now()}_${index}`,
-        title: article.title,
-        description: article.description,
-        url: article.url,
-        publishedAt: article.publishedAt,
-        source: article.source.name,
-        sentiment: this.analyzeSentiment(article.title + ' ' + article.description),
-        relevance: this.calculateRelevance(article.title + ' ' + article.description, searchQuery)
-      }));
+      const articles = response.data.articles
+        .map((article: any, index: number) => ({
+          id: `newsapi_${Date.now()}_${index}`,
+          title: article.title,
+          description: article.description,
+          url: article.url,
+          publishedAt: article.publishedAt,
+          source: article.source.name,
+          sentiment: this.analyzeSentiment(article.title + ' ' + article.description),
+          relevance: this.calculateRelevance(article.title + ' ' + article.description, searchQuery)
+        }))
+        // Sort by relevance first (highest first), then by recency
+        .sort((a, b) => {
+          const relevanceDiff = b.relevance - a.relevance;
+          if (Math.abs(relevanceDiff) > 0.1) return relevanceDiff; // If significant relevance difference
+          return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(); // Then by recency
+        })
+        .slice(0, limit); // Take only the requested amount
 
       return { articles };
     }
@@ -251,21 +260,60 @@ export class EnhancedNewsService {
   }
 
   /**
-   * Calculate relevance score
+   * Calculate relevance score for financial news importance
    */
   private calculateRelevance(text: string, query: string): number {
     const lowerText = text.toLowerCase();
     const lowerQuery = query.toLowerCase();
-    const queryWords = lowerQuery.split(' ');
+    
+    // High-importance financial keywords
+    const highImportanceKeywords = [
+      'federal reserve', 'fed', 'interest rate', 'inflation', 'gdp',
+      'earnings', 'market crash', 'bull market', 'bear market',
+      'recession', 'economy', 'unemployment', 'jobs report',
+      'warren buffett', 'tesla', 'apple', 'nvidia', 'microsoft',
+      'sp500', 's&p 500', 'dow jones', 'nasdaq', 'cryptocurrency',
+      'bitcoin', 'merger', 'acquisition', 'ipo', 'dividend'
+    ];
+    
+    // Medium-importance keywords
+    const mediumImportanceKeywords = [
+      'stock', 'finance', 'investment', 'trading', 'market',
+      'portfolio', 'analyst', 'price target', 'upgrade', 'downgrade'
+    ];
     
     let score = 0;
-    queryWords.forEach(word => {
-      if (lowerText.includes(word)) {
+    
+    // Check for high-importance keywords (weight: 3)
+    highImportanceKeywords.forEach(keyword => {
+      if (lowerText.includes(keyword)) {
+        score += 3;
+      }
+    });
+    
+    // Check for medium-importance keywords (weight: 1)
+    mediumImportanceKeywords.forEach(keyword => {
+      if (lowerText.includes(keyword)) {
         score += 1;
       }
     });
     
-    return Math.min(score / queryWords.length, 1);
+    // Check for query word matches (weight: 2)
+    const queryWords = lowerQuery.split(' ').filter(word => word.length > 2);
+    queryWords.forEach(word => {
+      if (lowerText.includes(word)) {
+        score += 2;
+      }
+    });
+    
+    // Boost score for financial sources
+    const prestigeSources = ['reuters', 'bloomberg', 'wall street journal', 'financial times', 'cnbc'];
+    if (prestigeSources.some(source => lowerText.includes(source))) {
+      score *= 1.2;
+    }
+    
+    // Normalize score to 0-1 range, with emphasis on higher scores
+    return Math.min(score / 10, 1);
   }
 
   /**
