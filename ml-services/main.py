@@ -3,10 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 import uvicorn
 from contextlib import asynccontextmanager
-# import redis.asyncio as redis
-# from motor.motor_asyncio import AsyncIOMotorClient
 import os
 from dotenv import load_dotenv
+import logging
+
+# Import database connections
+from database import connect_mongodb, disconnect_mongodb, connect_redis, disconnect_redis
+from database import mongodb_connected, redis_connected
 
 # Import routers
 from routes import portfolio_analysis, market_prediction, risk_assessment, ai_chat
@@ -14,34 +17,53 @@ from routes import portfolio_analysis, market_prediction, risk_assessment, ai_ch
 # Load environment variables
 load_dotenv()
 
-# Global variables for database and cache connections
-# redis_client = None
-# mongo_client = None
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    global redis_client, mongo_client
+    logger.info("🚀 Starting WeathWise ML Services...")
     
-    # Initialize Redis connection (commented out for minimal setup)
-    # redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
-    # redis_client = redis.from_url(redis_url, decode_responses=True)
+    # Initialize MongoDB connection
+    try:
+        await connect_mongodb()
+        if await mongodb_connected():
+            logger.info("✅ MongoDB connected successfully")
+        else:
+            logger.warning("⚠️ MongoDB connection failed")
+    except Exception as e:
+        logger.error(f"❌ MongoDB connection error: {e}")
     
-    # Initialize MongoDB connection (commented out for minimal setup)
-    # mongo_url = os.getenv("MONGODB_URI")
-    # if mongo_url:
-    #     mongo_client = AsyncIOMotorClient(mongo_url)
+    # Initialize Redis connection (optional)
+    try:
+        await connect_redis()
+        if await redis_connected():
+            logger.info("✅ Redis connected successfully")
+        else:
+            logger.warning("⚠️ Redis connection failed (caching disabled)")
+    except Exception as e:
+        logger.warning(f"⚠️ Redis connection error (caching disabled): {e}")
     
-    print("ML Services started successfully")
+    logger.info("✅ ML Services started successfully")
     
     yield
     
     # Shutdown
-    # if redis_client:
-    #     await redis_client.close()
-    # if mongo_client:
-    #     mongo_client.close()
-    print("ML Services shutdown")
+    logger.info("🛑 Shutting down WeathWise ML Services...")
+    
+    try:
+        await disconnect_mongodb()
+    except Exception as e:
+        logger.error(f"❌ MongoDB disconnect error: {e}")
+    
+    try:
+        await disconnect_redis()
+    except Exception as e:
+        logger.error(f"❌ Redis disconnect error: {e}")
+    
+    logger.info("✅ ML Services shutdown complete")
 
 # Create FastAPI app
 app = FastAPI(
@@ -71,6 +93,9 @@ app.include_router(market_prediction.router, prefix="/api/ml/market", tags=["Mar
 app.include_router(risk_assessment.router, prefix="/api/ml/risk", tags=["Risk Assessment"])
 app.include_router(ai_chat.router, prefix="/api/ml/chat", tags=["AI Chat"])
 
+# BACKWARD COMPATIBILITY: Add /ai prefix for direct frontend calls
+app.include_router(ai_chat.router, prefix="/ai", tags=["AI Chat (Legacy)"])
+
 @app.get("/")
 async def root():
     return {
@@ -81,12 +106,19 @@ async def root():
 
 @app.get("/health")
 async def health_check():
+    """Health check endpoint with database status."""
+    mongo_status = await mongodb_connected()
+    redis_status = await redis_connected()
+    
     return {
         "status": "healthy",
         "services": {
-            "redis": False,  # Disabled in minimal setup
-            "mongodb": False  # Disabled in minimal setup
-        }
+            "mongodb": mongo_status,
+            "redis": redis_status,
+            "ollama": True  # TODO: Add actual Ollama health check
+        },
+        "database_ready": mongo_status,
+        "cache_ready": redis_status
     }
 
 if __name__ == "__main__":

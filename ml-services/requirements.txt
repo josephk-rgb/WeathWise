@@ -18,6 +18,9 @@ httpx==0.25.2
 # Environment and configuration
 python-dotenv==1.0.0
 
+# Authentication
+python-jose[cryptography]==3.3.0
+
 # Utilities
 python-dateutil==2.8.2
 pytz==2023.3

@@ -4,19 +4,61 @@ import { AIServiceManager } from '../services/aiServiceManager';
 const router = Router();
 const aiService = new AIServiceManager();
 
-// Chat with AI
-router.post('/chat', async (req, res) => {
+// Test endpoint for ML service connectivity (no auth required)
+router.post('/test-chat', async (req, res) => {
   try {
-    const { message, context, model = 'llama3.1:8b' } = req.body;
+    const { message, model = 'llama3.1:8b' } = req.body;
+    
+    if (!message) {
+      return res.status(400).json({ error: 'Message is required' });
+    }
     
     try {
-      const response = await aiService.chat(message, context, model);
+      const response = await aiService.chat(message, { test: true }, model);
       
       res.json({
         success: true,
         data: response,
-        userId: req.user?.id,
-        source: 'ai'
+        source: 'ai',
+        test: true
+      });
+    } catch (error: any) {
+      console.log('AI service unavailable, returning fallback response');
+      
+      res.json({
+        success: true,
+        data: {
+          response: "I'm a test fallback response. The ML service might be unavailable.",
+          confidence: 0.5,
+          sources: ["fallback"]
+        },
+        source: 'fallback',
+        note: 'AI service temporarily unavailable'
+      });
+    }
+  } catch (error: any) {
+    console.error('AI Test Chat Error:', error.message);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+// Chat with AI
+router.post('/chat', async (req, res) => {
+  try {
+    const { message, context, model = 'llama3.1:8b' } = req.body;
+    const userId = req.user?.id;
+    const authToken = req.headers.authorization?.replace('Bearer ', '');
+    
+    try {
+      // Pass user context to AI service for personalized responses
+      const response = await aiService.chat(message, context, model, userId, authToken);
+      
+      res.json({
+        success: true,
+        data: response,
+        userId: userId,
+        source: 'ai',
+        personalized: !!userId
       });
     } catch (error: any) {
       console.log('AI service unavailable, returning fallback response');
@@ -26,7 +68,7 @@ router.post('/chat', async (req, res) => {
       res.json({
         success: true,
         data: fallbackResponse,
-        userId: req.user?.id,
+        userId: userId,
         source: 'fallback',
         note: 'AI service temporarily unavailable'
       });

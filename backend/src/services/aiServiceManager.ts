@@ -114,24 +114,43 @@ export class AIServiceManager {
   }
 
   /**
-   * Chat with AI service
+   * Chat with AI service - Enhanced with user context and authentication
    */
-  async chat(message: string, context?: any, model?: string): Promise<any> {
+  async chat(message: string, context?: any, model?: string, userId?: string, authToken?: string): Promise<any> {
     if (!this.canMakeRequest()) {
       throw new Error('AI service is currently unavailable (circuit breaker open)');
     }
 
     try {
-      const response = await this.axiosInstance.post('/chat', {
+      // Prepare the request payload with user context
+      const payload = {
         message,
         context,
-        model: model || 'llama3.1:8b'
-      });
+        model: model || 'llama3.1:8b',
+        user_id: userId,
+        include_financial_data: !!userId // Only include financial data if we have a user ID
+      };
+
+      // Prepare headers with authentication if available
+      const headers: any = {
+        'Content-Type': 'application/json'
+      };
+      
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
+
+      logger.info(`🤖 Calling ML service chat with user_id: ${userId || 'anonymous'}, financial_data: ${!!userId}`);
+
+      const response = await this.axiosInstance.post('/api/ml/chat/chat', payload, { headers });
 
       this.recordSuccess();
+      logger.info(`✅ ML service responded with confidence: ${response.data.confidence}, sources: ${response.data.sources?.join(', ')}`);
+      
       return response.data;
     } catch (error) {
       this.recordFailure();
+      logger.error(`❌ ML service chat error: ${error}`);
       throw error;
     }
   }
@@ -151,7 +170,7 @@ export class AIServiceManager {
         prompt = `Based on this portfolio data: ${JSON.stringify(portfolioData)}, provide 3 personalized financial recommendations.`;
       }
 
-      const response = await this.axiosInstance.post('/chat', {
+      const response = await this.axiosInstance.post('/api/ml/chat/chat', {
         message: prompt,
         context: { 
           user_id: userId,
@@ -178,7 +197,7 @@ export class AIServiceManager {
     }
 
     try {
-      const response = await this.axiosInstance.post('/analyze-sentiment', {
+      const response = await this.axiosInstance.post('/api/ml/chat/analyze-sentiment', {
         message,
         model: 'llama3.1:8b'
       });
@@ -200,9 +219,10 @@ export class AIServiceManager {
     }
 
     try {
-      const response = await this.axiosInstance.post('/portfolio-analysis', {
-        portfolio: portfolioData,
-        user_id: userId
+      const response = await this.axiosInstance.post('/api/ml/portfolio/analyze', {
+        investments: portfolioData?.investments || [],
+        risk_profile: portfolioData?.risk_profile || 'moderate',
+        time_horizon: portfolioData?.time_horizon || 5
       });
 
       this.recordSuccess();
@@ -222,7 +242,7 @@ export class AIServiceManager {
     }
 
     try {
-      const response = await this.axiosInstance.post('/risk-assessment', {
+      const response = await this.axiosInstance.post('/api/ml/risk/assess', {
         portfolio: portfolioData,
         user_profile: userProfile
       });

@@ -15,6 +15,7 @@ import Settings from './pages/Settings';
 import Import from './pages/Import';
 import TalkToFinances from './pages/TalkToFinances';
 import ProfileCompletionWrapper from './components/ProfileCompletion/ProfileCompletionWrapper';
+import { AuthLoadingScreen } from './components/LoadingStates';
 import { useStore } from './store/useStore';
 import { useUser } from './contexts/UserContext';
 
@@ -23,17 +24,23 @@ const Callback: React.FC = () => {
   const { isLoading, error } = useAuth0();
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-navy-900 via-violet-900 to-magenta-900">
-        <div className="text-white text-lg">Loading...</div>
-      </div>
-    );
+    return <AuthLoadingScreen message="Completing authentication" />;
   }
 
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-navy-900 via-violet-900 to-magenta-900">
-        <div className="text-white text-lg">Error: {error.message}</div>
+        <div className="text-center max-w-md p-8">
+          <div className="text-red-400 text-6xl mb-4">⚠️</div>
+          <h2 className="text-white text-xl font-semibold mb-2">Authentication Error</h2>
+          <p className="text-gray-300 mb-4">{error.message}</p>
+          <button 
+            onClick={() => window.location.href = '/login'}
+            className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white px-6 py-2 rounded-lg hover:opacity-90 transition-opacity"
+          >
+            Try Again
+          </button>
+        </div>
       </div>
     );
   }

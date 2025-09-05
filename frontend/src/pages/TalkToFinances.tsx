@@ -12,12 +12,14 @@ import {
   CreditCard,
   Lightbulb,
   History,
-  Bookmark
+  Bookmark,
+  Clock
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { apiService } from '../services/api';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
+import MarkdownMessage from '../components/Chat/MarkdownMessage';
 import { formatCurrency } from '../utils/currency';
 
 interface QuickAction {
@@ -118,16 +120,31 @@ const TalkToFinances: React.FC = () => {
     setIsTyping(true);
 
     try {
-      const response = await apiService.sendChatMessage(messageToSend, { image: selectedImage });
+      // Use the new ML proxy endpoint for personalized responses
+      const response = await apiService.sendMLChatMessage(messageToSend, "llama3.1:8b", true);
+      
+      if (!response || !response.response || response.response.trim() === '') {
+        throw new Error('Empty response received from AI service');
+      }
+      
       const aiMessage = {
         id: (Date.now() + 1).toString(),
-        content: response,
+        content: response.response,
         sender: 'ai' as const,
         timestamp: new Date(),
       };
       addChatMessage(aiMessage);
     } catch (error) {
       console.error('Error sending message:', error);
+      
+      // Add error message to chat for user feedback
+      const errorMessage = {
+        id: (Date.now() + 1).toString(),
+        content: `Sorry, I'm having trouble responding right now. Please try again later. (Error: ${error instanceof Error ? error.message : 'Unknown error'})`,
+        sender: 'ai' as const,
+        timestamp: new Date(),
+      };
+      addChatMessage(errorMessage);
     } finally {
       setIsTyping(false);
     }
@@ -175,8 +192,8 @@ const TalkToFinances: React.FC = () => {
   const netWorth = totalIncome - totalExpenses + portfolioValue;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pt-20">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+      <div className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pt-20 w-full">
         {/* Header */}
         <div className="mb-6">
           <div className="flex items-center justify-between">
@@ -200,9 +217,9 @@ const TalkToFinances: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-8" style={{ height: 'calc(100vh - 200px)' }}>
           {/* Financial Context Panel */}
-          <div className="xl:col-span-1 space-y-6">
+          <div className="xl:col-span-1 space-y-6 overflow-y-auto h-full max-h-full">
             <Card>
               <div className="flex items-center space-x-2 mb-4">
                 <DollarSign className="w-5 h-5 text-violet-500" />
@@ -298,8 +315,8 @@ const TalkToFinances: React.FC = () => {
           </div>
 
           {/* Main Chat Interface */}
-          <div className="xl:col-span-3">
-            <Card className="h-[700px] flex flex-col">
+          <div className="xl:col-span-3 flex flex-col h-full">
+            <Card className="flex-1 flex flex-col h-full">
               {/* Chat Header */}
               <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center space-x-3">
@@ -322,9 +339,9 @@ const TalkToFinances: React.FC = () => {
               </div>
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0">
                 {chatMessages.length === 0 && (
-                  <div className="text-center py-12">
+                  <div className="text-center py-8">
                     <div className="w-16 h-16 bg-gradient-to-r from-violet-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
                       <Bot className="w-8 h-8 text-white" />
                     </div>
@@ -355,23 +372,25 @@ const TalkToFinances: React.FC = () => {
                   </div>
                 )}
                 
-                {chatMessages.map((msg) => (
+                {chatMessages.map((msg, index) => {
+                  const isLastMessage = index === chatMessages.length - 1;
+                  return (
                   <div
                     key={msg.id}
-                    className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                    className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'} mb-6 group`}
                   >
                     <div
-                      className={`max-w-md px-4 py-3 rounded-lg ${
+                      className={`max-w-2xl rounded-lg transition-all duration-200 ${
                         msg.sender === 'user'
-                          ? 'bg-gradient-to-r from-violet-500 to-purple-500 text-white'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
-                      }`}
+                          ? 'bg-gradient-to-r from-violet-500 to-purple-500 text-white shadow-lg shadow-violet-500/25 px-6 py-4 min-w-[200px]'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm hover:shadow-md px-4 py-3'
+                      } ${isLastMessage ? 'animate-in slide-in-from-bottom-2 duration-300' : ''}`}
                     >
-                      <div className="flex items-start space-x-3">
+                      <div className={`flex items-start ${msg.sender === 'user' ? 'space-x-4' : 'space-x-3'}`}>
                         {msg.sender === 'ai' && (
                           <Bot className="w-5 h-5 mt-0.5 text-violet-500 flex-shrink-0" />
                         )}
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                           {msg.imageUrl && (
                             <img 
                               src={msg.imageUrl} 
@@ -379,10 +398,53 @@ const TalkToFinances: React.FC = () => {
                               className="max-w-full h-32 object-cover rounded mb-2"
                             />
                           )}
-                          <p className="text-sm leading-relaxed">{msg.content}</p>
-                          <p className="text-xs opacity-70 mt-2">
-                            {msg.timestamp.toLocaleTimeString()}
-                          </p>
+                          <div className={msg.sender === 'user' ? 'user-message' : 'chat-message'}>
+                            <MarkdownMessage 
+                              content={msg.content} 
+                              isAI={msg.sender === 'ai'} 
+                            />
+                          </div>
+                          <div className={`flex items-center justify-between pt-3 ${
+                            msg.sender === 'user' 
+                              ? 'mt-4 border-t border-white/10' 
+                              : 'mt-3 border-t border-gray-200/50 dark:border-gray-600/30'
+                          }`}>
+                            <div className={`text-xs font-medium ${
+                              msg.sender === 'user' 
+                                ? 'text-white/80' 
+                                : 'text-gray-500 dark:text-gray-400'
+                            }`}>
+                              {msg.sender === 'ai' ? 'WeathWise AI' : 'You'}
+                            </div>
+                            <div className={`flex items-center space-x-1 text-xs transition-all duration-200 group-hover:opacity-100 ${
+                              msg.sender === 'user' 
+                                ? 'text-white/70 group-hover:text-white/90' 
+                                : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-400'
+                            }`}>
+                              <Clock className="w-3 h-3" />
+                              <span>
+                                {(() => {
+                                  const now = new Date();
+                                  const msgDate = new Date(msg.timestamp);
+                                  const isToday = msgDate.toDateString() === now.toDateString();
+                                  const isYesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000).toDateString() === msgDate.toDateString();
+                                  
+                                  if (isToday) {
+                                    return msgDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                  } else if (isYesterday) {
+                                    return `Yesterday ${msgDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                                  } else {
+                                    return msgDate.toLocaleDateString([], { 
+                                      month: 'short', 
+                                      day: 'numeric',
+                                      hour: '2-digit', 
+                                      minute: '2-digit' 
+                                    });
+                                  }
+                                })()}
+                              </span>
+                            </div>
+                          </div>
                         </div>
                         {msg.sender === 'user' && (
                           <User className="w-5 h-5 mt-0.5 text-white flex-shrink-0" />
@@ -390,7 +452,8 @@ const TalkToFinances: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
 
                 {isTyping && (
                   <div className="flex justify-start">
@@ -411,7 +474,7 @@ const TalkToFinances: React.FC = () => {
               </div>
 
               {/* Input */}
-              <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex-shrink-0 p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
                 {selectedImage && (
                   <div className="mb-3 relative inline-block">
                     <img 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { DollarSign, TrendingUp, Target, CreditCard, ArrowUpRight, ArrowDownRight, Lightbulb } from 'lucide-react';
+import { DollarSign, TrendingUp, Target, CreditCard, ArrowUpRight, ArrowDownRight, Lightbulb, PieChart } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { apiService } from '../services/api';
 import Card from '../components/UI/Card';
@@ -173,20 +173,29 @@ const Dashboard: React.FC = () => {
 
   // Calculate Financial Health Score using real data or backend API
   const calculateFinancialHealth = () => {
-    // If we have dashboard stats from backend, try to use enhanced data
-    if (dashboardStats && !loadingStats) {
-      // Use backend-calculated financial health if available
+    // If we have dashboard stats from backend, use that data
+    if (dashboardStats && !loadingStats && dashboardStats.financialHealth) {
+      return dashboardStats.financialHealth;
+    }
+
+    // Check if we have any meaningful frontend data for fallback
+    const hasTransactionData = safeTransactions.length > 0;
+    const hasInvestmentData = safeInvestments.length > 0;
+    const hasAnyFinancialData = hasTransactionData || hasInvestmentData;
+
+    // If no financial data exists anywhere, return zero state
+    if (!hasAnyFinancialData) {
       return {
-        overall: dashboardStats.financialHealth?.overall || 50,
-        emergencyFund: dashboardStats.financialHealth?.emergencyFund || 50,
-        cashFlow: dashboardStats.financialHealth?.cashFlow || (totalIncome > totalExpenses ? 85 : 45),
-        debtToIncome: dashboardStats.financialHealth?.debtToIncome || 0,
-        savingsRate: dashboardStats.financialHealth?.savingsRate || 50,
-        diversification: dashboardStats.financialHealth?.diversification || (safeInvestments.length > 3 ? 80 : 50)
+        overall: 0,
+        emergencyFund: 0,
+        cashFlow: 0, 
+        debtToIncome: 0,
+        savingsRate: 0,
+        diversification: 0
       };
     }
 
-    // Fallback to local calculation if backend data not available
+    // Fallback to local calculation only if we have some real data
     const monthlyIncome = totalIncome / 6; // Assuming 6 months of data
     const monthlyExpenses = totalExpenses / 6;
     
@@ -203,12 +212,12 @@ const Dashboard: React.FC = () => {
     ));
     
     return {
-      overall: isNaN(overall) ? 50 : overall,
-      emergencyFund: isNaN(emergencyFundMonths * 20) ? 50 : Math.min(100, emergencyFundMonths * 20),
-      cashFlow: monthlyIncome > monthlyExpenses ? 85 : 45,
-      debtToIncome: 0, // No debt data available yet
-      savingsRate: isNaN(savingsRate * 4) ? 50 : Math.min(100, savingsRate * 4),
-      diversification: safeInvestments.length > 3 ? 80 : 50
+      overall: isNaN(overall) ? 0 : overall, // Changed from 50 to 0
+      emergencyFund: isNaN(emergencyFundMonths * 20) ? 0 : Math.min(100, emergencyFundMonths * 20), // Changed from 50 to 0
+      cashFlow: hasTransactionData ? (monthlyIncome > monthlyExpenses ? 85 : 45) : 0, // Only calculate if we have transaction data
+      debtToIncome: hasTransactionData ? 75 : 0, // Only show good debt score if we have transaction data
+      savingsRate: isNaN(savingsRate * 4) ? 0 : Math.min(100, savingsRate * 4), // Changed from 50 to 0
+      diversification: hasInvestmentData ? (safeInvestments.length > 3 ? 80 : 50) : 0 // Only calculate if we have investment data
     };
   };
 
@@ -276,11 +285,19 @@ const Dashboard: React.FC = () => {
             ) : expenseData.length > 0 ? (
               <ExpenseList data={expenseData} />
             ) : (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <p className="text-gray-500 dark:text-gray-400 mb-2">No expense data available</p>
-                  <p className="text-sm text-gray-400 dark:text-gray-500">Add some transactions to see your expense breakdown</p>
+              <div className="flex flex-col items-center justify-center h-full">
+                <div className="text-gray-400 mb-4">
+                  <PieChart className="w-12 h-12 mx-auto" />
                 </div>
+                <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+                  No Expense Data
+                </h4>
+                <p className="text-gray-500 dark:text-gray-400 mb-2">
+                  You haven't added any transactions yet
+                </p>
+                <p className="text-sm text-gray-400 dark:text-gray-500">
+                  Add some transactions to see your expense breakdown
+                </p>
               </div>
             )}
           </div>
@@ -378,11 +395,16 @@ const Dashboard: React.FC = () => {
               ))
             ) : (
               <div className="text-center py-8">
-                <CreditCard className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
+                <div className="text-gray-400 mb-4">
+                  <CreditCard className="w-12 h-12 mx-auto" />
+                </div>
                 <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
                   No Recent Transactions
                 </h4>
-                <p className="text-gray-500 dark:text-gray-400 text-sm">
+                <p className="text-gray-500 dark:text-gray-400 mb-2">
+                  You haven't added any transactions yet
+                </p>
+                <p className="text-sm text-gray-400 dark:text-gray-500">
                   Start adding transactions to track your income and expenses.
                 </p>
               </div>
@@ -430,11 +452,16 @@ const Dashboard: React.FC = () => {
               })
             ) : (
               <div className="text-center py-8">
-                <Target className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
+                <div className="text-gray-400 mb-4">
+                  <Target className="w-12 h-12 mx-auto" />
+                </div>
                 <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
                   No Savings Goals Set
                 </h4>
-                <p className="text-gray-500 dark:text-gray-400 text-sm">
+                <p className="text-gray-500 dark:text-gray-400 mb-2">
+                  You haven't created any savings goals yet
+                </p>
+                <p className="text-sm text-gray-400 dark:text-gray-500">
                   Create your first savings goal to start tracking your financial progress.
                 </p>
               </div>

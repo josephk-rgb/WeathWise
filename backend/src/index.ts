@@ -55,6 +55,7 @@ import budgetRoutes from './routes/budgets';
 import analyticsRoutes from './routes/analytics';
 import authTestRoutes from './routes/auth-test';
 import testApisRoutes from './routes/test-apis';
+import mlProxyRoutes from './routes/ml-proxy';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -111,6 +112,33 @@ app.get('/health', (_req, res) => {
   });
 });
 
+// DEBUG: Add route debugging endpoint
+app.get('/debug/routes', (_req, res) => {
+  res.json({
+    message: 'WeathWise Backend Route Debug',
+    registered_routes: [
+      'GET /health - Backend health check',
+      'GET /debug/routes - This debug endpoint',
+      'POST /api/auth/* - Authentication routes',
+      'GET /api/users/* - User management (auth required)',
+      'GET /api/portfolio/* - Portfolio data (auth required)',
+      'GET /api/transactions/* - Transaction data (auth required)',
+      'GET /api/investments/* - Investment data (auth required)',
+      'GET /api/goals/* - Goals data (auth required)',
+      'GET /api/budgets/* - Budget data (auth required)',
+      'GET /api/analytics/* - Analytics data (auth required)',
+      'GET /api/market/* - Market data (auth required)',
+      'GET /api/ai/* - AI services (auth required)',
+      'POST /api/ml/chat - ML proxy chat (auth required)',
+      'GET /api/ml/health - ML proxy health (auth required)',
+      'GET /api/ml/debug/routes - ML proxy debug routes',
+      'GET /api/test-apis/* - Test endpoints (no auth)'
+    ],
+    ml_proxy_status: 'should_be_registered',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/auth-test', authMiddleware, authTestRoutes);
@@ -123,7 +151,51 @@ app.use('/api/budgets', authMiddleware, budgetRoutes);
 app.use('/api/analytics', authMiddleware, analyticsRoutes);
 app.use('/api/market', authMiddleware, marketRoutes);
 app.use('/api/ai', authMiddleware, aiRoutes);
+
+// DEBUG: Log ML proxy route registration
+console.log('🔧 [DEBUG] Registering ML proxy routes at /api/ml');
+app.use('/api/ml', (req, res, next) => {
+  console.log(`🔧 [DEBUG] ML proxy request: ${req.method} ${req.path} - Full URL: ${req.originalUrl}`);
+  next();
+}, mlProxyRoutes); // ML proxy with built-in auth
+
 app.use('/api/test-apis', testApisRoutes); // No auth required for testing
+
+// DEBUG: Add global route debugging
+app.use('*', (req, res, next) => {
+  console.log(`🔧 [DEBUG] Unmatched route: ${req.method} ${req.originalUrl}`);
+  console.log(`🔧 [DEBUG] Available ML routes should be: POST /api/ml/chat, GET /api/ml/health, GET /api/ml/debug/routes`);
+  next();
+});
+
+// Test ML service integration (no auth required)
+app.post('/api/test-ml', async (req, res) => {
+  try {
+    const { AIServiceManager } = await import('./services/aiServiceManager');
+    const aiService = new AIServiceManager();
+    
+    const { message = 'Hello from test endpoint' } = req.body;
+    
+    try {
+      const response = await aiService.chat(message, { test: true });
+      res.json({
+        success: true,
+        data: response,
+        source: 'ml-service',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      res.json({
+        success: false,
+        error: error.message,
+        fallback: 'ML service not available',
+        timestamp: new Date().toISOString()
+      });
+    }
+  } catch (error: any) {
+    res.status(500).json({ error: 'Server error', details: error.message });
+  }
+});
 
 // Error handling middleware
 app.use(errorHandler);

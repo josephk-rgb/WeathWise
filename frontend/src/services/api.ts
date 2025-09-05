@@ -123,6 +123,14 @@ class ApiService {
     const token = this.currentToken;
     const url = `${this.baseUrl}${endpoint}`;
     
+    // DEBUG: Add comprehensive logging
+    console.log('🔧 [DEBUG] makeRequest called');
+    console.log('🔧 [DEBUG] endpoint:', endpoint);
+    console.log('🔧 [DEBUG] baseUrl:', this.baseUrl);
+    console.log('🔧 [DEBUG] full URL:', url);
+    console.log('🔧 [DEBUG] method:', options.method || 'GET');
+    console.log('🔧 [DEBUG] has token:', !!token);
+    
     // Create a request key for deduplication and caching
     const method = options.method || 'GET';
     const requestKey = `${method}:${endpoint}`;
@@ -528,7 +536,42 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify({ message, context }),
     });
-    return response.response;
+    
+    // Handle the response structure from backend: { success: true, data: { response: "...", confidence: 0.85 } }
+    if (response.success && response.data && response.data.response) {
+      return response.data.response;
+    }
+    
+    // Fallback if response structure is different
+    return response.response || response.data || response || 'No response received';
+  }
+
+  // NEW: ML-powered chat with personalized financial context via backend proxy
+  async sendMLChatMessage(message: string, model: string = "llama3.1:8b", includeFinancialData: boolean = true): Promise<any> {
+    console.log('🔧 [DEBUG] sendMLChatMessage called');
+    console.log('🔧 [DEBUG] Base URL:', this.baseUrl);
+    console.log('🔧 [DEBUG] Full URL will be:', `${this.baseUrl}/ml/chat`);
+    console.log('🔧 [DEBUG] Current token:', this.currentToken ? this.currentToken.substring(0, 30) + '...' : 'none');
+    
+    const response = await this.makeRequest('/ml/chat', {
+      method: 'POST',
+      body: JSON.stringify({ 
+        message, 
+        model,
+        include_financial_data: includeFinancialData
+      }),
+    });
+    
+    console.log('🔧 [DEBUG] sendMLChatMessage response:', response);
+    return response;
+  }
+
+  async getMLChatHistory(sessionId: string, limit: number = 50): Promise<any> {
+    return this.makeRequest(`/ml/chat/history/${sessionId}?limit=${limit}`);
+  }
+
+  async checkMLServiceHealth(): Promise<any> {
+    return this.makeRequest('/ml/health');
   }
 
   async getFinancialInsights(): Promise<any> {

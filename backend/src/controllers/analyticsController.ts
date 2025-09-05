@@ -369,6 +369,48 @@ export class AnalyticsController {
         isActive: true 
       });
 
+      // Check if user has any financial data before calculating scores
+      const hasTransactionData = transactions.length > 0;
+      const hasInvestmentData = investments.length > 0;
+      const hasEmergencyFundData = emergencyFundGoal && emergencyFundGoal.currentAmount > 0;
+      const hasAnyFinancialData = hasTransactionData || hasInvestmentData || hasEmergencyFundData;
+
+      // If no financial data exists, return zero state
+      if (!hasAnyFinancialData) {
+        res.json({
+          success: true,
+          data: {
+            overall: 0,
+            components: {
+              cashFlow: 0,
+              savingsRate: 0,
+              emergencyFund: 0,
+              diversification: 0,
+              debtToIncome: 0
+            },
+            metrics: {
+              monthlyIncome: 0,
+              monthlyExpenses: 0,
+              monthlySavings: 0,
+              savingsRate: 0,
+              portfolioValue: 0,
+              emergencyFundAmount: 0,
+              recommendedEmergencyFund: 0,
+              monthlyDebtPayments: 0,
+              debtToIncomeRatio: 0,
+              assetTypes: 0,
+              investmentCount: 0
+            },
+            recommendations: [
+              'Start by adding some transactions to track your income and expenses',
+              'Consider setting up an emergency fund goal',
+              'Add some investments to begin building your portfolio'
+            ]
+          }
+        });
+        return;
+      }
+
       // Calculate health scores (0-100)
       const monthlyIncome = totalIncome / 6;
       const monthlyExpenses = totalExpenses / 6;
@@ -388,16 +430,43 @@ export class AnalyticsController {
       const emergencyFundScore = recommendedEmergencyFund > 0 ? 
         Math.min(100, (emergencyFundAmount / recommendedEmergencyFund) * 100) : 0;
 
-      // Diversification score (0-100)
-      const diversificationScore = investments.length === 0 ? 0 : 
-        Math.min(100, (investments.length / 10) * 100); // 10+ investments = 100 points
+      // Debt-to-Income score (0-100)
+      // Calculate monthly debt payments from expense transactions
+      const debtTransactions = transactions.filter(t => 
+        t.transactionInfo.type === 'expense' && 
+        ['debt', 'loan', 'credit', 'mortgage'].some(keyword => 
+          t.transactionInfo.category.toLowerCase().includes(keyword)
+        )
+      );
+      const monthlyDebtPayments = debtTransactions.reduce((sum, t) => 
+        sum + Math.abs(t.transactionInfo.amount), 0) / 6;
+      
+      const debtToIncomeRatio = monthlyIncome > 0 ? monthlyDebtPayments / monthlyIncome : 0;
+      const debtToIncomeScore = Math.max(0, 100 - (debtToIncomeRatio * 300)); // 33% DTI = 1 point
 
-      // Overall score
+      // Enhanced Diversification score (0-100)
+      let diversificationScore = 0;
+      if (investments.length > 0) {
+        // Calculate asset type diversity
+        const assetTypes = new Set(investments.map(inv => inv.securityInfo.type));
+        const typeScore = Math.min(50, (assetTypes.size / 6) * 50); // Max 6 asset types
+        
+        // Calculate allocation balance (Herfindahl Index)
+        const totalValue = investments.reduce((sum, inv) => sum + inv.position.marketValue, 0);
+        const allocations = investments.map(inv => inv.position.marketValue / totalValue);
+        const herfindahlIndex = allocations.reduce((sum, alloc) => sum + (alloc * alloc), 0);
+        const balanceScore = Math.max(0, 50 - (herfindahlIndex * 100)); // Lower concentration = higher score
+        
+        diversificationScore = Math.round(typeScore + balanceScore);
+      }
+
+      // Overall score with enhanced weighting
       const overallScore = Math.round(
-        (cashFlowScore * 0.3 + 
-         savingsScore * 0.25 + 
+        (cashFlowScore * 0.25 + 
+         savingsScore * 0.20 + 
          emergencyFundScore * 0.25 + 
-         diversificationScore * 0.2)
+         diversificationScore * 0.15 +
+         debtToIncomeScore * 0.15)
       );
 
       res.json({
@@ -408,7 +477,8 @@ export class AnalyticsController {
             cashFlow: Math.round(cashFlowScore),
             savingsRate: Math.round(savingsScore),
             emergencyFund: Math.round(emergencyFundScore),
-            diversification: Math.round(diversificationScore)
+            diversification: Math.round(diversificationScore),
+            debtToIncome: Math.round(debtToIncomeScore)
           },
           metrics: {
             monthlyIncome,
@@ -417,13 +487,20 @@ export class AnalyticsController {
             savingsRate,
             portfolioValue,
             emergencyFundAmount,
-            recommendedEmergencyFund
+            recommendedEmergencyFund,
+            monthlyDebtPayments,
+            debtToIncomeRatio: debtToIncomeRatio * 100,
+            assetTypes: investments.length > 0 ? new Set(investments.map(inv => inv.securityInfo.type)).size : 0,
+            investmentCount: investments.length
           },
           recommendations: [
             ...(cashFlowScore < 50 ? ['Improve cash flow by reducing expenses or increasing income'] : []),
             ...(savingsScore < 50 ? ['Increase your savings rate to at least 20% of income'] : []),
             ...(emergencyFundScore < 100 ? ['Build an emergency fund covering 6 months of expenses'] : []),
-            ...(diversificationScore < 50 ? ['Diversify your investment portfolio'] : [])
+            ...(diversificationScore < 50 ? ['Diversify your investment portfolio across different asset types'] : []),
+            ...(debtToIncomeScore < 70 ? ['Consider reducing debt payments - aim for less than 28% debt-to-income ratio'] : []),
+            ...(overallScore >= 80 ? ['Excellent financial health! Consider advanced investment strategies'] : []),
+            ...(overallScore < 40 ? ['Focus on building emergency fund and reducing debt first'] : [])
           ]
         }
       });

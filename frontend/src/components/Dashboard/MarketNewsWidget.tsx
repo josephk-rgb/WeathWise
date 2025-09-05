@@ -132,9 +132,19 @@ const MarketNewsWidget: React.FC<MarketNewsWidgetProps> = ({
             </button>
           </div>
         ) : news.length === 0 ? (
-          <div className="text-center py-6">
-            <Newspaper className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-            <div className="text-gray-500">No news available</div>
+          <div className="text-center py-8">
+            <div className="text-gray-400 mb-4">
+              <Newspaper className="w-12 h-12 mx-auto" />
+            </div>
+            <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+              No Market News
+            </h4>
+            <p className="text-gray-500 dark:text-gray-400 mb-2">
+              No news articles available at the moment
+            </p>
+            <p className="text-sm text-gray-400 dark:text-gray-500">
+              Check back later for the latest market updates and news.
+            </p>
           </div>
         ) : (
           <div className="space-y-4">

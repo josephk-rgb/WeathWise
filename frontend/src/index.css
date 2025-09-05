@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import highlight.js theme for code syntax highlighting */
+@import 'highlight.js/styles/github-dark.css';
+
 @layer base {
   html {
     font-family: 'Inter', system-ui, sans-serif;
@@ -31,5 +34,13 @@
   
   .input-field {
     @apply w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition-all duration-200;
+  }
+  
+  .chat-message {
+    @apply leading-relaxed;
+  }
+  
+  .user-message {
+    @apply leading-relaxed text-white/95;
   }
 }

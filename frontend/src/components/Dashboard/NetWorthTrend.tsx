@@ -76,13 +76,31 @@ const NetWorthTrend: React.FC<NetWorthTrendProps> = ({
         );
         
         if (response.success && response.data?.trend) {
-          setData(response.data.trend);
+          const trendData = response.data.trend;
+          console.log('📊 Net Worth Trend Data Received:', trendData);
+          
+          // Check if this is meaningful data or just sample/empty data
+          const hasRealData = trendData.length > 0 && 
+            trendData.some((item: NetWorthData) => 
+              item.netWorth !== 0 || item.assets !== 0 || item.investments !== 0
+            );
+          
+          console.log('📊 Has real data?', hasRealData);
+          
+          if (hasRealData) {
+            setData(trendData);
+          } else {
+            // Treat as no data if all values are zero or minimal
+            setData([]);
+          }
         } else {
+          setData([]);
           setError('Failed to load net worth data');
           console.warn('Invalid net worth trend response:', response);
         }
       } catch (err) {
         console.error('Error fetching net worth data:', err);
+        setData([]);
         setError('Failed to load net worth data');
         // Don't show error immediately, try to use cached/existing data
         if (data.length === 0) {
@@ -108,14 +126,27 @@ const NetWorthTrend: React.FC<NetWorthTrendProps> = ({
     return data.filter((item: NetWorthData) => new Date(item.date) >= cutoffDate);
   }, [data, selectedPeriod]);
 
+  // Check if we have meaningful data (not just zeros or minimal values)
+  const hasRealData = useMemo(() => {
+    if (filteredData.length === 0) return false;
+    
+    // Check if any data point has meaningful values
+    return filteredData.some(item => 
+      Math.abs(item.netWorth) > 10 || 
+      Math.abs(item.assets) > 10 || 
+      Math.abs(item.investments) > 10 ||
+      Math.abs(item.cash) > 10
+    );
+  }, [filteredData]);
+
   // Calculate trend metrics
   const trendMetrics = useMemo(() => {
-    if (filteredData.length < 2) {
+    if (!hasRealData || filteredData.length < 2) {
       return {
         change: 0,
         changePercent: 0,
         trend: 'neutral' as const,
-        current: filteredData[filteredData.length - 1]?.netWorth || 0,
+        current: 0,
         previous: 0,
         highestPoint: 0,
         lowestPoint: 0,
@@ -147,7 +178,7 @@ const NetWorthTrend: React.FC<NetWorthTrendProps> = ({
       lowestPoint,
       volatility,
     };
-  }, [filteredData]);
+  }, [filteredData, hasRealData]);
 
   const formatValue = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -319,7 +350,7 @@ const NetWorthTrend: React.FC<NetWorthTrendProps> = ({
             Retry
           </button>
         </div>
-      ) : filteredData.length > 0 ? (
+      ) : hasRealData ? (
         <div className="relative">
           <ResponsiveContainer width="100%" height={height}>
             {viewMode === 'trend' ? (
@@ -398,14 +429,24 @@ const NetWorthTrend: React.FC<NetWorthTrendProps> = ({
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center h-80 text-gray-500 dark:text-gray-400">
-          <TrendingUp className="w-12 h-12 mb-3 opacity-50" />
-          <p className="text-lg font-medium">No Data Available</p>
-          <p className="text-sm">Start tracking your finances to see trends</p>
+          <div className="text-gray-400 mb-4">
+            <TrendingUp className="w-16 h-16 mx-auto" />
+          </div>
+          <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+            No Net Worth Data
+          </h4>
+          <p className="text-gray-500 dark:text-gray-400 mb-2">
+            You haven't added any financial data yet
+          </p>
+          <p className="text-sm text-gray-400 dark:text-gray-500 text-center max-w-md">
+            Add transactions and investments to start tracking your net worth over time. 
+            Your financial journey begins here.
+          </p>
         </div>
       )}
 
       {/* Summary Stats */}
-      {!loading && !error && filteredData.length > 0 && (
+      {!loading && !error && hasRealData && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
           <div className="text-center">
             <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Current</p>

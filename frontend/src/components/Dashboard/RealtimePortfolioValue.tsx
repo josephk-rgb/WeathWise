@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, TrendingUp, TrendingDown, Clock, Signal, Wifi, WifiOff } from 'lucide-react';
+import { RefreshCw, TrendingUp, TrendingDown, Clock, Signal, Wifi, WifiOff, PieChart } from 'lucide-react';
 import { usePortfolioPolling } from '../../hooks/usePolling';
 import { RealtimePortfolioValue, Investment } from '../../types';
 import { formatCurrency } from '../../utils/currency';
@@ -100,6 +100,28 @@ const RealtimePortfolioValueComponent: React.FC<RealtimePortfolioValueProps> = (
     const hours = Math.floor(minutes / 60);
     return `${hours}h ago`;
   };
+
+  // No investments state
+  if (investments.length === 0) {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+        <div className="text-center py-8">
+          <div className="text-gray-400 mb-4">
+            <PieChart className="w-12 h-12 mx-auto" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            No Portfolio Data
+          </h3>
+          <p className="text-gray-500 dark:text-gray-400 mb-2">
+            You haven't added any investments yet
+          </p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">
+            Add some investments to see your real-time portfolio value and performance.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (!displayValue) {
     return (

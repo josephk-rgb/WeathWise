@@ -37,10 +37,12 @@ const ChatWidget: React.FC = () => {
     setIsTyping(true);
 
     try {
-      const response = await apiService.sendChatMessage(message, { image: selectedImage });
+      // Use the new ML proxy endpoint for personalized responses
+      const response = await apiService.sendMLChatMessage(message, "llama3.1:8b", true);
+      
       const aiMessage = {
         id: (Date.now() + 1).toString(),
-        content: response,
+        content: response.response || response.data?.response || 'No response received',
         sender: 'ai' as const,
         timestamp: new Date(),
       };
