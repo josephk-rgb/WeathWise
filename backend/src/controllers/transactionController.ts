@@ -61,6 +61,18 @@ export class TransactionController {
 
       const total = await Transaction.countDocuments(filter);
 
+      // Calculate totals for all transactions matching the filter (not just current page)
+      const allTransactions = await Transaction.find(filter);
+      const totalIncome = allTransactions
+        .filter(t => t.transactionInfo.type === 'income')
+        .reduce((sum, t) => sum + t.transactionInfo.amount, 0);
+      
+      const totalExpenses = Math.abs(allTransactions
+        .filter(t => t.transactionInfo.type === 'expense')
+        .reduce((sum, t) => sum + t.transactionInfo.amount, 0));
+
+      const netFlow = totalIncome - totalExpenses;
+
       res.json({
         success: true,
         data: transactions,
@@ -69,6 +81,11 @@ export class TransactionController {
           limit: Number(limit),
           offset: Number(offset),
           hasMore: total > Number(offset) + Number(limit)
+        },
+        totals: {
+          totalIncome,
+          totalExpenses,
+          netFlow
         }
       });
     } catch (error) {

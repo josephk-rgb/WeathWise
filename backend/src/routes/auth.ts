@@ -25,10 +25,15 @@ router.get('/me', authMiddleware, async (req: Request, res: Response): Promise<v
       return;
     }
 
+    // Debug: Log user role
+    console.log('🔍 DEBUG - User role for', user.email, ':', user.role);
+    console.log('🔍 DEBUG - Full user object keys:', Object.keys(user));
+
     // Return user profile without sensitive data
     res.json({
       id: user._id,
       email: user.email,
+      role: user.role,
       profile: user.profile,
       preferences: user.preferences,
       riskProfile: user.riskProfile,

@@ -42,10 +42,11 @@ const Dashboard: React.FC = () => {
 
     console.log('Making parallel API calls...');
     const [transactionsData, goalsData, investmentsData, recommendationsData, dashboardStatsData, spendingData, financialHealthData] = await Promise.all([
-      apiService.getTransactions(userProfile.id).then(data => {
-        // Ensure we always get an array for transactions
+      apiService.getTransactions(userProfile.id).then(response => {
+        // Handle the response format: {success: true, data: [...]}
+        const data = (response as any)?.data || response;
         if (!Array.isArray(data)) {
-          console.warn('Transactions API returned non-array data:', data);
+          console.warn('Transactions API returned non-array data:', response);
           return [];
         }
         return data;
@@ -53,10 +54,11 @@ const Dashboard: React.FC = () => {
         console.error('Failed to load transactions:', err);
         return []; // Return empty array on error
       }),
-      apiService.getGoals(userProfile.id).then(data => {
-        // Ensure we always get an array for goals
+      apiService.getGoals(userProfile.id).then(response => {
+        // Handle the response format: {success: true, data: [...]}
+        const data = (response as any)?.data || response;
         if (!Array.isArray(data)) {
-          console.warn('Goals API returned non-array data:', data);
+          console.warn('Goals API returned non-array data:', response);
           return [];
         }
         return data;
@@ -157,19 +159,24 @@ const Dashboard: React.FC = () => {
   const safeGoals = Array.isArray(goals) ? goals : [];
   const safeRecommendations = Array.isArray(recommendations) ? recommendations : [];
   
-  const totalIncome = safeTransactions
-    .filter(t => t.type === 'income')
-    .reduce((sum, t) => sum + t.amount, 0);
+  // Use backend data when available, fallback to local calculations
+  // All calculations should match backend methodology for consistency
+  const totalIncome = dashboardStats?.income?.current ?? safeTransactions
+    .filter((t: any) => (t.transactionInfo?.type || t.type) === 'income')
+    .reduce((sum: number, t: any) => sum + (t.transactionInfo?.amount || t.amount || 0), 0);
 
-  const totalExpenses = Math.abs(safeTransactions
-    .filter(t => t.type === 'expense')
-    .reduce((sum, t) => sum + t.amount, 0));
+  const totalExpenses = dashboardStats?.expenses?.current ?? Math.abs(safeTransactions
+    .filter((t: any) => (t.transactionInfo?.type || t.type) === 'expense')
+    .reduce((sum: number, t: any) => sum + (t.transactionInfo?.amount || t.amount || 0), 0));
 
-  const netWorth = totalIncome - totalExpenses + safeInvestments.reduce((sum, inv) => 
-    sum + (inv.shares * inv.currentPrice), 0);
+  // Use consistent portfolio calculation - work with frontend Investment type structure
+  const portfolioValue = dashboardStats?.portfolio?.current ?? safeInvestments.reduce((sum, inv) => {
+    // Frontend uses flat structure: inv.shares, inv.currentPrice
+    return sum + ((inv.shares || 0) * (inv.currentPrice || 0));
+  }, 0);
 
-  const portfolioValue = safeInvestments.reduce((sum, inv) => 
-    sum + (inv.shares * inv.currentPrice), 0);
+  // Net Worth = All-time cash position + Portfolio value (matching backend)
+  const netWorth = dashboardStats?.netWorth?.current ?? (totalIncome - totalExpenses + portfolioValue);
 
   // Calculate Financial Health Score using real data or backend API
   const calculateFinancialHealth = () => {
@@ -246,6 +253,14 @@ const Dashboard: React.FC = () => {
           iconColor="text-green-500"
         />
         <StatCard
+          title="Total Income"
+          value={formatCurrency(totalIncome, currency)}
+          change={dashboardStats?.income?.changeText || "Calculating..."}
+          changeType={dashboardStats?.income?.changeType || "neutral"}
+          icon={ArrowUpRight}
+          iconColor="text-green-500"
+        />
+        <StatCard
           title="Portfolio Value"
           value={formatCurrency(portfolioValue, currency)}
           change={dashboardStats?.portfolio?.changeText || "Calculating..."}
@@ -254,20 +269,12 @@ const Dashboard: React.FC = () => {
           iconColor="text-violet-500"
         />
         <StatCard
-          title="Monthly Expenses"
+          title="Total Expenses"
           value={formatCurrency(totalExpenses, currency)}
           change={dashboardStats?.expenses?.changeText || "Calculating..."}
           changeType={dashboardStats?.expenses?.changeType || "neutral"}
           icon={CreditCard}
           iconColor="text-blue-500"
-        />
-        <StatCard
-          title="Savings Goals"
-          value={`${safeGoals.length} active`}
-          change={dashboardStats?.goals?.changeText || "Calculating..."}
-          changeType="positive"
-          icon={Target}
-          iconColor="text-magenta-500"
         />
       </div>
 
@@ -365,30 +372,30 @@ const Dashboard: React.FC = () => {
           <div className="space-y-3">
             {safeTransactions.length > 0 ? (
               safeTransactions.slice(0, 5).map((transaction) => (
-                <div key={transaction.id} className="flex items-center justify-between py-2">
+                <div key={(transaction as any)._id || (transaction as any).id} className="flex items-center justify-between py-2">
                   <div className="flex items-center">
                     <div className={`p-2 rounded-lg mr-3 ${
-                      transaction.type === 'income' ? 'bg-green-100 dark:bg-green-900/20' : 'bg-red-100 dark:bg-red-900/20'
+                      ((transaction as any).transactionInfo?.type || (transaction as any).type) === 'income' ? 'bg-green-100 dark:bg-green-900/20' : 'bg-red-100 dark:bg-red-900/20'
                     }`}>
-                      {transaction.type === 'income' ? (
+                      {((transaction as any).transactionInfo?.type || (transaction as any).type) === 'income' ? (
                         <ArrowUpRight className="w-4 h-4 text-green-600" />
                       ) : (
                         <ArrowDownRight className="w-4 h-4 text-red-600" />
                       )}
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900 dark:text-gray-100">{transaction.description}</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{transaction.category}</p>
+                      <p className="font-medium text-gray-900 dark:text-gray-100">{(transaction as any).transactionInfo?.description || (transaction as any).description}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{(transaction as any).transactionInfo?.category || (transaction as any).category}</p>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className={`font-medium ${
-                      transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
+                      ((transaction as any).transactionInfo?.type || (transaction as any).type) === 'income' ? 'text-green-600' : 'text-red-600'
                     }`}>
-                      {transaction.type === 'income' ? '+' : ''}{formatCurrency(Math.abs(transaction.amount), currency)}
+                      {((transaction as any).transactionInfo?.type || (transaction as any).type) === 'income' ? '+' : ''}{formatCurrency(Math.abs((transaction as any).transactionInfo?.amount || (transaction as any).amount || 0), currency)}
                     </p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {new Date(transaction.date).toLocaleDateString()}
+                      {new Date((transaction as any).transactionInfo?.date || (transaction as any).date).toLocaleDateString()}
                     </p>
                   </div>
                 </div>

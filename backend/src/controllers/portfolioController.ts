@@ -477,21 +477,21 @@ export class PortfolioController {
             return {
               symbol: holding.symbol,
               weight: holding.weight,
-              value: holding.currentValue,
-              ...assetMetrics
+              analytics: assetMetrics
             };
           } catch (error) {
             logger.warn(`Failed to get analytics for ${holding.symbol}:`, error);
             return {
               symbol: holding.symbol,
               weight: holding.weight,
-              value: holding.currentValue,
-              beta: 1.0,
-              volatility: 20.0,
-              sharpeRatio: 0.0,
-              maxDrawdown: 0.0,
-              var95: 0.0,
-              correlation: 0.5
+              analytics: {
+                beta: 1.0,
+                volatility: 20.0,
+                sharpeRatio: 0.0,
+                maxDrawdown: 0.0,
+                var95: 0.0,
+                correlation: 0.5
+              }
             };
           }
         })
@@ -500,26 +500,27 @@ export class PortfolioController {
       // Portfolio composition analysis
       const compositionAnalysis = holdings.map(holding => {
         const investment = investments.find(inv => inv.securityInfo.symbol === holding.symbol);
+        const assetAnalytics = individualAnalytics.find(a => a.symbol === holding.symbol);
         return {
           symbol: holding.symbol,
           name: investment?.securityInfo.name || holding.symbol,
           type: investment?.securityInfo.type || 'unknown',
-          weight: Math.round(holding.weight * 10000) / 100, // Percentage with 2 decimals
+          percentage: Math.round(holding.weight * 10000) / 100, // Percentage with 2 decimals
           value: holding.currentValue,
-          beta: individualAnalytics.find(a => a.symbol === holding.symbol)?.beta || 1.0,
-          volatility: individualAnalytics.find(a => a.symbol === holding.symbol)?.volatility || 20.0
+          beta: assetAnalytics?.analytics?.beta || 1.0,
+          volatility: assetAnalytics?.analytics?.volatility || 20.0
         };
       });
 
       // Risk concentration analysis
       const riskConcentration = {
         topHoldings: compositionAnalysis
-          .sort((a, b) => b.weight - a.weight)
+          .sort((a, b) => b.percentage - a.percentage)
           .slice(0, 5)
           .map(holding => ({
             symbol: holding.symbol,
             name: holding.name,
-            weight: holding.weight
+            weight: holding.percentage
           })),
         concentrationRisk: Math.max(...holdings.map(h => h.weight)) > 0.3 ? 'High' : 
                           Math.max(...holdings.map(h => h.weight)) > 0.2 ? 'Medium' : 'Low'
@@ -527,9 +528,27 @@ export class PortfolioController {
 
       // Sector/Type diversification
       const typeDistribution = compositionAnalysis.reduce((acc, holding) => {
-        acc[holding.type] = (acc[holding.type] || 0) + holding.weight;
+        acc[holding.type] = (acc[holding.type] || 0) + (holding.percentage / 100);
         return acc;
       }, {} as { [key: string]: number });
+
+      const diversificationScore = PortfolioController.calculateDiversificationScore(typeDistribution);
+      
+      // Calculate overall risk level based on portfolio metrics
+      const calculateOverallRisk = () => {
+        const maxWeight = Math.max(...holdings.map(h => h.weight));
+        const highVolatility = portfolioMetrics.volatility > 20;
+        const lowDiversification = diversificationScore < 40;
+        const highConcentration = maxWeight > 0.3;
+        
+        if ((highVolatility && lowDiversification) || highConcentration) {
+          return 'high';
+        } else if (highVolatility || lowDiversification || maxWeight > 0.2) {
+          return 'medium';
+        } else {
+          return 'low';
+        }
+      };
 
       res.json({
         success: true,
@@ -543,13 +562,18 @@ export class PortfolioController {
           individualAssets: individualAnalytics,
           composition: compositionAnalysis,
           riskAnalysis: {
-            concentration: riskConcentration,
-            diversification: {
-              byType: Object.entries(typeDistribution).map(([type, weight]) => ({
-                type,
-                weight: Math.round(weight * 100) / 100
-              })),
-              score: PortfolioController.calculateDiversificationScore(typeDistribution)
+            overall: calculateOverallRisk(),
+            diversification: diversificationScore,
+            concentration: Math.round(Math.max(...holdings.map(h => h.weight)) * 100),
+            details: {
+              concentration: riskConcentration,
+              diversification: {
+                byType: Object.entries(typeDistribution).map(([type, weight]) => ({
+                  type,
+                  weight: Math.round(weight * 100) / 100
+                })),
+                score: diversificationScore
+              }
             }
           },
           benchmarkComparison: {

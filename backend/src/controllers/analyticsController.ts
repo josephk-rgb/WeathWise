@@ -744,7 +744,7 @@ export class AnalyticsController {
         return;
       }
 
-      // Get current period (last 30 days)
+      // Get current period (last 30 days) for trend analysis
       const endDate = new Date();
       const startDate = new Date();
       startDate.setDate(endDate.getDate() - 30);
@@ -754,12 +754,13 @@ export class AnalyticsController {
       const prevStartDate = new Date(prevEndDate);
       prevStartDate.setDate(prevEndDate.getDate() - 30);
 
-      // Get current period data
-      const [currentTransactions, currentInvestments, currentGoals] = await Promise.all([
+      // Get all-time data for Net Worth calculation and current period for trends
+      const [allTransactions, currentPeriodTransactions, currentInvestments, currentGoals] = await Promise.all([
+        Transaction.find({ userId }), // All-time transactions for Net Worth
         Transaction.find({
           userId,
           'transactionInfo.date': { $gte: startDate, $lte: endDate }
-        }),
+        }), // Current period for trends
         Investment.find({ userId, isActive: true }),
         Goal.find({ userId, isActive: true })
       ]);
@@ -770,21 +771,33 @@ export class AnalyticsController {
         'transactionInfo.date': { $gte: prevStartDate, $lte: prevEndDate }
       });
 
-      // Calculate current metrics
-      const currentIncome = currentTransactions
+      // Calculate all-time Net Worth (total accumulated wealth)
+      const allTimeIncome = allTransactions
         .filter(t => t.transactionInfo.type === 'income')
         .reduce((sum, t) => sum + t.transactionInfo.amount, 0);
 
-      const currentExpenses = Math.abs(currentTransactions
+      const allTimeExpenses = Math.abs(allTransactions
         .filter(t => t.transactionInfo.type === 'expense')
         .reduce((sum, t) => sum + t.transactionInfo.amount, 0));
 
-      const currentPortfolioValue = currentInvestments.reduce((sum, inv) => 
+      const totalPortfolioValue = currentInvestments.reduce((sum, inv) => 
         sum + inv.position.marketValue, 0);
 
-      const currentNetWorth = currentIncome - currentExpenses + currentPortfolioValue;
+      // True Net Worth = Total Assets - Total Liabilities
+      // For now: Cash Position (income - expenses) + Portfolio Value
+      // TODO: Add savings accounts, cash, and debt for complete picture
+      const currentNetWorth = allTimeIncome - allTimeExpenses + totalPortfolioValue;
 
-      // Calculate previous metrics
+      // Calculate current period metrics for trends
+      const currentIncome = currentPeriodTransactions
+        .filter(t => t.transactionInfo.type === 'income')
+        .reduce((sum, t) => sum + t.transactionInfo.amount, 0);
+
+      const currentExpenses = Math.abs(currentPeriodTransactions
+        .filter(t => t.transactionInfo.type === 'expense')
+        .reduce((sum, t) => sum + t.transactionInfo.amount, 0));
+
+      // Calculate previous metrics for trend comparison
       const prevIncome = prevTransactions
         .filter(t => t.transactionInfo.type === 'income')
         .reduce((sum, t) => sum + t.transactionInfo.amount, 0);
@@ -793,11 +806,25 @@ export class AnalyticsController {
         .filter(t => t.transactionInfo.type === 'expense')
         .reduce((sum, t) => sum + t.transactionInfo.amount, 0));
 
-      // Calculate portfolio change (simplified - in reality would use historical data)
+      // For previous Net Worth, we need all transactions up to the previous period end
+      const allTransactionsUpToPrevPeriod = await Transaction.find({
+        userId,
+        'transactionInfo.date': { $lte: prevEndDate }
+      });
+
+      const prevAllTimeIncome = allTransactionsUpToPrevPeriod
+        .filter(t => t.transactionInfo.type === 'income')
+        .reduce((sum, t) => sum + t.transactionInfo.amount, 0);
+
+      const prevAllTimeExpenses = Math.abs(allTransactionsUpToPrevPeriod
+        .filter(t => t.transactionInfo.type === 'expense')
+        .reduce((sum, t) => sum + t.transactionInfo.amount, 0));
+
+      // Simplified portfolio historical value (in reality would use historical market data)
       const prevPortfolioValue = currentInvestments.reduce((sum, inv) => 
         sum + (inv.position.shares * inv.position.averageCost), 0);
 
-      const prevNetWorth = prevIncome - prevExpenses + prevPortfolioValue;
+      const prevNetWorth = prevAllTimeIncome - prevAllTimeExpenses + prevPortfolioValue;
 
       // Calculate percentage changes
       const calculateChange = (current: number, previous: number) => {
@@ -812,7 +839,7 @@ export class AnalyticsController {
       };
 
       const netWorthChange = calculateChange(currentNetWorth, prevNetWorth);
-      const portfolioChange = calculateChange(currentPortfolioValue, prevPortfolioValue);
+      const portfolioChange = calculateChange(totalPortfolioValue, prevPortfolioValue);
       const expenseChange = calculateChange(currentExpenses, prevExpenses);
 
       // Count goals on track
@@ -833,14 +860,20 @@ export class AnalyticsController {
             changeType: netWorthChange.changeType,
             changeText: `${netWorthChange.changePercent >= 0 ? '+' : ''}${netWorthChange.changePercent.toFixed(1)}% from last month`
           },
+          income: {
+            current: allTimeIncome,
+            change: calculateChange(currentIncome, prevIncome).changePercent,
+            changeType: calculateChange(currentIncome, prevIncome).changeType,
+            changeText: `${calculateChange(currentIncome, prevIncome).changePercent >= 0 ? '+' : ''}${calculateChange(currentIncome, prevIncome).changePercent.toFixed(1)}% from last month`
+          },
           portfolio: {
-            current: currentPortfolioValue,
+            current: totalPortfolioValue,
             change: portfolioChange.changePercent,
             changeType: portfolioChange.changeType,
             changeText: `${portfolioChange.changePercent >= 0 ? '+' : ''}${portfolioChange.changePercent.toFixed(1)}% this month`
           },
           expenses: {
-            current: currentExpenses,
+            current: allTimeExpenses,
             change: expenseChange.changePercent,
             changeType: expenseChange.changePercent <= 0 ? 'positive' : 'negative', // Lower expenses are positive
             changeText: `${expenseChange.changePercent <= 0 ? '' : '+'}${expenseChange.changePercent.toFixed(1)}% from last month`

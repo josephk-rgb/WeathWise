@@ -3,11 +3,19 @@ import { logger } from './logger';
 
 export async function connectDB(): Promise<void> {
   try {
-    const mongoUri = process.env['MONGODB_URI'];
+    const baseUri = process.env['MONGODB_URI'] || 'mongodb://localhost:27017';
+    const dbName = process.env['MONGODB_DB_NAME'] || 'wealthwise';
     
-    if (!mongoUri) {
-      throw new Error('MONGODB_URI environment variable is not defined');
+    // Construct the full URI with database name
+    const mongoUri = baseUri.includes('mongodb+srv://') 
+      ? `${baseUri.replace('/?', `/${dbName}?`)}`
+      : `${baseUri}/${dbName}`;
+    
+    if (!process.env['MONGODB_URI']) {
+      logger.warn(`MONGODB_URI environment variable not found, using default: mongodb://localhost:27017/${dbName}`);
     }
+    
+    logger.info(`Connecting to database: ${dbName}`);
 
     await mongoose.connect(mongoUri, {
       maxPoolSize: 10,
@@ -16,7 +24,8 @@ export async function connectDB(): Promise<void> {
       bufferCommands: false,
     });
 
-    logger.info('MongoDB connected successfully');
+    logger.info(`MongoDB connected successfully to database: ${dbName}`);
+    logger.info(`Connection string: ${mongoUri.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')}`); // Hide credentials
     
     // Handle connection events
     mongoose.connection.on('error', (error) => {

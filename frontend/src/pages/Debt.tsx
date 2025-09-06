@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, CreditCard, Calendar, AlertTriangle } from 'lucide-react';
 import { useStore } from '../store/useStore';
+import { apiService } from '../services/api';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import { formatCurrency } from '../utils/currency';
 import { Debt } from '../types';
 
 const DebtPage: React.FC = () => {
-  const { user, debts, addDebt, currency } = useStore();
+  const { user, debts, setDebts, currency } = useStore();
   const [showAddForm, setShowAddForm] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -19,6 +20,30 @@ const DebtPage: React.FC = () => {
     type: 'credit_card' as Debt['type'],
   });
 
+  useEffect(() => {
+    if (user) {
+      loadDebts();
+    }
+  }, [user]);
+
+  const loadDebts = async () => {
+    if (!user) return;
+    try {
+      const response = await apiService.getDebts(user.id);
+      // Handle the response format: {success: true, data: [...]}
+      const data = (response as any)?.data || response;
+      if (!Array.isArray(data)) {
+        console.warn('Debts API returned non-array data:', response);
+        setDebts([]);
+        return;
+      }
+      setDebts(data);
+    } catch (error) {
+      console.error('Error loading debts:', error);
+      setDebts([]); // Set empty array on error
+    }
+  };
+
   const debtTypes = [
     { value: 'credit_card', label: 'Credit Card' },
     { value: 'loan', label: 'Personal Loan' },
@@ -27,35 +52,40 @@ const DebtPage: React.FC = () => {
     { value: 'other', label: 'Other' },
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
-    const newDebt: Debt = {
-      id: Date.now().toString(),
-      userId: user.id,
-      name: formData.name,
-      totalAmount: Number(formData.totalAmount),
-      remainingBalance: Number(formData.remainingBalance),
-      interestRate: Number(formData.interestRate),
-      minimumPayment: Number(formData.minimumPayment),
-      dueDate: new Date(formData.dueDate),
-      type: formData.type,
-      currency,
-      createdAt: new Date(),
-    };
+    try {
+      const debtData = {
+        name: formData.name,
+        totalAmount: Number(formData.totalAmount),
+        remainingBalance: Number(formData.remainingBalance),
+        interestRate: Number(formData.interestRate),
+        minimumPayment: Number(formData.minimumPayment),
+        dueDate: new Date(formData.dueDate),
+        type: formData.type,
+        currency,
+        isActive: true,
+        isPaidOff: false,
+        paymentHistory: []
+      };
 
-    addDebt(newDebt);
-    setShowAddForm(false);
-    setFormData({
-      name: '',
-      totalAmount: '',
-      remainingBalance: '',
-      interestRate: '',
-      minimumPayment: '',
-      dueDate: '',
-      type: 'credit_card',
-    });
+      await apiService.createDebt(debtData);
+      await loadDebts(); // Reload debts from server
+      setShowAddForm(false);
+      setFormData({
+        name: '',
+        totalAmount: '',
+        remainingBalance: '',
+        interestRate: '',
+        minimumPayment: '',
+        dueDate: '',
+        type: 'credit_card' as Debt['type'],
+      });
+    } catch (error) {
+      console.error('Error creating debt:', error);
+    }
   };
 
   const calculatePayoffTime = (debt: Debt) => {

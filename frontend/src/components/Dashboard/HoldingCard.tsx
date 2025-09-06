@@ -16,8 +16,8 @@ const HoldingCard: React.FC<HoldingCardProps> = ({
   onEdit,
   onDelete,
 }) => {
-  const currentValue = investment.shares * investment.currentPrice;
-  const costBasis = investment.shares * investment.purchasePrice;
+  const currentValue = (investment.shares || 0) * (investment.currentPrice || 0);
+  const costBasis = (investment.shares || 0) * (investment.purchasePrice || 0);
   const gainLoss = currentValue - costBasis;
   const gainLossPercent = costBasis > 0 ? (gainLoss / costBasis) * 100 : 0;
   const isPositive = gainLoss >= 0;
@@ -54,21 +54,21 @@ const HoldingCard: React.FC<HoldingCardProps> = ({
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
-            {investment.symbol.charAt(0)}
+            {(investment.symbol || 'N/A').charAt(0)}
           </div>
           <div>
             <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-              {investment.symbol}
+              {investment.symbol || 'N/A'}
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              {investment.name}
+              {investment.name || 'Unknown'}
             </p>
           </div>
         </div>
         
         <div className="flex items-center space-x-2">
-          <span className={`px-2 py-1 text-xs font-medium rounded-full ${getTypeColor(investment.type)}`}>
-            {getTypeIcon(investment.type)} {investment.type.replace('_', ' ').toUpperCase()}
+          <span className={`px-2 py-1 text-xs font-medium rounded-full ${getTypeColor(investment.type || 'other')}`}>
+            {getTypeIcon(investment.type || 'other')} {(investment.type || 'other').replace('_', ' ').toUpperCase()}
           </span>
         </div>
       </div>
@@ -84,19 +84,19 @@ const HoldingCard: React.FC<HoldingCardProps> = ({
         <div>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Shares</p>
           <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
-            {investment.shares.toLocaleString()}
+            {(investment.shares || 0).toLocaleString()}
           </p>
         </div>
         <div>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Current Price</p>
           <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
-            {formatCurrency(investment.currentPrice, currency)}
+            {formatCurrency(investment.currentPrice || 0, currency)}
           </p>
         </div>
         <div>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Cost Basis</p>
           <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
-            {formatCurrency(investment.purchasePrice, currency)}
+            {formatCurrency(investment.purchasePrice || 0, currency)}
           </p>
         </div>
       </div>

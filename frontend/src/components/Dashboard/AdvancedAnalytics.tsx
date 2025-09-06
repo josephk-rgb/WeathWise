@@ -47,7 +47,8 @@ const AdvancedAnalyticsComponent: React.FC<AdvancedAnalyticsProps> = ({ classNam
   };
 
   const getRiskIcon = (level: string) => {
-    switch (level) {
+    const safeLevel = level || 'low';
+    switch (safeLevel) {
       case 'low': return <Shield className="h-4 w-4" />;
       case 'medium': return <Target className="h-4 w-4" />;
       case 'high': return <AlertTriangle className="h-4 w-4" />;
@@ -135,24 +136,37 @@ const AdvancedAnalyticsComponent: React.FC<AdvancedAnalyticsProps> = ({ classNam
   }
   
   // Safely destructure with defaults
-  const { 
-    portfolioMetrics = { 
-      beta: 0, 
-      volatility: 0, 
-      sharpeRatio: 0, 
-      valueAtRisk: 0, 
-      correlation: 0 
-    }, 
-    individualAssets = [], 
-    composition = [], 
-    riskAnalysis = { 
-      overall: 'low' as const, 
-      diversification: 0, 
-      concentration: 0 
-    } 
-  } = analytics || {};
+  const portfolioMetrics = analytics?.portfolioMetrics || { 
+    beta: 0, 
+    volatility: 0, 
+    sharpeRatio: 0, 
+    valueAtRisk: 0, 
+    correlation: 0 
+  };
+  
+  const individualAssets = analytics?.individualAssets || [];
+  const composition = analytics?.composition || [];
+  const riskAnalysis = analytics?.riskAnalysis || { 
+    overall: 'low' as const, 
+    diversification: 0, 
+    concentration: 0 
+  };
 
   console.log('🔍 portfolioMetrics after destructuring:', portfolioMetrics);
+  console.log('🔍 riskAnalysis after destructuring:', riskAnalysis);
+  console.log('🔍 riskAnalysis.overall:', riskAnalysis?.overall);
+  console.log('🔍 originalAnalytics.riskAnalysis:', analytics?.riskAnalysis);
+  console.log('🔍 composition data:', composition);
+  console.log('🔍 individualAssets data:', individualAssets);
+
+  // Helper function to safely get risk level
+  const getRiskLevel = () => {
+    const level = riskAnalysis?.overall;
+    if (level && ['low', 'medium', 'high'].includes(level)) {
+      return level;
+    }
+    return 'low';
+  };
 
   return (
     <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 ${className}`}>
@@ -248,13 +262,13 @@ const AdvancedAnalyticsComponent: React.FC<AdvancedAnalyticsProps> = ({ classNam
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
               <div className="flex items-center space-x-2 mb-2">
-                {getRiskIcon(riskAnalysis.overall)}
+                {getRiskIcon(getRiskLevel())}
                 <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
                   Overall Risk
                 </span>
               </div>
-              <div className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${formatRiskLevel(riskAnalysis.overall)}`}>
-                {riskAnalysis.overall.toUpperCase()}
+              <div className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${formatRiskLevel(getRiskLevel())}`}>
+                {getRiskLevel().toUpperCase()}
               </div>
             </div>
 
@@ -266,7 +280,7 @@ const AdvancedAnalyticsComponent: React.FC<AdvancedAnalyticsProps> = ({ classNam
                 </span>
               </div>
               <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {Math.round(riskAnalysis.diversification)}%
+                {Math.round(riskAnalysis?.diversification || 0)}%
               </div>
             </div>
 
@@ -278,7 +292,7 @@ const AdvancedAnalyticsComponent: React.FC<AdvancedAnalyticsProps> = ({ classNam
                 </span>
               </div>
               <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {Math.round(riskAnalysis.concentration)}%
+                {Math.round(riskAnalysis?.concentration || 0)}%
               </div>
             </div>
           </div>
@@ -298,15 +312,15 @@ const AdvancedAnalyticsComponent: React.FC<AdvancedAnalyticsProps> = ({ classNam
                       backgroundColor: `hsl(${index * 137.5 % 360}, 70%, 50%)`
                     }}></div>
                     <span className="text-sm font-medium text-gray-900 dark:text-white capitalize">
-                      {asset.type}
+                      {asset.type || 'Unknown'}
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <span className="text-sm text-gray-500">
-                      ${asset.value.toLocaleString()}
+                      ${(asset.value || 0).toLocaleString()}
                     </span>
                     <span className="text-sm font-medium text-gray-900 dark:text-white">
-                      {asset.percentage.toFixed(1)}%
+                      {(asset.percentage || 0).toFixed(1)}%
                     </span>
                   </div>
                 </div>
@@ -346,19 +360,19 @@ const AdvancedAnalyticsComponent: React.FC<AdvancedAnalyticsProps> = ({ classNam
                   {individualAssets.slice(0, 5).map((asset, index) => (
                     <tr key={index}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                        {asset.symbol}
+                        {asset.symbol || 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                        {(asset.weight * 100).toFixed(1)}%
+                        {((asset.weight || 0) * 100).toFixed(1)}%
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                        {asset.analytics.beta?.toFixed(2) || 'N/A'}
+                        {asset.analytics?.beta?.toFixed(2) || 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                        {asset.analytics.volatility?.toFixed(1) || 'N/A'}%
+                        {asset.analytics?.volatility?.toFixed(1) || 'N/A'}%
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                        {asset.analytics.sharpeRatio?.toFixed(2) || 'N/A'}
+                        {asset.analytics?.sharpeRatio?.toFixed(2) || 'N/A'}
                       </td>
                     </tr>
                   ))}

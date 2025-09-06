@@ -411,6 +411,38 @@ class ApiService {
     });
   }
 
+  // Debt methods
+  async getDebts(_userId: string): Promise<any[]> {
+    return this.makeRequest('/debts');
+  }
+
+  async createDebt(debtData: any): Promise<any> {
+    return this.makeRequest('/debts', {
+      method: 'POST',
+      body: JSON.stringify(debtData),
+    });
+  }
+
+  async updateDebt(id: string, debtData: any): Promise<any> {
+    return this.makeRequest(`/debts/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(debtData),
+    });
+  }
+
+  async deleteDebt(id: string): Promise<void> {
+    return this.makeRequest(`/debts/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async addDebtPayment(debtId: string, paymentData: any): Promise<any> {
+    return this.makeRequest(`/debts/${debtId}/payments`, {
+      method: 'POST',
+      body: JSON.stringify(paymentData),
+    });
+  }
+
   // Investment methods
   async getInvestments(_userId: string): Promise<Investment[]> {
     const response = await this.makeRequest('/investments');
@@ -640,6 +672,28 @@ class ApiService {
   // Public method for making authenticated requests (used by polling manager)
   async makeAuthenticatedRequest(endpoint: string, cacheTTL?: number): Promise<any> {
     return this.makeRequest(endpoint, {}, 0, cacheTTL);
+  }
+
+  // Mock Data Methods for Admin Users
+  async generateMockData(config: any): Promise<any> {
+    return this.makeRequest('/mock-data/generate', {
+      method: 'POST',
+      body: JSON.stringify(config),
+    });
+  }
+
+  async getMockDataSummary(): Promise<any> {
+    return this.makeRequest('/mock-data/summary');
+  }
+
+  async clearMockData(): Promise<any> {
+    return this.makeRequest('/mock-data/clear', {
+      method: 'DELETE',
+    });
+  }
+
+  async getMockDataConfig(): Promise<any> {
+    return this.makeRequest('/mock-data/config');
   }
 }
 

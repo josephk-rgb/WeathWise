@@ -1,12 +1,20 @@
 import React from 'react';
 import { Globe, Bell, Shield, Palette, Database } from 'lucide-react';
 import { useStore } from '../store/useStore';
+import { useUser } from '../contexts/UserContext';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
+import AdminMockData from '../components/Admin/AdminMockData';
 import { CURRENCIES } from '../utils/currency';
 
 const Settings: React.FC = () => {
   const { darkMode, toggleDarkMode, currency, setCurrency } = useStore();
+  const { userProfile } = useUser();
+
+  // Debug: Log admin check
+  console.log('🔍 DEBUG - Settings page userProfile:', userProfile);
+  console.log('🔍 DEBUG - Settings page role:', userProfile?.role);
+  console.log('🔍 DEBUG - Is admin check:', userProfile?.role === 'admin');
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -202,6 +210,9 @@ const Settings: React.FC = () => {
             </div>
           </div>
         </Card>
+
+        {/* Admin Mock Data Section */}
+        <AdminMockData isAdmin={userProfile?.role === 'admin'} />
 
         {/* Danger Zone */}
         <Card>

@@ -68,6 +68,7 @@ export interface IUserMetadata {
 export interface IUser extends Document {
   auth0Id: string;
   email: string;
+  role: 'user' | 'admin';
   profile: IUserProfile;
   preferences: IUserPreferences;
   riskProfile: IRiskProfile;
@@ -105,6 +106,13 @@ const UserSchema = new Schema<IUser>({
       },
       message: 'Invalid email format'
     }
+  },
+  role: {
+    type: String,
+    required: true,
+    enum: ['user', 'admin'],
+    default: 'user',
+    index: true
   },
   profile: {
     firstName: {

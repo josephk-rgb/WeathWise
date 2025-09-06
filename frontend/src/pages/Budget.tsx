@@ -32,10 +32,11 @@ const BudgetPage: React.FC = () => {
   const loadBudgets = async () => {
     if (!user) return;
     try {
-      const data = await apiService.getBudgets(user.id);
-      // Ensure we always get an array for budgets
+      const response = await apiService.getBudgets(user.id);
+      // Handle the response format: {success: true, data: [...]}
+      const data = (response as any)?.data || response;
       if (!Array.isArray(data)) {
-        console.warn('Budgets API returned non-array data:', data);
+        console.warn('Budgets API returned non-array data:', response);
         setBudgets([]);
         return;
       }

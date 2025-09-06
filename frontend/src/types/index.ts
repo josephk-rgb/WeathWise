@@ -107,10 +107,37 @@ export interface User {
   name: string;
   email: string;
   avatar?: string;
+  role: 'user' | 'admin';
   riskProfile: 'conservative' | 'moderate' | 'aggressive';
   currency: string;
   darkMode: boolean;
   createdAt: Date;
+}
+
+// Mock Data Types for Admin
+export interface MockDataConfig {
+  accounts?: number;
+  transactionsPerMonth?: number;
+  monthsOfHistory?: number;
+  includeInvestments?: boolean;
+  includeBudgets?: boolean;
+  includeGoals?: boolean;
+  includeDebts?: boolean;
+}
+
+export interface MockDataSummary {
+  accounts: number;
+  transactions: number;
+  investments: number;
+  budgets: number;
+  goals: number;
+  debts: number;
+}
+
+export interface MockDataResponse {
+  success: boolean;
+  message: string;
+  summary: MockDataSummary;
 }
 
 export interface Transaction {

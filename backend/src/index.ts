@@ -52,10 +52,12 @@ import marketRoutes from './routes/market';
 import aiRoutes from './routes/ai';
 import goalRoutes from './routes/goals';
 import budgetRoutes from './routes/budgets';
+import debtRoutes from './routes/debts';
 import analyticsRoutes from './routes/analytics';
 import authTestRoutes from './routes/auth-test';
 import testApisRoutes from './routes/test-apis';
 import mlProxyRoutes from './routes/ml-proxy';
+import mockDataRoutes from './routes/mockData';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -126,6 +128,7 @@ app.get('/debug/routes', (_req, res) => {
       'GET /api/investments/* - Investment data (auth required)',
       'GET /api/goals/* - Goals data (auth required)',
       'GET /api/budgets/* - Budget data (auth required)',
+      'GET /api/debts/* - Debt data (auth required)',
       'GET /api/analytics/* - Analytics data (auth required)',
       'GET /api/market/* - Market data (auth required)',
       'GET /api/ai/* - AI services (auth required)',
@@ -148,9 +151,11 @@ app.use('/api/transactions', authMiddleware, transactionRoutes);
 app.use('/api/investments', authMiddleware, investmentRoutes);
 app.use('/api/goals', authMiddleware, goalRoutes);
 app.use('/api/budgets', authMiddleware, budgetRoutes);
+app.use('/api/debts', authMiddleware, debtRoutes);
 app.use('/api/analytics', authMiddleware, analyticsRoutes);
 app.use('/api/market', authMiddleware, marketRoutes);
 app.use('/api/ai', authMiddleware, aiRoutes);
+app.use('/api/mock-data', mockDataRoutes); // Admin-only mock data routes
 
 // DEBUG: Log ML proxy route registration
 console.log('🔧 [DEBUG] Registering ML proxy routes at /api/ml');
@@ -283,6 +288,9 @@ process.on('uncaughtException', (error) => {
   logger.error('Uncaught Exception:', error);
   process.exit(1);
 });
+
+// Export app for testing
+export default app;
 
 startServer();
 

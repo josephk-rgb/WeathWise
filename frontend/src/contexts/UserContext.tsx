@@ -1,11 +1,13 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { apiService } from '../services/api';
+import { useStore } from '../store/useStore';
 
 interface UserProfile {
   id: string;
   email: string;
   name: string;
+  role?: 'user' | 'admin';
   profile?: {
     firstName?: string;
     lastName?: string;
@@ -67,6 +69,9 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     getAccessTokenSilently,
   } = useAuth0();
 
+  // Get store actions
+  const { setUser } = useStore();
+
   // Profile state
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isProfileLoading, setIsProfileLoading] = useState(false);
@@ -101,7 +106,16 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
 
       // Fetch profile
       const profile = await apiService.getCurrentUser();
+      
+      // Debug: Log received profile
+      console.log('🔍 DEBUG - Frontend received profile:', profile);
+      console.log('🔍 DEBUG - Profile role:', profile?.role);
+      console.log('🔍 DEBUG - Profile keys:', Object.keys(profile || {}));
+      
       setUserProfile(profile);
+      
+      // Also set the user in the store for compatibility with existing pages
+      setUser(profile);
       
       console.log('✅ User profile loaded successfully');
     } catch (error: any) {
@@ -121,6 +135,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     } else if (!isAuthenticated) {
       // Reset state on logout
       setUserProfile(null);
+      setUser(null);
       setIsProfileLoading(false);
       setProfileError(null);
       setHasInitialized(false);
@@ -152,6 +167,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       setIsProfileLoading(true);
       const updatedProfile = await apiService.updateProfile(data);
       setUserProfile(updatedProfile);
+      setUser(updatedProfile);
     } catch (error: any) {
       console.error('Failed to update profile:', error);
       throw error;

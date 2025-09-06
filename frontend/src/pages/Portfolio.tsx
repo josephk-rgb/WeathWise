@@ -148,13 +148,13 @@ const PortfolioPage: React.FC = () => {
   const handleEdit = (investment: Investment) => {
     setEditingInvestment(investment);
     setFormData({
-      symbol: investment.symbol,
-      name: investment.name,
-      shares: investment.shares.toString(),
-      purchasePrice: investment.purchasePrice.toString(),
-      currentPrice: investment.currentPrice.toString(),
-      type: investment.type,
-      purchaseDate: new Date(investment.purchaseDate).toISOString().split('T')[0],
+      symbol: investment.symbol || '',
+      name: investment.name || '',
+      shares: (investment.shares || 0).toString(),
+      purchasePrice: (investment.purchasePrice || 0).toString(),
+      currentPrice: (investment.currentPrice || 0).toString(),
+      type: investment.type || 'stock',
+      purchaseDate: investment.purchaseDate ? new Date(investment.purchaseDate).toISOString().split('T')[0] : '',
     });
     setShowAddForm(true);
   };
@@ -169,8 +169,8 @@ const PortfolioPage: React.FC = () => {
   // Filter and sort investments
   const filteredAndSortedInvestments = safeInvestments
     .filter(inv => {
-      const matchesSearch = inv.symbol.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          inv.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = (inv.symbol || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (inv.name || '').toLowerCase().includes(searchTerm.toLowerCase());
       const matchesType = filterType === 'all' || inv.type === filterType;
       return matchesSearch && matchesType;
     })
@@ -179,20 +179,20 @@ const PortfolioPage: React.FC = () => {
       
       switch (sortBy) {
         case 'value':
-          aValue = a.shares * a.currentPrice;
-          bValue = b.shares * b.currentPrice;
+          aValue = (a.shares || 0) * (a.currentPrice || 0);
+          bValue = (b.shares || 0) * (b.currentPrice || 0);
           break;
         case 'gainLoss':
-          aValue = (a.currentPrice - a.purchasePrice) / a.purchasePrice;
-          bValue = (b.currentPrice - b.purchasePrice) / b.purchasePrice;
+          aValue = ((a.currentPrice || 0) - (a.purchasePrice || 0)) / (a.purchasePrice || 1);
+          bValue = ((b.currentPrice || 0) - (b.purchasePrice || 0)) / (b.purchasePrice || 1);
           break;
         case 'name':
-          aValue = a.symbol.charCodeAt(0);
-          bValue = b.symbol.charCodeAt(0);
+          aValue = (a.symbol || '').charCodeAt(0);
+          bValue = (b.symbol || '').charCodeAt(0);
           break;
         default:
-          aValue = a.shares * a.currentPrice;
-          bValue = b.shares * b.currentPrice;
+          aValue = (a.shares || 0) * (a.currentPrice || 0);
+          bValue = (b.shares || 0) * (b.currentPrice || 0);
       }
       
       return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
@@ -200,8 +200,9 @@ const PortfolioPage: React.FC = () => {
 
   const getAssetAllocation = () => {
     const allocation = safeInvestments.reduce((acc, inv) => {
-      const value = inv.shares * inv.currentPrice;
-      acc[inv.type] = (acc[inv.type] || 0) + value;
+      const value = (inv.shares || 0) * (inv.currentPrice || 0);
+      const type = inv.type || 'unknown';
+      acc[type] = (acc[type] || 0) + value;
       return acc;
     }, {} as Record<string, number>);
 

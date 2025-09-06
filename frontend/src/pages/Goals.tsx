@@ -4,6 +4,7 @@ import { useStore } from '../store/useStore';
 import { apiService } from '../services/api';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
+import Pagination from '../components/UI/Pagination';
 import { formatCurrency } from '../utils/currency';
 import { Goal } from '../types';
 
@@ -12,6 +13,13 @@ const GoalsPage: React.FC = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -37,10 +45,11 @@ const GoalsPage: React.FC = () => {
   const loadGoals = async () => {
     if (!user) return;
     try {
-      const data = await apiService.getGoals(user.id);
-      // Ensure we always get an array for goals
+      const response = await apiService.getGoals(user.id);
+      // Handle the response format: {success: true, data: [...]}
+      const data = (response as any)?.data || response;
       if (!Array.isArray(data)) {
-        console.warn('Goals API returned non-array data:', data);
+        console.warn('Goals API returned non-array data:', response);
         setGoals([]);
         return;
       }
