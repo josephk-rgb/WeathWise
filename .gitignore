@@ -18,6 +18,10 @@ build/
 .env.test.local
 .env.production.local
 
+# Virtual Enviroment 
+
+venv/
+
 # IDE and editor files
 .vscode/
 .idea/
