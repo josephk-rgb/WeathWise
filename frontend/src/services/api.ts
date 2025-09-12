@@ -177,14 +177,44 @@ class ApiService {
     // Update request timestamp
     this.requestTimestamps.set(requestKey, Date.now());
     
+    // Build headers explicitly to avoid spread issues
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    // Add any custom headers from options
+    if (options.headers) {
+      Object.entries(options.headers).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          headers[key] = value as string;
+        }
+      });
+    }
+    
+    // Always add Authorization header if token exists
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const config: RequestInit = {
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token && { Authorization: `Bearer ${token}` }),
-        ...options.headers,
-      },
+      headers,
       ...options,
     };
+
+    // Debug: Log authorization header for polling endpoints
+    if (endpoint.includes('/portfolio/summary') || endpoint.includes('/investments')) {
+      console.log('🔧 [DEBUG] Polling request headers:', {
+        endpoint,
+        hasToken: !!token,
+        tokenType: typeof token,
+        tokenValue: token ? token.substring(0, 50) + '...' : 'null',
+        hasAuthHeader: !!config.headers && 'Authorization' in config.headers,
+        authHeaderValue: config.headers && 'Authorization' in config.headers ? 
+          (config.headers as any).Authorization.substring(0, 30) + '...' : 'none',
+        allHeaders: Object.keys(config.headers || {}),
+        headerConstruction: token ? `Bearer ${token}`.substring(0, 30) + '...' : 'no token'
+      });
+    }
 
     if (this.debugMode) {
       console.log('🚀 Making API request:', {
@@ -222,10 +252,34 @@ class ApiService {
         console.log('📡 API response status:', response.status);
       }
 
+      // Handle 304 Not Modified - return cached data if available
+      if (response.status === 304) {
+        if (this.debugMode) {
+          console.log('📋 304 Not Modified - using cached data');
+        }
+        
+        // Return cached data if available, otherwise return null
+        if (cacheKey) {
+          const cached = this.cache.get(cacheKey);
+          if (cached) {
+            return cached.data;
+          }
+        }
+        
+        // If no cached data available, return null (data hasn't changed)
+        return null;
+      }
+
       if (!response.ok) {
         if (response.status === 401) {
           console.log('🔐 Authentication failed');
           this.clearToken();
+          
+          // Dispatch a custom event to notify auth system
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('auth-token-cleared'));
+          }
+          
           throw new Error('Authentication failed');
         }
         
@@ -456,30 +510,65 @@ class ApiService {
     });
   }
 
+  // Data transformation helper methods
+  private transformBackendInvestment(backendInvestment: any): Investment {
+    return {
+      id: backendInvestment._id || backendInvestment.id,
+      userId: backendInvestment.userId || '',
+      symbol: backendInvestment.securityInfo?.symbol || '',
+      name: backendInvestment.securityInfo?.name || '',
+      shares: backendInvestment.position?.shares || 0,
+      purchasePrice: backendInvestment.acquisition?.purchasePrice || backendInvestment.position?.averageCost || 0,
+      currentPrice: backendInvestment.position?.currentPrice || 0,
+      type: backendInvestment.securityInfo?.type || 'other',
+      purchaseDate: backendInvestment.acquisition?.purchaseDate ? new Date(backendInvestment.acquisition.purchaseDate) : new Date(),
+      currency: backendInvestment.securityInfo?.currency || 'USD',
+      originalCurrency: backendInvestment.securityInfo?.currency,
+      originalPurchasePrice: backendInvestment.acquisition?.purchasePrice
+    };
+  }
+
+  private transformBackendInvestments(backendInvestments: any[]): Investment[] {
+    if (!Array.isArray(backendInvestments)) {
+      return [];
+    }
+    return backendInvestments.map(inv => this.transformBackendInvestment(inv));
+  }
+
   // Investment methods
   async getInvestments(_userId: string): Promise<Investment[]> {
     const response = await this.makeRequest('/investments');
     if (response && response.success && Array.isArray(response.data)) {
-      return response.data;
+      return this.transformBackendInvestments(response.data);
     }
     if (Array.isArray(response)) {
-      return response;
+      return this.transformBackendInvestments(response);
     }
     return [];
   }
 
   async createInvestment(investmentData: Omit<Investment, 'id'>): Promise<Investment> {
-    return this.makeRequest('/investments', {
+    const response = await this.makeRequest('/investments', {
       method: 'POST',
       body: JSON.stringify(investmentData),
     });
+    
+    if (response && response.success && response.data) {
+      return this.transformBackendInvestment(response.data);
+    }
+    return response;
   }
 
   async updateInvestment(id: string, investmentData: Partial<Investment>): Promise<Investment> {
-    return this.makeRequest(`/investments/${id}`, {
+    const response = await this.makeRequest(`/investments/${id}`, {
       method: 'PUT',
       body: JSON.stringify(investmentData),
     });
+    
+    if (response && response.success && response.data) {
+      return this.transformBackendInvestment(response.data);
+    }
+    return response;
   }
 
   async deleteInvestment(id: string): Promise<void> {
@@ -570,7 +659,38 @@ class ApiService {
 
   async getPortfolioPerformance(): Promise<any> {
     const response = await this.makeRequest('/portfolio/performance');
-    return response.success ? response.data : response;
+    
+    // Handle both response formats: wrapped {success, data} and direct data
+    let backendData;
+    if (response && response.success && response.data) {
+      // Standard wrapped response format
+      backendData = response.data;
+    } else if (response && (response.historicalPerformance || response.investments)) {
+      // Direct data format (what we're actually receiving)
+      backendData = response;
+    } else {
+      // No valid data
+      return response;
+    }
+    
+    return {
+      ...backendData,
+      // Transform historical performance data if it exists
+      historicalPerformance: backendData.historicalPerformance || [],
+      // Transform investments data if it exists
+      investments: backendData.investments ? backendData.investments.map((inv: any) => ({
+        symbol: inv.symbol,
+        name: inv.name,
+        type: inv.type,
+        shares: inv.shares,
+        currentPrice: inv.currentPrice,
+        averageCost: inv.averageCost,
+        currentValue: inv.currentValue,
+        costBasis: inv.costBasis,
+        gainLoss: inv.gainLoss,
+        gainLossPercent: inv.gainLossPercent
+      })) : []
+    };
   }
 
   // Market data methods
@@ -594,7 +714,7 @@ class ApiService {
   }
 
   async getYahooQuote(symbol: string): Promise<MarketData> {
-    const response = await this.makeRequest(`/market/yahoo-quote/${symbol}`);
+  const response = await this.makeRequest(`/market/data/${symbol}`);
     return response.data || response;
   }
 
@@ -606,6 +726,48 @@ class ApiService {
   // Real-time Portfolio Value with Yahoo Finance
   async getRealtimePortfolioValue(): Promise<RealtimePortfolioValue> {
     const response = await this.makeRequest('/investments/portfolio/summary');
+    
+    if (response && response.success && response.data) {
+      // Transform the backend portfolio summary to match frontend expectations
+      const backendData = response.data;
+      return {
+        totalValue: backendData.totalValue || 0,
+        totalCost: backendData.totalCost || 0,
+        totalGainLoss: backendData.totalGainLoss || 0,
+        totalGainLossPercent: backendData.totalGainLossPercent || 0,
+        lastUpdated: backendData.lastUpdated ? new Date(backendData.lastUpdated) : new Date(),
+        marketData: backendData.topHoldings ? backendData.topHoldings.map((holding: any) => ({
+          id: holding.symbol,
+          userId: '',
+          symbol: holding.symbol,
+          name: holding.name,
+          shares: 0, // Not provided in summary
+          purchasePrice: 0, // Not provided in summary
+          currentPrice: holding.value || 0,
+          type: 'stock' as const,
+          purchaseDate: new Date(),
+          currency: 'USD',
+          value: holding.value || 0,
+          cost: 0,
+          gainLoss: holding.gainLoss || 0,
+          gainLossPercent: holding.gainLossPercent || 0,
+          marketData: {
+            symbol: holding.symbol,
+            name: holding.name,
+            currentPrice: holding.value || 0,
+            change: 0,
+            changePercent: 0,
+            volume: 0,
+            high: holding.value || 0,
+            low: holding.value || 0,
+            open: holding.value || 0,
+            previousClose: holding.value || 0,
+            lastUpdated: new Date()
+          }
+        })) : []
+      };
+    }
+    
     return response.data || response;
   }
 
@@ -752,8 +914,18 @@ class ApiService {
   }
 
   // Public method for making authenticated requests (used by polling manager)
-  async makeAuthenticatedRequest(endpoint: string, cacheTTL?: number): Promise<any> {
-    return this.makeRequest(endpoint, {}, 0, cacheTTL);
+  async makeAuthenticatedRequest(endpoint: string, cacheTTL?: number, forceRefresh?: boolean): Promise<any> {
+    const options: RequestInit = {};
+    
+    // If forceRefresh is true, add a cache-busting header to prevent 304 responses
+    if (forceRefresh) {
+      options.headers = {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      };
+    }
+    
+    return this.makeRequest(endpoint, options, 0, cacheTTL);
   }
 
   // Mock Data Methods for Admin Users

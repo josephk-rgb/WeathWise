@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { RefreshCw, TrendingUp, TrendingDown, Clock, Signal, Wifi, WifiOff, PieChart } from 'lucide-react';
 import { usePortfolioPolling } from '../../hooks/usePolling';
+import { useAuth } from '../../hooks/useAuth';
 import { RealtimePortfolioValue, Investment } from '../../types';
 import { formatCurrency } from '../../utils/currency';
 
@@ -13,14 +14,43 @@ const RealtimePortfolioValueComponent: React.FC<RealtimePortfolioValueProps> = (
   investments,
   currency
 }) => {
-  // Use the polling hook for real-time data
+  // Get authentication state
+  const { isAuthenticated, tokenReady } = useAuth();
+  
+  // Calculate static value function - memoized to avoid infinite loops
+  const calculateStaticValue = useCallback(() => {
+    let totalValue = 0;
+    let totalCost = 0;
+
+    investments.forEach(investment => {
+      const value = investment.shares * investment.currentPrice;
+      const cost = investment.shares * investment.purchasePrice;
+      
+      totalValue += value;
+      totalCost += cost;
+    });
+
+    const totalGainLoss = totalValue - totalCost;
+    const totalGainLossPercent = totalCost > 0 ? (totalGainLoss / totalCost) * 100 : 0;
+
+    return {
+      totalValue,
+      totalCost,
+      totalGainLoss,
+      totalGainLossPercent,
+      investmentCount: investments.length,
+      lastUpdated: new Date()
+    };
+  }, [investments]);
+
+  // Use the polling hook for real-time data - only when authenticated and token is ready
   const { 
     data: portfolioValue, 
     error: pollingError, 
     isLoading, 
     lastUpdated, 
     refresh 
-  } = usePortfolioPolling(investments.length > 0);
+  } = usePortfolioPolling(investments.length > 0 && isAuthenticated && tokenReady);
 
   const [fallbackValue, setFallbackValue] = useState<RealtimePortfolioValue | null>(null);
 
@@ -30,56 +60,41 @@ const RealtimePortfolioValueComponent: React.FC<RealtimePortfolioValueProps> = (
       const fallback = calculateStaticValue();
       setFallbackValue(fallback);
     }
-  }, [investments, portfolioValue, pollingError]);
+  }, [investments, portfolioValue, pollingError, calculateStaticValue]);
 
+  // Also calculate fallback when we have investments but no polling data (even without error)
+  useEffect(() => {
+    if (investments.length > 0 && !portfolioValue && !pollingError && !fallbackValue) {
+      const fallback = calculateStaticValue();
+      setFallbackValue(fallback);
+    }
+  }, [investments, portfolioValue, pollingError, fallbackValue, calculateStaticValue]);
+
+  // Extract data from API response format
+  const extractedPortfolioValue = portfolioValue?.data || portfolioValue;
+  
   // Use polling data or fallback
-  const displayValue = portfolioValue || fallbackValue;
+  const displayValue = extractedPortfolioValue || fallbackValue;
   const hasError = !!pollingError;
-  const isRealtime = !!portfolioValue && !pollingError;
+  const isRealtime = !!extractedPortfolioValue && !pollingError;
 
-  const calculateStaticValue = (): RealtimePortfolioValue => {
-    let totalValue = 0;
-    let totalCost = 0;
-
-    const marketData = investments.map(investment => {
-      const value = investment.shares * investment.currentPrice;
-      const cost = investment.shares * investment.purchasePrice;
-      
-      totalValue += value;
-      totalCost += cost;
-      
-      return {
-        ...investment,
-        currentPrice: investment.currentPrice,
-        value,
-        cost,
-        gainLoss: value - cost,
-        gainLossPercent: cost > 0 ? ((value - cost) / cost) * 100 : 0,
-        marketData: {
-          symbol: investment.symbol,
-          name: investment.name,
-          currentPrice: investment.currentPrice,
-          change: 0,
-          changePercent: 0,
-          volume: 0,
-          high: investment.currentPrice,
-          low: investment.currentPrice,
-          open: investment.currentPrice,
-          previousClose: investment.currentPrice,
-          lastUpdated: new Date()
-        }
-      };
-    });
-
-    return {
-      totalValue,
-      totalCost,
-      totalGainLoss: totalValue - totalCost,
-      totalGainLossPercent: totalCost > 0 ? ((totalValue - totalCost) / totalCost) * 100 : 0,
-      lastUpdated: new Date(),
-      marketData
-    };
-  };
+  // Debug logging to track value changes
+  console.log('=== REALTIME PORTFOLIO VALUE DEBUG ===');
+  console.log('Auth state - isAuthenticated:', isAuthenticated, 'tokenReady:', tokenReady);
+  console.log('Polling enabled:', investments.length > 0 && isAuthenticated && tokenReady);
+  console.log('Polling data:', extractedPortfolioValue);
+  console.log('Polling error:', pollingError);
+  console.log('Fallback value:', fallbackValue);
+  console.log('Display value:', displayValue);
+  console.log('Is realtime:', isRealtime);
+  console.log('Has error:', hasError);
+  console.log('Investments count:', investments.length);
+  console.log('Should calculate fallback:', investments.length > 0 && (!portfolioValue || pollingError));
+  if (investments.length > 0) {
+    const fallbackCalc = calculateStaticValue();
+    console.log('Fallback calculation:', fallbackCalc);
+  }
+  console.log('=== END REALTIME PORTFOLIO DEBUG ===');
 
   const handleManualRefresh = () => {
     refresh();
@@ -123,7 +138,7 @@ const RealtimePortfolioValueComponent: React.FC<RealtimePortfolioValueProps> = (
     );
   }
 
-  if (!displayValue) {
+  if (!displayValue || displayValue.totalValue === undefined || displayValue.totalValue === null) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
         <div className="animate-pulse">
@@ -138,7 +153,7 @@ const RealtimePortfolioValueComponent: React.FC<RealtimePortfolioValueProps> = (
   const status = getConnectionStatus();
   const StatusIcon = status.icon;
 
-  const isPositive = displayValue.totalGainLoss >= 0;
+  const isPositive = (displayValue.totalGainLoss ?? 0) >= 0;
   const TrendIcon = isPositive ? TrendingUp : TrendingDown;
 
   return (
@@ -178,10 +193,10 @@ const RealtimePortfolioValueComponent: React.FC<RealtimePortfolioValueProps> = (
           <div className={`flex items-center space-x-1 ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
             <TrendIcon className="h-4 w-4" />
             <span className="font-medium">
-              {formatCurrency(Math.abs(displayValue.totalGainLoss), currency)}
+              {formatCurrency(Math.abs(displayValue.totalGainLoss ?? 0), currency)}
             </span>
             <span className="text-sm">
-              ({isPositive ? '+' : ''}{displayValue.totalGainLossPercent.toFixed(2)}%)
+              ({isPositive ? '+' : ''}{(displayValue.totalGainLossPercent ?? 0).toFixed(2)}%)
             </span>
           </div>
         </div>
@@ -192,13 +207,13 @@ const RealtimePortfolioValueComponent: React.FC<RealtimePortfolioValueProps> = (
         <div>
           <p className="text-sm text-gray-500 dark:text-gray-400">Total Cost</p>
           <p className="font-medium text-gray-900 dark:text-white">
-            {formatCurrency(displayValue.totalCost, currency)}
+            {formatCurrency(displayValue.totalCost ?? 0, currency)}
           </p>
         </div>
         <div>
           <p className="text-sm text-gray-500 dark:text-gray-400">Holdings</p>
           <p className="font-medium text-gray-900 dark:text-white">
-            {displayValue.marketData.length} assets
+            {displayValue.investmentCount ?? 0} assets
           </p>
         </div>
       </div>

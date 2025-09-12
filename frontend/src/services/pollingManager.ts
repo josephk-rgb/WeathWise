@@ -53,6 +53,7 @@ export class PollingManager extends SimpleEventEmitter {
   private configs: Map<string, PollingConfig> = new Map();
   private lastData: Map<string, PollingData> = new Map();
   private errorCounts: Map<string, number> = new Map();
+  private initialRequests: Map<string, boolean> = new Map(); // Track if initial request has been made
   private isTabVisible: boolean = true;
   private visibilityListener?: () => void;
 
@@ -78,8 +79,9 @@ export class PollingManager extends SimpleEventEmitter {
       ...config
     });
 
-    // Reset error count
+    // Reset error count and initial request flag
     this.errorCounts.set(key, 0);
+    this.initialRequests.set(key, false);
 
     // Start immediate poll and then schedule recurring
     this.performPoll(key);
@@ -97,6 +99,7 @@ export class PollingManager extends SimpleEventEmitter {
     }
     this.configs.delete(key);
     this.errorCounts.delete(key);
+    this.initialRequests.delete(key);
   }
 
   /**
@@ -107,6 +110,7 @@ export class PollingManager extends SimpleEventEmitter {
     this.intervals.clear();
     this.configs.clear();
     this.errorCounts.clear();
+    this.initialRequests.clear();
   }
 
   /**
@@ -173,18 +177,57 @@ export class PollingManager extends SimpleEventEmitter {
         return;
       }
 
-      // Use API service for authenticated requests
-      // The API service handles auth tokens, caching, and conditional requests automatically
-      const response = await apiService.makeAuthenticatedRequest(config.endpoint, 600000); // 10 minute cache for polling
+      // Check if this is the initial request for this key
+      const isInitialRequest = !this.initialRequests.get(key);
       
-      const pollingData: PollingData = {
-        data: response,
-        timestamp: Date.now()
-      };
+      // Debug: Check token state before making request
+      const currentToken = apiService.getCurrentToken();
+      console.log('🔧 [DEBUG] Polling request token state:', {
+        endpoint: config.endpoint,
+        hasToken: !!currentToken,
+        tokenPreview: currentToken ? currentToken.substring(0, 30) + '...' : 'none',
+        isInitialRequest
+      });
 
-      this.lastData.set(key, pollingData);
-      this.errorCounts.set(key, 0); // Reset error count on success
-      this.emit('data', key, pollingData);
+      // Use API service for authenticated requests
+      // Force refresh on initial request to ensure we get actual data instead of 304
+      const response = await apiService.makeAuthenticatedRequest(
+        config.endpoint, 
+        600000, // 10 minute cache for polling
+        isInitialRequest // Force refresh on first request
+      );
+      
+      // Mark that initial request has been made
+      if (isInitialRequest) {
+        this.initialRequests.set(key, true);
+      }
+      
+      // Handle 304 Not Modified responses (response will be null or cached data)
+      if (response === null) {
+        // Data hasn't changed, use existing cached data if available
+        const existingData = this.lastData.get(key);
+        if (existingData) {
+          // Update timestamp but keep existing data
+          const pollingData: PollingData = {
+            data: existingData.data,
+            timestamp: Date.now()
+          };
+          this.lastData.set(key, pollingData);
+          this.errorCounts.set(key, 0);
+          this.emit('data', key, pollingData);
+        }
+        // If no existing data, don't emit anything (no change)
+      } else {
+        // New data received
+        const pollingData: PollingData = {
+          data: response,
+          timestamp: Date.now()
+        };
+
+        this.lastData.set(key, pollingData);
+        this.errorCounts.set(key, 0); // Reset error count on success
+        this.emit('data', key, pollingData);
+      }
 
     } catch (error) {
       console.error(`Polling error for ${key}:`, error);

@@ -40,17 +40,12 @@ export const useProfileCompletion = () => {
       setError(null);
       
       // Complete profile and onboarding in one atomic operation
-      const response = await apiService.completeProfile({
-        profile: {
-          firstName: profileData.firstName,
-          lastName: profileData.lastName,
-          phone: profileData.phone,
-          dateOfBirth: profileData.dateOfBirth,
-          address: profileData.address
-        },
-        metadata: {
-          onboardingCompleted: true
-        }
+      await apiService.completeProfile({
+        firstName: profileData.firstName,
+        lastName: profileData.lastName,
+        phone: profileData.phone,
+        dateOfBirth: profileData.dateOfBirth,
+        address: profileData.address
       });
 
       console.log('✅ Profile updated successfully');

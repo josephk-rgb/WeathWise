@@ -16,6 +16,8 @@
     "test:complete": "ts-node scripts/test-api-complete.ts",
     "test:mockdata": "jest tests/mockData.test.ts",
     "test:mock-data-simple": "ts-node scripts/test-mock-data.ts",
+    "populate-historical": "ts-node src/scripts/populateHistoricalData.ts",
+    "test-daily-prices": "ts-node src/scripts/testDailyPriceSystem.ts",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
     "migrate": "ts-node scripts/migrate.ts",
@@ -23,7 +25,10 @@
     "seed": "ts-node scripts/seed.ts",
     "test:user": "ts-node scripts/test-user-model.ts",
     "test:phase4-5": "ts-node scripts/test-phase4-5.ts",
-    "test:api-phase4-5": "node scripts/test-api-phase4-5.js"
+    "test:api-phase4-5": "node scripts/test-api-phase4-5.js",
+    "test:portfolio-history": "ts-node src/scripts/testPortfolioHistory.ts",
+    "test:portfolio-quick": "ts-node src/scripts/quickPortfolioTest.ts",
+    "test:portfolio-detailed": "ts-node src/scripts/detailedPortfolioTest.ts"
   },
   "dependencies": {
     "@faker-js/faker": "^8.4.1",

@@ -314,3 +314,4 @@ for i in {1..150}; do curl http://localhost:3001/api/market/data/AAPL; done
 Test endpoints without authentication tokens to ensure they're properly protected.
 
 
+

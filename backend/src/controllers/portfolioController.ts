@@ -3,6 +3,9 @@ import mongoose from 'mongoose';
 import { Investment, IInvestment } from '../models';
 import { logger } from '../utils/logger';
 import { MarketAnalyticsService } from '../services/marketAnalyticsService';
+import { MarketDataService } from '../services/marketDataService';
+import { DailyPriceService } from '../services/dailyPriceService';
+import { PortfolioHistoryService } from '../services/portfolioHistoryService';
 
 export class PortfolioController {
   private static analyticsService = new MarketAnalyticsService();
@@ -23,19 +26,23 @@ export class PortfolioController {
       const investments = await Investment.find({ userId, isActive: true });
       logger.info('Found investments:', { count: investments.length, userId });
 
+      // Update investments with real-time market data
+      const marketDataService = new MarketDataService();
+      const updatedInvestments = await marketDataService.updateInvestmentPrices(investments);
+
       // Calculate portfolio metrics
       let totalValue = 0;
       let totalCost = 0;
       let totalGainLoss = 0;
       const assetAllocation: { [key: string]: number } = {};
 
-      investments.forEach(investment => {
-        const currentValue = investment.position.shares * investment.position.currentPrice;
+      updatedInvestments.forEach(investment => {
+        const currentValue = investment.position.marketValue;
         const costBasis = investment.position.totalCost;
         
         totalValue += currentValue;
         totalCost += costBasis;
-        totalGainLoss += (currentValue - costBasis);
+        totalGainLoss += investment.position.gainLoss;
 
         // Asset allocation by type
         const type = investment.securityInfo.type;
@@ -132,18 +139,28 @@ export class PortfolioController {
           startDate.setFullYear(endDate.getFullYear() - 1);
       }
 
+      // Get all active investments for the user (not filtered by purchase date)
+      // The period filter should apply to the historical data, not the investments themselves
       const investments = await Investment.find({ 
         userId, 
-        isActive: true,
-        'acquisition.purchaseDate': { $gte: startDate }
+        isActive: true
       });
 
-      // Calculate performance metrics
-      const performanceData = investments.map(investment => {
+      logger.info(`Found ${investments.length} investments for portfolio performance calculation`);
+
+      // Update investments with real-time market data before calculating performance
+      const marketDataService = new MarketDataService();
+      const updatedInvestments = await marketDataService.updateInvestmentPrices(investments);
+
+      // Calculate performance metrics using updated prices
+      const performanceData = updatedInvestments.map(investment => {
         const currentValue = investment.position.shares * investment.position.currentPrice;
         const costBasis = investment.position.totalCost;
         const gainLoss = currentValue - costBasis;
         const gainLossPercent = costBasis > 0 ? (gainLoss / costBasis) * 100 : 0;
+
+        // Debug logging for each investment
+        logger.info(`Investment ${investment.securityInfo.symbol}: ${investment.position.shares} shares × $${investment.position.currentPrice} = $${currentValue.toFixed(2)}`);
 
         return {
           symbol: investment.securityInfo.symbol,
@@ -162,32 +179,35 @@ export class PortfolioController {
       // Sort by performance
       performanceData.sort((a, b) => b.gainLossPercent - a.gainLossPercent);
 
-      // Generate historical performance data (simplified)
-      const historicalPerformance = [];
-      const daysInPeriod = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-      const intervalDays = daysInPeriod > 180 ? 7 : daysInPeriod > 30 ? 1 : 1; // Weekly for >6mo, daily otherwise
+      // Get real historical performance data using new portfolio history service
+      const portfolioHistoryService = new PortfolioHistoryService();
       
-      let currentValue = performanceData.reduce((sum, inv) => sum + inv.costBasis, 0);
+      // Calculate portfolio history from scratch with proper logic
+      const portfolioHistoryResult = await portfolioHistoryService.calculatePortfolioHistory(
+        updatedInvestments,
+        startDate,
+        endDate
+      );
+      
+      const historicalPerformance = portfolioHistoryResult.snapshots.map(snapshot => ({
+        date: snapshot.date,
+        value: snapshot.value
+      }));
+      
+      const dataQualityMetrics = portfolioHistoryResult.dataQuality;
+
+      // Calculate total current value from performance data
       const totalCurrentValue = performanceData.reduce((sum, inv) => sum + inv.currentValue, 0);
       
-      // Simple growth simulation based on actual performance
-      const totalGrowthRate = currentValue > 0 ? (totalCurrentValue / currentValue - 1) : 0;
-      const dailyGrowthRate = totalGrowthRate / daysInPeriod;
-
-      for (let i = 0; i <= daysInPeriod; i += intervalDays) {
-        const date = new Date(startDate);
-        date.setDate(date.getDate() + i);
-        
-        // Add some realistic volatility
-        const volatility = (Math.random() - 0.5) * 0.02; // ±1% daily volatility
-        const growth = dailyGrowthRate * i + volatility;
-        currentValue = Math.max(0, currentValue * (1 + growth));
-        
-        historicalPerformance.push({
-          date: date.toISOString().split('T')[0],
-          value: Math.round(currentValue * 100) / 100
-        });
-      }
+      // Debug logging for current value calculation
+      logger.info('=== PORTFOLIO PERFORMANCE CURRENT VALUE DEBUG ===');
+      logger.info(`Total investments: ${performanceData.length}`);
+      logger.info(`Total current value: $${totalCurrentValue.toFixed(2)}`);
+      logger.info('Individual investment breakdown:');
+      performanceData.forEach(inv => {
+        logger.info(`  ${inv.symbol}: ${inv.shares} shares × $${inv.currentPrice} = $${inv.currentValue.toFixed(2)}`);
+      });
+      logger.info('=== END PORTFOLIO PERFORMANCE DEBUG ===');
 
       res.json({
         success: true,
@@ -196,12 +216,17 @@ export class PortfolioController {
           dateRange: { startDate, endDate },
           investments: performanceData,
           historicalPerformance,
+          dataQuality: dataQualityMetrics,
           summary: {
             totalInvestments: performanceData.length,
             bestPerformer: performanceData[0] || null,
             worstPerformer: performanceData[performanceData.length - 1] || null,
             totalValue: totalCurrentValue,
-            totalCost: performanceData.reduce((sum, inv) => sum + inv.costBasis, 0)
+            totalCost: performanceData.reduce((sum, inv) => sum + inv.costBasis, 0),
+            historicalDataPoints: historicalPerformance.length,
+            dataCoverage: dataQualityMetrics?.overallCoverage || 0,
+            currentValue: portfolioHistoryResult.currentValue,
+            validationPassed: Math.abs(portfolioHistoryResult.currentValue - totalCurrentValue) < (totalCurrentValue * 0.05)
           }
         }
       });

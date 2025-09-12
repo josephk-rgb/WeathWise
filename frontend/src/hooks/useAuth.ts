@@ -99,6 +99,35 @@ export const useAuth = () => {
     }
   }, [isAuthenticated, user, isLoading, getAccessTokenSilently]); // Removed tokenInitialized from dependencies
 
+  // Listen for token clearing events from API service
+  useEffect(() => {
+    const handleTokenCleared = async () => {
+      console.log('🔧 [FRONTEND] Token cleared by API service, updating auth state');
+      setTokenReady(false);
+      setTokenInitialized(false);
+      
+      // Try to get a fresh token if user is still authenticated
+      if (isAuthenticated && !isLoading) {
+        console.log('🔧 [FRONTEND] Attempting to refresh token after clearing');
+        try {
+          const newToken = await getAccessTokenSilently();
+          console.log('🔧 [FRONTEND] Got fresh token after clearing:', newToken.substring(0, 30) + '...');
+          apiService.setToken(newToken);
+          setTokenReady(true);
+          setTokenInitialized(true);
+        } catch (error) {
+          console.error('🔧 [FRONTEND] Failed to refresh token after clearing:', error);
+        }
+      }
+    };
+
+    window.addEventListener('auth-token-cleared', handleTokenCleared);
+    
+    return () => {
+      window.removeEventListener('auth-token-cleared', handleTokenCleared);
+    };
+  }, [isAuthenticated, isLoading, getAccessTokenSilently]);
+
   const login = () => {
     console.log('🔧 [FRONTEND] Starting Auth0 login with configuration:');
     console.log('🔧 [FRONTEND] - Domain:', import.meta.env.VITE_AUTH0_DOMAIN);

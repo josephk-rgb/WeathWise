@@ -58,10 +58,12 @@ import authTestRoutes from './routes/auth-test';
 import testApisRoutes from './routes/test-apis';
 import mlProxyRoutes from './routes/ml-proxy';
 import mockDataRoutes from './routes/mockData';
+import debugRoutes from './routes/debug';
 import accountRoutes from './routes/accounts';
 import physicalAssetRoutes from './routes/physicalAssets';
 import netWorthRoutes from './routes/netWorth';
 import enhancedFeaturesRoutes from './routes/enhanced-features';
+import adminRoutes from './routes/admin';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -87,8 +89,17 @@ const limiter = rateLimit({
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env['CORS_ORIGIN'] || 'http://localhost:5173',
+  origin: [
+    process.env['CORS_ORIGIN'] || 'http://localhost:5173',
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:5173'
+  ],
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  optionsSuccessStatus: 200 // Some legacy browsers (IE11, various SmartTVs) choke on 204
 }));
 app.use(compression());
 app.use(morgan('combined', { stream: { write: (message) => logger.info(message.trim()) } }));
@@ -163,6 +174,10 @@ app.use('/api/market', authMiddleware, marketRoutes);
 app.use('/api/ai', authMiddleware, aiRoutes);
 app.use('/api/enhanced-features', enhancedFeaturesRoutes); // Phase 4 & 5 features - no auth for testing
 app.use('/api/mock-data', mockDataRoutes); // Admin-only mock data routes
+app.use('/api/debug', authMiddleware, debugRoutes); // Debug routes for testing
+
+// Admin routes for daily price management
+app.use('/api/admin', adminRoutes);
 
 console.log('🔧 [DEBUG] Registering ML proxy routes at /api/ml');
 app.use('/api/ml', (req, res, next) => {
@@ -228,6 +243,12 @@ async function startServer() {
     await connectDB();
     logger.info('✅ MongoDB connected successfully');
     
+    // Start cron service for daily price updates
+    const { CronService } = await import('./services/cronService');
+    const cronService = new CronService();
+    cronService.start();
+    logger.info('⏰ Cron service started for daily price updates');
+
     // ONLY start the server AFTER database is ready
     server.listen(PORT, () => {
       logger.info(`🚀 Server running on port ${PORT}`);

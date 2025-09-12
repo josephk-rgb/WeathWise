@@ -1,7 +1,7 @@
-import PortfolioInsights from '../components/Dashboard/PortfolioInsights';
 import React, { useState, useEffect } from 'react';
 import { Plus, TrendingUp, PieChart, Search, SortAsc, SortDesc } from 'lucide-react';
 import { useStore } from '../store/useStore';
+import { useAuth } from '../hooks/useAuth';
 import { apiService } from '../services/api';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
@@ -11,12 +11,12 @@ import PortfolioGrowthChart from '../components/Charts/PortfolioGrowthChart';
 import PortfolioMetrics from '../components/Dashboard/PortfolioMetrics';
 // ...existing code...
 import HoldingCard from '../components/Dashboard/HoldingCard';
-import RealtimePortfolioValue from '../components/Dashboard/RealtimePortfolioValue';
 import AdvancedAnalytics from '../components/Dashboard/AdvancedAnalytics';
-import { generatePortfolioHistory, formatPortfolioHistory } from '../utils/portfolioData';
+import { formatPortfolioHistory } from '../utils/portfolioData';
 
 const PortfolioPage: React.FC = () => {
   const { user, investments, setInvestments, currency } = useStore();
+  const { isAuthenticated, isLoading: authLoading, tokenReady } = useAuth();
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingInvestment, setEditingInvestment] = useState<Investment | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -25,6 +25,7 @@ const PortfolioPage: React.FC = () => {
   const [filterType, setFilterType] = useState<string>('all');
   const [portfolioHistory, setPortfolioHistory] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  const [dataQuality, setDataQuality] = useState<any>(null);
   
   const [formData, setFormData] = useState({
     symbol: '',
@@ -53,34 +54,81 @@ const PortfolioPage: React.FC = () => {
   }, [user]);
 
   useEffect(() => {
+    console.log('=== PORTFOLIO HISTORY useEffect TRIGGERED ===');
+    console.log('Dependencies:', { investments: investments.length, user: !!user, isAuthenticated, authLoading, tokenReady });
+    
     // Load portfolio history from backend instead of generating fake data
     const loadPortfolioHistory = async () => {
-      if (!user) return;
+      console.log('=== LOADING PORTFOLIO HISTORY ===');
+      console.log('User:', user);
+      console.log('User ID:', user?.id);
+      console.log('User exists:', !!user);
+      console.log('Is authenticated:', isAuthenticated);
+      console.log('Auth loading:', authLoading);
+      console.log('Token ready:', tokenReady);
+      console.log('Investments length:', investments.length);
+      
+      // Don't bail out completely - just wait for auth to be ready
+      if (!user || authLoading) {
+        console.log('User not loaded or auth still loading, skipping for now');
+        return;
+      }
+      
+      if (!isAuthenticated || !tokenReady) {
+        console.log('Waiting for authentication/token to be ready...');
+        console.log('Conditions:', { isAuthenticated, tokenReady });
+        return;
+      }
+      
+      console.log('Authentication ready, proceeding with API call...');
       
       try {
         setLoadingHistory(true);
+        console.log('Making API call to getPortfolioPerformance...');
+        console.log('Current token from API service:', apiService.getCurrentToken() ? 'EXISTS' : 'NULL');
+        console.log('Token preview:', apiService.getCurrentToken()?.substring(0, 30) + '...');
         const response = await apiService.getPortfolioPerformance();
-        if (response.success && response.data && response.data.historicalPerformance) {
-          // Use real portfolio performance data
-          const formattedHistory = formatPortfolioHistory(response.data.historicalPerformance);
+        console.log('API response received:', response);
+        console.log('Response success:', response.success);
+        console.log('Response data exists:', !!response.data);
+        console.log('Historical performance exists:', !!response.data?.historicalPerformance);
+        console.log('Historical performance length:', response.data?.historicalPerformance?.length);
+        
+        // The API service now handles response format normalization
+        if (response && response.historicalPerformance) {
+          console.log('=== RAW API RESPONSE ===');
+          console.log('Full response:', response);
+          console.log('Available keys:', Object.keys(response));
+          console.log('Historical performance length:', response.historicalPerformance.length);
+          
+          const formattedHistory = formatPortfolioHistory(response.historicalPerformance);
+          console.log('=== PORTFOLIO HISTORY DATA ===');
+          console.log('Formatted history:', formattedHistory);
+          console.log('Formatted data points count:', formattedHistory.length);
+          console.log('First data point:', formattedHistory[0]);
+          console.log('Last data point:', formattedHistory[formattedHistory.length - 1]);
+          console.log('=== END PORTFOLIO HISTORY ===');
           setPortfolioHistory(formattedHistory);
+          setDataQuality(response.dataQuality);
         } else {
-          // Fallback to generated data if no historical data available
-          const history = generatePortfolioHistory(investments);
-          setPortfolioHistory(history);
+          // No fallback - just set empty array if no data
+          console.log('No API data available, setting empty array');
+          console.log('Response exists:', !!response);
+          console.log('Response has historicalPerformance:', !!response?.historicalPerformance);
+          setPortfolioHistory([]);
         }
       } catch (error) {
         console.error('Error loading portfolio history:', error);
-        // Fallback to generated data on error
-        const history = generatePortfolioHistory(investments);
-        setPortfolioHistory(history);
+        // No fallback - just set empty array on error
+        setPortfolioHistory([]);
       } finally {
         setLoadingHistory(false);
       }
     };
 
+    console.log('useEffect triggered - calling loadPortfolioHistory');
     loadPortfolioHistory();
-  }, [investments, user]);
+  }, [investments, user, isAuthenticated, authLoading, tokenReady]);
 
   const loadInvestments = async () => {
     if (!user) return;
@@ -231,6 +279,18 @@ const PortfolioPage: React.FC = () => {
 
   const assetAllocation = getAssetAllocation();
 
+  // Debug: Log data being passed to chart
+  console.log('=== PASSING DATA TO CHART ===', {
+    portfolioHistory,
+    dataLength: portfolioHistory.length,
+    loadingHistory,
+    currency,
+    isAuthenticated,
+    authLoading,
+    tokenReady
+  });
+
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
@@ -255,9 +315,11 @@ const PortfolioPage: React.FC = () => {
       <div className="mb-8">
         <PortfolioGrowthChart 
           data={portfolioHistory} 
+          investments={investments}
           currency={currency}
           height={400}
           loading={loadingHistory}
+          dataQuality={dataQuality}
         />
       </div>
 
@@ -266,15 +328,8 @@ const PortfolioPage: React.FC = () => {
         <PortfolioMetrics investments={investments} currency={currency} />
       </div>
 
-      {/* 🚀 NEW: Enhanced Yahoo Finance Integration */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <RealtimePortfolioValue investments={investments} currency={currency} />
-        
-        {/* Portfolio Insights */}
-        <div className="lg:col-span-1">
-          <PortfolioInsights investments={investments} currency={currency} />
-        </div>
-      </div>
+      {/* Temporarily disabled to fix authentication issues */}
+      {/* <RealtimePortfolioValue investments={investments} currency={currency} /> */}
 
       {/* 🚀 NEW: Advanced Portfolio Analytics */}
       <div className="mb-8">

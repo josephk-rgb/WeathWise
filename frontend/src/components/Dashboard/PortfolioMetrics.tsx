@@ -18,6 +18,23 @@ const PortfolioMetrics: React.FC<PortfolioMetricsProps> = ({
     const totalGainLoss = totalValue - totalCost;
     const totalGainLossPercent = totalCost > 0 ? (totalGainLoss / totalCost) * 100 : 0;
 
+    // Enhanced debug logging
+    console.log('=== PORTFOLIO METRICS FRONTEND DEBUG ===');
+    console.log('Investments count:', investments.length);
+    console.log('Total value:', totalValue);
+    console.log('Total cost:', totalCost);
+    console.log('Total gain/loss:', totalGainLoss);
+    console.log('Total gain/loss %:', totalGainLossPercent);
+    console.log('Individual investments breakdown:');
+    investments.forEach(inv => {
+      const currentValue = inv.shares * inv.currentPrice;
+      const costBasis = inv.shares * inv.purchasePrice;
+      const gainLoss = currentValue - costBasis;
+      const gainLossPercent = costBasis > 0 ? (gainLoss / costBasis) * 100 : 0;
+      console.log(`  ${inv.symbol}: ${inv.shares} shares × $${inv.currentPrice} = $${currentValue.toFixed(2)} (Cost: $${costBasis.toFixed(2)}, Gain: $${gainLoss.toFixed(2)} (${gainLossPercent.toFixed(2)}%))`);
+    });
+    console.log('=== END PORTFOLIO METRICS DEBUG ===');
+
     // Calculate best and worst performers
     const performers = investments.map(inv => {
       const returnPercent = ((inv.currentPrice - inv.purchasePrice) / inv.purchasePrice) * 100;

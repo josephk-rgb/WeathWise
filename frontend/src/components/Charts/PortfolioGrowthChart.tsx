@@ -1,12 +1,21 @@
 import React, { useState } from 'react';
 import { XAxis, YAxis, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { Investment } from '../../types';
 
 interface PortfolioGrowthChartProps {
   data: any[];
+  investments?: Investment[];
   height?: number;
   currency: string;
   loading?: boolean;
+  dataQuality?: {
+    overallCoverage: number;
+    symbolCoverage: Array<{
+      symbol: string;
+      coveragePercent: number;
+    }>;
+  };
 }
 
 const timePeriods = [
@@ -19,24 +28,44 @@ const timePeriods = [
 
 const PortfolioGrowthChart: React.FC<PortfolioGrowthChartProps> = ({
   data,
+  investments = [],
   height = 400,
   currency,
   loading = false,
+  dataQuality,
 }) => {
   const [selectedPeriod, setSelectedPeriod] = useState('1Y');
 
-  // Calculate performance metrics
-  const currentValue = data[data.length - 1]?.value || 0;
-  const startValue = data[0]?.value || 0;
-  const totalReturn = currentValue - startValue;
-  const totalReturnPercent = startValue > 0 ? ((currentValue - startValue) / startValue) * 100 : 0;
-  const isPositive = totalReturn >= 0;
-
-  // Filter data based on selected period
+  // Filter data based on selected period FIRST
   const selectedPeriodConfig = timePeriods.find(p => p.value === selectedPeriod);
   const filteredData = selectedPeriod === 'ALL' 
     ? data 
     : data.slice(-(selectedPeriodConfig?.days || data.length));
+
+  // Calculate current value using the same method as PortfolioMetrics
+  const currentValue = investments.length > 0 
+    ? investments.reduce((sum, inv) => sum + (inv.shares * inv.currentPrice), 0)
+    : filteredData[filteredData.length - 1]?.value || 0;
+  
+  // Use filtered data for period-specific calculations
+  const startValue = filteredData[0]?.value || 0;
+  const totalReturn = currentValue - startValue;
+  const totalReturnPercent = startValue > 0 ? ((currentValue - startValue) / startValue) * 100 : 0;
+  const isPositive = totalReturn >= 0;
+
+  // Debug logging
+  console.log('=== CHART CALCULATION DEBUG ===');
+  console.log('Selected period:', selectedPeriod);
+  console.log('Data length:', data.length);
+  console.log('Filtered data length:', filteredData.length);
+  console.log('Investments length:', investments.length);
+  console.log('Start value (filtered):', startValue);
+  console.log('Current value:', currentValue);
+  console.log('Total return:', totalReturn);
+  console.log('Total return percent:', totalReturnPercent);
+  console.log('First filtered data point:', filteredData[0]);
+  console.log('Last filtered data point:', filteredData[filteredData.length - 1]);
+  console.log('=== END CHART DEBUG ===');
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -113,18 +142,24 @@ const PortfolioGrowthChart: React.FC<PortfolioGrowthChartProps> = ({
             Portfolio Growth
           </h3>
           {data.length > 0 ? (
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Total Return:</span>
-                <span className={`text-lg font-bold ${isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                  {isPositive ? '+' : ''}{formatCurrency(totalReturn)}
-                </span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Return %:</span>
-                <span className={`text-lg font-bold ${isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                  {isPositive ? '+' : ''}{totalReturnPercent.toFixed(2)}%
-                </span>
+            <div className="flex flex-col space-y-2">
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    {selectedPeriod === 'ALL' ? 'Total Return:' : `${selectedPeriod} Return:`}
+                  </span>
+                  <span className={`text-lg font-bold ${isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                    {isPositive ? '+' : ''}{formatCurrency(totalReturn)}
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    {selectedPeriod === 'ALL' ? 'Return %:' : `${selectedPeriod} Return %:`}
+                  </span>
+                  <span className={`text-lg font-bold ${isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                    {isPositive ? '+' : ''}{totalReturnPercent.toFixed(2)}%
+                  </span>
+                </div>
               </div>
             </div>
           ) : (

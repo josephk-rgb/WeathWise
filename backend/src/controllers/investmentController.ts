@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { Investment, IInvestment } from '../models';
 import { logger } from '../utils/logger';
+import { MarketDataService } from '../services/marketDataService';
 
 export class InvestmentController {
   // Get all investments for a user
@@ -26,10 +27,38 @@ export class InvestmentController {
         investmentIds: investments.map(inv => inv._id)
       });
 
+      // Update investments with real-time market data
+      const marketDataService = new MarketDataService();
+      const updatedInvestments = await marketDataService.updateInvestmentPrices(investments);
+
+      // Debug logging for investments endpoint
+      logger.info('=== INVESTMENTS ENDPOINT CURRENT VALUE DEBUG ===');
+      logger.info(`Total investments returned: ${updatedInvestments.length}`);
+      const totalValue = updatedInvestments.reduce((sum, inv) => sum + (inv.position.shares * inv.position.currentPrice), 0);
+      logger.info(`Total current value: $${totalValue.toFixed(2)}`);
+      logger.info('Individual investment breakdown:');
+      updatedInvestments.forEach(inv => {
+        const currentValue = inv.position.shares * inv.position.currentPrice;
+        logger.info(`  ${inv.securityInfo.symbol}: ${inv.position.shares} shares × $${inv.position.currentPrice} = $${currentValue.toFixed(2)}`);
+      });
+      logger.info('=== END INVESTMENTS ENDPOINT DEBUG ===');
+
+      // Transform investments to include all necessary fields for frontend
+      const transformedInvestments = updatedInvestments.map(investment => ({
+        _id: investment._id,
+        userId: investment.userId,
+        securityInfo: investment.securityInfo,
+        position: investment.position,
+        acquisition: investment.acquisition,
+        isActive: investment.isActive,
+        createdAt: investment.createdAt,
+        updatedAt: investment.updatedAt
+      }));
+
       res.json({
         success: true,
-        data: investments,
-        count: investments.length
+        data: transformedInvestments,
+        count: transformedInvestments.length
       });
     } catch (error) {
       logger.error('Error getting investments:', error);
@@ -127,9 +156,21 @@ export class InvestmentController {
       const investment = new Investment(investmentData);
       const savedInvestment = await investment.save();
 
+      // Transform the saved investment for frontend consumption
+      const transformedInvestment = {
+        _id: savedInvestment._id,
+        userId: savedInvestment.userId,
+        securityInfo: savedInvestment.securityInfo,
+        position: savedInvestment.position,
+        acquisition: savedInvestment.acquisition,
+        isActive: savedInvestment.isActive,
+        createdAt: savedInvestment.createdAt,
+        updatedAt: savedInvestment.updatedAt
+      };
+
       res.status(201).json({
         success: true,
-        data: savedInvestment
+        data: transformedInvestment
       });
     } catch (error) {
       logger.error('Error creating investment:', error);
@@ -165,9 +206,21 @@ export class InvestmentController {
         return;
       }
 
+      // Transform the updated investment for frontend consumption
+      const transformedInvestment = {
+        _id: investment._id,
+        userId: investment.userId,
+        securityInfo: investment.securityInfo,
+        position: investment.position,
+        acquisition: investment.acquisition,
+        isActive: investment.isActive,
+        createdAt: investment.createdAt,
+        updatedAt: investment.updatedAt
+      };
+
       res.json({
         success: true,
-        data: investment
+        data: transformedInvestment
       });
     } catch (error) {
       logger.error('Error updating investment:', error);
@@ -218,13 +271,30 @@ export class InvestmentController {
 
       const investments = await Investment.find({ userId, isActive: true });
 
-      const totalValue = investments.reduce((sum, inv) => sum + inv.position.marketValue, 0);
-      const totalCost = investments.reduce((sum, inv) => sum + inv.position.totalCost, 0);
+      // Update investments with real-time market data
+      const marketDataService = new MarketDataService();
+      const updatedInvestments = await marketDataService.updateInvestmentPrices(investments);
+
+      // Debug logging for portfolio summary
+      logger.info('=== PORTFOLIO SUMMARY CURRENT VALUE DEBUG ===');
+      logger.info(`Total investments: ${updatedInvestments.length}`);
+      
+      const totalValue = updatedInvestments.reduce((sum, inv) => sum + inv.position.marketValue, 0);
+      const totalCost = updatedInvestments.reduce((sum, inv) => sum + inv.position.totalCost, 0);
       const totalGainLoss = totalValue - totalCost;
       const totalGainLossPercent = totalCost > 0 ? (totalGainLoss / totalCost) * 100 : 0;
+      
+      logger.info(`Total value (marketValue): $${totalValue.toFixed(2)}`);
+      logger.info(`Total cost: $${totalCost.toFixed(2)}`);
+      logger.info(`Total gain/loss: $${totalGainLoss.toFixed(2)} (${totalGainLossPercent.toFixed(2)}%)`);
+      logger.info('Individual investment breakdown:');
+      updatedInvestments.forEach(inv => {
+        logger.info(`  ${inv.securityInfo.symbol}: ${inv.position.shares} shares × $${inv.position.currentPrice} = $${inv.position.marketValue.toFixed(2)}`);
+      });
+      logger.info('=== END PORTFOLIO SUMMARY DEBUG ===');
 
       // Calculate allocation by type
-      const allocationByType = investments.reduce((acc, inv) => {
+      const allocationByType = updatedInvestments.reduce((acc, inv) => {
         const type = inv.securityInfo.type;
         acc[type] = (acc[type] || 0) + inv.position.marketValue;
         return acc;
@@ -233,8 +303,8 @@ export class InvestmentController {
       // Convert to percentages
       const allocationPercentages = Object.entries(allocationByType).map(([type, value]) => ({
         type,
-        value,
-        percentage: totalValue > 0 ? (value / totalValue) * 100 : 0
+        value: Number(value),
+        percentage: totalValue > 0 ? (Number(value) / totalValue) * 100 : 0
       }));
 
       const summary = {
@@ -242,9 +312,9 @@ export class InvestmentController {
         totalCost,
         totalGainLoss,
         totalGainLossPercent,
-        investmentCount: investments.length,
+        investmentCount: updatedInvestments.length,
         allocation: allocationPercentages,
-        topHoldings: investments
+        topHoldings: updatedInvestments
           .sort((a, b) => b.position.marketValue - a.position.marketValue)
           .slice(0, 5)
           .map(inv => ({

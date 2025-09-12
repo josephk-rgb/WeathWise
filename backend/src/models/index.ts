@@ -61,6 +61,12 @@ export {
   IPortfolioPriceHistory
 } from './PortfolioPriceHistory';
 
+// Daily Price exports
+export {
+  DailyPrice,
+  IDailyPrice
+} from './DailyPrice';
+
 // Account Balance History exports
 export {
   AccountBalanceHistory,

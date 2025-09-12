@@ -85,7 +85,7 @@ export function usePolling<T = any>(
         setIsLoading(false);
       }
 
-      // Force a new poll
+      // Force a new poll with fresh data (this will reset the initial request flag)
       const config: PollingConfig = {
         endpoint,
         interval,
@@ -172,7 +172,7 @@ export function usePolling<T = any>(
  * Hook for polling portfolio data
  */
 export function usePortfolioPolling(enabled = true) {
-  return usePolling('/portfolio/summary', {
+  return usePolling('/investments/portfolio/summary', {
     enabled,
     interval: POLLING_INTERVALS.portfolio,
     immediate: true
