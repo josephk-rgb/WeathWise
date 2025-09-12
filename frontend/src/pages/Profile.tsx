@@ -7,10 +7,17 @@ import Button from '../components/UI/Button';
 const Profile: React.FC = () => {
   const { user, setUser } = useStore();
   const [isEditing, setIsEditing] = useState(false);
+  const getRiskProfileLevel = (riskProfile: any) => {
+    if (typeof riskProfile === 'object' && riskProfile !== null) {
+      return riskProfile.level;
+    }
+    return riskProfile || 'moderate';
+  };
+
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
-    riskProfile: user?.riskProfile || 'moderate',
+    riskProfile: getRiskProfileLevel(user?.riskProfile),
   });
 
   const handleSave = () => {
@@ -19,7 +26,7 @@ const Profile: React.FC = () => {
         ...user,
         name: formData.name,
         email: formData.email,
-        riskProfile: formData.riskProfile as 'conservative' | 'moderate' | 'aggressive',
+        riskProfile: { level: formData.riskProfile as 'conservative' | 'moderate' | 'aggressive' },
       });
     }
     setIsEditing(false);
@@ -29,7 +36,7 @@ const Profile: React.FC = () => {
     setFormData({
       name: user?.name || '',
       email: user?.email || '',
-      riskProfile: user?.riskProfile || 'moderate',
+      riskProfile: getRiskProfileLevel(user?.riskProfile),
     });
     setIsEditing(false);
   };
@@ -82,7 +89,9 @@ const Profile: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                    {user.name}
+                    {user.profile?.firstName || user.profile?.lastName
+                      ? `${user.profile?.firstName || ''} ${user.profile?.lastName || ''}`.trim()
+                      : user.name || 'Not set'}
                   </h3>
                   <p className="text-gray-500 dark:text-gray-400">
                     Member since {new Date(user.createdAt).toLocaleDateString()}
@@ -106,7 +115,11 @@ const Profile: React.FC = () => {
                   ) : (
                     <div className="flex items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                       <User className="w-5 h-5 text-gray-400 mr-3" />
-                      <span className="text-gray-900 dark:text-gray-100">{user.name}</span>
+                      <span className="text-gray-900 dark:text-gray-100">
+                        {user.profile?.firstName || user.profile?.lastName
+                          ? `${user.profile?.firstName || ''} ${user.profile?.lastName || ''}`.trim()
+                          : user.name || 'Not set'}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -149,7 +162,11 @@ const Profile: React.FC = () => {
                       <Shield className="w-5 h-5 text-gray-400 mr-3" />
                       <div>
                         <span className="text-gray-900 dark:text-gray-100 capitalize">
-                          {user.riskProfile}
+                          {typeof user.riskProfile === 'object' && user.riskProfile !== null
+                            ? user.riskProfile.level
+                            : typeof user.riskProfile === 'string'
+                              ? user.riskProfile
+                              : 'Unknown'}
                         </span>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
                           {user.riskProfile === 'conservative' && 'Low risk, stable returns'}
@@ -181,7 +198,11 @@ const Profile: React.FC = () => {
               <div className="flex items-center justify-between">
                 <span className="text-gray-600 dark:text-gray-400">Risk Profile</span>
                 <span className="font-medium text-gray-900 dark:text-gray-100 capitalize">
-                  {user.riskProfile}
+                  {typeof user.riskProfile === 'object' && user.riskProfile !== null
+                    ? user.riskProfile.level
+                    : typeof user.riskProfile === 'string'
+                      ? user.riskProfile
+                      : 'Unknown'}
                 </span>
               </div>
               <div className="flex items-center justify-between">

@@ -9,7 +9,7 @@ const ExpenseList = ({
   const total = data.reduce((sum, item) => sum + item.value, 0);
 
   return (
-    <div className="grid grid-cols-2 gap-3 h-full">
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 h-full">
       {data.map((item, index) => {
         const percentage = (item.value / total) * 100;
         return (

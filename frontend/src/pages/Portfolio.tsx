@@ -1,3 +1,4 @@
+import PortfolioInsights from '../components/Dashboard/PortfolioInsights';
 import React, { useState, useEffect } from 'react';
 import { Plus, TrendingUp, PieChart, Search, SortAsc, SortDesc } from 'lucide-react';
 import { useStore } from '../store/useStore';
@@ -8,7 +9,7 @@ import { formatCurrency } from '../utils/currency';
 import { Investment } from '../types';
 import PortfolioGrowthChart from '../components/Charts/PortfolioGrowthChart';
 import PortfolioMetrics from '../components/Dashboard/PortfolioMetrics';
-import PortfolioInsights from '../components/Dashboard/PortfolioInsights';
+// ...existing code...
 import HoldingCard from '../components/Dashboard/HoldingCard';
 import RealtimePortfolioValue from '../components/Dashboard/RealtimePortfolioValue';
 import AdvancedAnalytics from '../components/Dashboard/AdvancedAnalytics';
@@ -419,10 +420,7 @@ const PortfolioPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Portfolio Insights - Full Width Row */}
-      <div className="mt-8">
-        <PortfolioInsights investments={investments} currency={currency} />
-      </div>
+  {/* Portfolio Insights removed from bottom of page */}
 
       {/* Add/Edit Investment Form */}
       {showAddForm && (

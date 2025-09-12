@@ -102,16 +102,38 @@ export interface ServiceStatus {
   newsProviders?: Record<string, NewsProvider>;
 }
 
+export type RiskProfileType =
+  | 'conservative'
+  | 'moderate'
+  | 'aggressive'
+  | { level: 'conservative' | 'moderate' | 'aggressive'; [key: string]: any };
+
+export interface UserProfile {
+  firstName?: string;
+  lastName?: string;
+  avatar?: string;
+  dateOfBirth?: string;
+  phone?: string;
+  address?: {
+    street?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    country?: string;
+  };
+}
+
 export interface User {
   id: string;
   name: string;
   email: string;
   avatar?: string;
   role: 'user' | 'admin';
-  riskProfile: 'conservative' | 'moderate' | 'aggressive';
+  riskProfile: RiskProfileType;
   currency: string;
   darkMode: boolean;
   createdAt: Date;
+  profile?: UserProfile;
 }
 
 // Mock Data Types for Admin

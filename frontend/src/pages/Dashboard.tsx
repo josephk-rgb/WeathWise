@@ -9,7 +9,7 @@ import ExpenseList from '../components/Charts/ExpenseList';
 import FinancialHealthScore from '../components/Dashboard/FinancialHealthScore';
 import RealtimePortfolioValue from '../components/Dashboard/RealtimePortfolioValue';
 import MarketNewsWidget from '../components/Dashboard/MarketNewsWidget';
-import AdvancedAnalytics from '../components/Dashboard/AdvancedAnalytics';
+// ...existing code...
 import { formatCurrency } from '../utils/currency';
 import { useUser } from '../contexts/UserContext';
 
@@ -345,7 +345,7 @@ const Dashboard: React.FC = () => {
 
         <Card>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Expense Breakdown</h3>
-          <div className="h-[400px]">
+          <div className="h-[400px] overflow-y-auto">
             {loadingStats ? (
               <div className="flex items-center justify-center h-full">
                 <div className="text-gray-500 dark:text-gray-400">Loading expense data...</div>
@@ -421,10 +421,7 @@ const Dashboard: React.FC = () => {
         <MarketNewsWidget />
       </div>
 
-      {/* 🚀 NEW: Advanced Portfolio Analytics */}
-      <div className="mb-8">
-        <AdvancedAnalytics />
-      </div>
+  {/* Advanced Portfolio Analytics removed as requested */}
 
       {/* Recent Transactions and Goals */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">

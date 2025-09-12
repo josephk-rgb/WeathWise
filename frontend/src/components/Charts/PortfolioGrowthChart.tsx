@@ -191,7 +191,7 @@ const PortfolioGrowthChart: React.FC<PortfolioGrowthChartProps> = ({
                 />
                 <Tooltip content={<CustomTooltip />} />
                 <Area 
-                  type="monotone" 
+                  type="basis" 
                   dataKey="value" 
                   stroke={isPositive ? "#10b981" : "#ef4444"}
                   strokeWidth={3}
