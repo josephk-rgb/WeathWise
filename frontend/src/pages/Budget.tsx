@@ -18,9 +18,10 @@ const BudgetPage: React.FC = () => {
   });
 
   const categories = [
-    'Food & Dining', 'Transportation', 'Shopping', 'Entertainment',
-    'Bills & Utilities', 'Healthcare', 'Travel', 'Education',
-    'Business', 'Personal Care', 'Gifts & Donations', 'Other'
+    'Housing', 'Transportation', 'Food', 'Utilities', 'Insurance',
+    'Healthcare', 'Savings', 'Personal', 'Recreation', 'Miscellaneous',
+    'Education', 'Clothing', 'Technology', 'Travel', 'Business',
+    'Gifts', 'Charity', 'Debt Payments', 'Emergency Fund', 'Other'
   ];
 
   useEffect(() => {
@@ -58,33 +59,41 @@ const BudgetPage: React.FC = () => {
       .reduce((sum, t) => sum + t.amount, 0));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
-    const [year, month] = formData.month.split('-');
-    const monthName = new Date(parseInt(year), parseInt(month) - 1).toLocaleString('default', { month: 'long' });
-    
-    const spent = calculateSpent(formData.category, formData.month, parseInt(year));
+    try {
+      const [year] = formData.month.split('-');
+      const spent = calculateSpent(formData.category, formData.month, parseInt(year));
 
-    const budgetData: Budget = {
-      id: editingBudget?.id || Date.now().toString(),
-      userId: user.id,
-      category: formData.category,
-      allocated: Number(formData.allocated),
-      spent,
-      month: monthName,
-      year: parseInt(year),
-      currency,
-    };
+      const budgetData = {
+        userId: user.id,
+        category: formData.category,
+        allocated: Number(formData.allocated),
+        spent,
+        month: formData.month, // Keep the YYYY-MM format
+        year: parseInt(year),
+        currency,
+      };
 
-    if (editingBudget) {
-      setBudgets(safeBudgets.map(b => b.id === editingBudget.id ? budgetData : b));
-    } else {
-      setBudgets([...safeBudgets, budgetData]);
+      if (editingBudget) {
+        // Update existing budget
+        const response = await apiService.updateBudget(editingBudget.id, budgetData);
+        const updatedBudget = (response as any).data || response;
+        setBudgets(safeBudgets.map(b => b.id === editingBudget.id ? updatedBudget : b));
+      } else {
+        // Create new budget
+        const response = await apiService.createBudget(budgetData);
+        const savedBudget = (response as any).data || response;
+        setBudgets([...safeBudgets, savedBudget]);
+      }
+
+      resetForm();
+    } catch (error) {
+      console.error('Error saving budget:', error);
+      alert('Failed to save budget. Please try again.');
     }
-
-    resetForm();
   };
 
   const resetForm = () => {

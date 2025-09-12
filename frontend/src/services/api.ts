@@ -9,7 +9,9 @@ import {
   NewsResponse,
   RealtimePortfolioValue,
   AdvancedPortfolioAnalytics,
-  NewsProvider
+  NewsProvider,
+  Account,
+  PhysicalAsset
 } from '../types';
 
 // Enhanced API service - stateless authentication
@@ -130,6 +132,9 @@ class ApiService {
     console.log('🔧 [DEBUG] full URL:', url);
     console.log('🔧 [DEBUG] method:', options.method || 'GET');
     console.log('🔧 [DEBUG] has token:', !!token);
+    console.log('🔧 [DEBUG] token preview:', token ? token.substring(0, 30) + '...' : 'null');
+    console.log('🔧 [DEBUG] token value:', token ? `${token.substring(0, 20)}...` : 'null/undefined');
+    console.log('🔧 [DEBUG] token preview:', token ? `${token.substring(0, 20)}...` : 'null');
     
     // Create a request key for deduplication and caching
     const method = options.method || 'GET';
@@ -285,11 +290,19 @@ class ApiService {
   }
 
   // User profile methods
-  async getCurrentUser(): Promise<User> {
+  async getCurrentUser(auth0UserData?: { email?: string; given_name?: string; family_name?: string; name?: string }): Promise<User> {
     console.log('📡 Calling getCurrentUser API...');
+    console.log('🔧 [FRONTEND] Sending Auth0 user data:', auth0UserData);
+    
     try {
+      // Send Auth0 user data in the request body to help backend create/update user
+      const requestOptions: RequestInit = auth0UserData ? {
+        method: 'POST',
+        body: JSON.stringify({ auth0UserData })
+      } : {};
+      
       // Cache user profile for 10 minutes since it rarely changes
-      const result = await this.makeRequest('/auth/me', {}, 0, 600000);
+      const result = await this.makeRequest('/auth/me', requestOptions, 0, 600000);
       console.log('✅ getCurrentUser successful:', !!result);
       return result;
     } catch (error) {
@@ -475,6 +488,70 @@ class ApiService {
     });
   }
 
+  // Account methods
+  async getAccounts(): Promise<Account[]> {
+    const response = await this.makeRequest('/accounts');
+    if (response && response.success && Array.isArray(response.data)) {
+      return response.data;
+    }
+    if (Array.isArray(response)) {
+      return response;
+    }
+    return [];
+  }
+
+  async createAccount(accountData: Omit<Account, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<Account> {
+    return this.makeRequest('/accounts', {
+      method: 'POST',
+      body: JSON.stringify(accountData),
+    });
+  }
+
+  async updateAccount(id: string, accountData: Partial<Account>): Promise<Account> {
+    return this.makeRequest(`/accounts/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(accountData),
+    });
+  }
+
+  async deleteAccount(id: string): Promise<void> {
+    return this.makeRequest(`/accounts/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Physical Asset methods
+  async getAssets(): Promise<PhysicalAsset[]> {
+    const response = await this.makeRequest('/assets');
+    if (response && response.success && Array.isArray(response.data)) {
+      return response.data;
+    }
+    if (Array.isArray(response)) {
+      return response;
+    }
+    return [];
+  }
+
+  async createAsset(assetData: Omit<PhysicalAsset, 'id' | 'userId' | 'equity' | 'createdAt' | 'updatedAt'>): Promise<PhysicalAsset> {
+    return this.makeRequest('/assets', {
+      method: 'POST',
+      body: JSON.stringify(assetData),
+    });
+  }
+
+  async updateAsset(id: string, assetData: Partial<PhysicalAsset>): Promise<PhysicalAsset> {
+    return this.makeRequest(`/assets/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(assetData),
+    });
+  }
+
+  async deleteAsset(id: string): Promise<void> {
+    return this.makeRequest(`/assets/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Portfolio methods
   async getPortfolio(): Promise<any> {
     const response = await this.makeRequest('/portfolio/overview');
@@ -634,6 +711,11 @@ class ApiService {
   async getDashboardStats(): Promise<any> {
     // Cache dashboard stats for 5 minutes - increased from default 3 minutes
     return this.makeRequest('/analytics/dashboard-stats', {}, 0, 300000);
+  }
+
+  async getEnhancedDashboardStats(): Promise<any> {
+    // Use enhanced dashboard stats with true net worth calculation
+    return this.makeRequest('/analytics/enhanced-dashboard-stats', {}, 0, 300000);
   }
 
   async getFinancialHealth(): Promise<any> {

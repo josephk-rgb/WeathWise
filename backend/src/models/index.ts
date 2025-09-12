@@ -41,6 +41,32 @@ export {
   IConnectionStatus 
 } from './Account';
 
+// Physical Asset exports
+export {
+  PhysicalAsset,
+  IPhysicalAsset,
+  ILoanInfo,
+  IDepreciation
+} from './PhysicalAsset';
+
+// Net Worth Milestone exports
+export {
+  NetWorthMilestone,
+  INetWorthMilestone
+} from './NetWorthMilestone';
+
+// Portfolio Price History exports  
+export {
+  PortfolioPriceHistory,
+  IPortfolioPriceHistory
+} from './PortfolioPriceHistory';
+
+// Account Balance History exports
+export {
+  AccountBalanceHistory,
+  IAccountBalanceHistory
+} from './AccountBalanceHistory';
+
 // Goal exports
 export { 
   Goal, 
@@ -65,3 +91,10 @@ export {
   Recommendation, 
   IRecommendation 
 } from './Recommendation';
+
+// User Account Preferences exports
+export { 
+  UserAccountPreferences, 
+  UserAccountPreferencesInterface,
+  AccountLinkingRule 
+} from './UserAccountPreferences';

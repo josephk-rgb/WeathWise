@@ -58,6 +58,10 @@ import authTestRoutes from './routes/auth-test';
 import testApisRoutes from './routes/test-apis';
 import mlProxyRoutes from './routes/ml-proxy';
 import mockDataRoutes from './routes/mockData';
+import accountRoutes from './routes/accounts';
+import physicalAssetRoutes from './routes/physicalAssets';
+import netWorthRoutes from './routes/netWorth';
+import enhancedFeaturesRoutes from './routes/enhanced-features';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -114,7 +118,6 @@ app.get('/health', (_req, res) => {
   });
 });
 
-// DEBUG: Add route debugging endpoint
 app.get('/debug/routes', (_req, res) => {
   res.json({
     message: 'WeathWise Backend Route Debug',
@@ -146,6 +149,9 @@ app.get('/debug/routes', (_req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/auth-test', authMiddleware, authTestRoutes);
 app.use('/api/users', authMiddleware, userRoutes);
+app.use('/api/accounts', authMiddleware, accountRoutes);
+app.use('/api/physical-assets', authMiddleware, physicalAssetRoutes);
+app.use('/api/net-worth', netWorthRoutes); // Net worth routes with built-in auth
 app.use('/api/portfolio', authMiddleware, portfolioRoutes);
 app.use('/api/transactions', authMiddleware, transactionRoutes);
 app.use('/api/investments', authMiddleware, investmentRoutes);
@@ -155,9 +161,9 @@ app.use('/api/debts', authMiddleware, debtRoutes);
 app.use('/api/analytics', authMiddleware, analyticsRoutes);
 app.use('/api/market', authMiddleware, marketRoutes);
 app.use('/api/ai', authMiddleware, aiRoutes);
+app.use('/api/enhanced-features', enhancedFeaturesRoutes); // Phase 4 & 5 features - no auth for testing
 app.use('/api/mock-data', mockDataRoutes); // Admin-only mock data routes
 
-// DEBUG: Log ML proxy route registration
 console.log('🔧 [DEBUG] Registering ML proxy routes at /api/ml');
 app.use('/api/ml', (req, res, next) => {
   console.log(`🔧 [DEBUG] ML proxy request: ${req.method} ${req.path} - Full URL: ${req.originalUrl}`);
@@ -166,7 +172,6 @@ app.use('/api/ml', (req, res, next) => {
 
 app.use('/api/test-apis', testApisRoutes); // No auth required for testing
 
-// DEBUG: Add global route debugging
 app.use('*', (req, res, next) => {
   console.log(`🔧 [DEBUG] Unmatched route: ${req.method} ${req.originalUrl}`);
   console.log(`🔧 [DEBUG] Available ML routes should be: POST /api/ml/chat, GET /api/ml/health, GET /api/ml/debug/routes`);

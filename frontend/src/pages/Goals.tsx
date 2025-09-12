@@ -4,7 +4,6 @@ import { useStore } from '../store/useStore';
 import { apiService } from '../services/api';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
-import Pagination from '../components/UI/Pagination';
 import { formatCurrency } from '../utils/currency';
 import { Goal } from '../types';
 
@@ -13,12 +12,6 @@ const GoalsPage: React.FC = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
-  
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [totalItems, setTotalItems] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -60,30 +53,40 @@ const GoalsPage: React.FC = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
-    const goalData: Goal = {
-      id: editingGoal?.id || Date.now().toString(),
-      userId: user.id,
-      title: formData.title,
-      description: formData.description,
-      targetAmount: Number(formData.targetAmount),
-      currentAmount: Number(formData.currentAmount),
-      targetDate: new Date(formData.targetDate),
-      category: formData.category,
-      priority: formData.priority,
-      currency,
-    };
+    try {
+      const goalData = {
+        userId: user.id,
+        title: formData.title,
+        description: formData.description,
+        targetAmount: Number(formData.targetAmount),
+        currentAmount: Number(formData.currentAmount),
+        targetDate: new Date(formData.targetDate),
+        category: formData.category,
+        priority: formData.priority,
+        currency,
+      };
 
-    if (editingGoal) {
-      setGoals(safeGoals.map(g => g.id === editingGoal.id ? goalData : g));
-    } else {
-      setGoals([...safeGoals, goalData]);
+      if (editingGoal) {
+        // Update existing goal
+        const response = await apiService.updateGoal(editingGoal.id, goalData);
+        const updatedGoal = (response as any).data || response;
+        setGoals(safeGoals.map(g => g.id === editingGoal.id ? updatedGoal : g));
+      } else {
+        // Create new goal
+        const response = await apiService.createGoal(goalData);
+        const savedGoal = (response as any).data || response;
+        setGoals([...safeGoals, savedGoal]);
+      }
+
+      resetForm();
+    } catch (error) {
+      console.error('Error saving goal:', error);
+      alert('Failed to save goal. Please try again.');
     }
-
-    resetForm();
   };
 
   const resetForm = () => {

@@ -30,6 +30,8 @@ const Dashboard: React.FC = () => {
   const { isAuthenticated, isLoading: authLoading, userProfile } = useUser();
   const [dashboardStats, setDashboardStats] = useState<any>(null);
   const [expenseData, setExpenseData] = useState<any[]>([]);
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [assets, setAssets] = useState<any[]>([]);
   const [loadingStats, setLoadingStats] = useState(true);
 
   const loadDashboardData = useCallback(async () => {
@@ -41,7 +43,7 @@ const Dashboard: React.FC = () => {
     console.log('Starting to load dashboard data for user:', userProfile.id);
 
     console.log('Making parallel API calls...');
-    const [transactionsData, goalsData, investmentsData, recommendationsData, dashboardStatsData, spendingData, financialHealthData] = await Promise.all([
+    const [transactionsData, goalsData, investmentsData, recommendationsData, dashboardStatsData, spendingData, financialHealthData, accountsData, assetsData] = await Promise.all([
       apiService.getTransactions(userProfile.id).then(response => {
         // Handle the response format: {success: true, data: [...]}
         const data = (response as any)?.data || response;
@@ -89,11 +91,11 @@ const Dashboard: React.FC = () => {
         return []; // Return empty array on error
       }),
       // Get dashboard statistics
-      apiService.getDashboardStats().then(data => {
-        console.log('Dashboard stats loaded:', data);
+      apiService.getEnhancedDashboardStats().then(data => {
+        console.log('Enhanced dashboard stats loaded:', data);
         return data.success ? data.data : null;
       }).catch(err => {
-        console.error('Failed to load dashboard stats:', err);
+        console.error('Failed to load enhanced dashboard stats:', err);
         return null;
       }),
       // Get spending analysis for expense breakdown
@@ -118,6 +120,30 @@ const Dashboard: React.FC = () => {
         console.error('Failed to load financial health:', err);
         return null;
       }),
+      // Get accounts data
+      apiService.getAccounts().then(data => {
+        console.log('Accounts loaded:', data);
+        if (!Array.isArray(data)) {
+          console.warn('Accounts API returned non-array data:', data);
+          return [];
+        }
+        return data;
+      }).catch(err => {
+        console.error('Failed to load accounts:', err);
+        return [];
+      }),
+      // Get physical assets data
+      apiService.getAssets().then(data => {
+        console.log('Assets loaded:', data);
+        if (!Array.isArray(data)) {
+          console.warn('Assets API returned non-array data:', data);
+          return [];
+        }
+        return data;
+      }).catch(err => {
+        console.error('Failed to load assets:', err);
+        return [];
+      }),
     ]);
 
     console.log('Successfully loaded all dashboard data');
@@ -125,6 +151,8 @@ const Dashboard: React.FC = () => {
     setGoals(goalsData);
     setInvestments(investmentsData);
     setRecommendations(recommendationsData);
+    setAccounts(accountsData);
+    setAssets(assetsData);
     
     // Enhance dashboard stats with financial health data
     const enhancedStats = dashboardStatsData ? {
@@ -158,6 +186,8 @@ const Dashboard: React.FC = () => {
   const safeInvestments = Array.isArray(investments) ? investments : [];
   const safeGoals = Array.isArray(goals) ? goals : [];
   const safeRecommendations = Array.isArray(recommendations) ? recommendations : [];
+  const safeAccounts = Array.isArray(accounts) ? accounts : [];
+  const safeAssets = Array.isArray(assets) ? assets : [];
   
   // Use backend data when available, fallback to local calculations
   // All calculations should match backend methodology for consistency
@@ -175,8 +205,30 @@ const Dashboard: React.FC = () => {
     return sum + ((inv.shares || 0) * (inv.currentPrice || 0));
   }, 0);
 
-  // Net Worth = All-time cash position + Portfolio value (matching backend)
-  const netWorth = dashboardStats?.netWorth?.current ?? (totalIncome - totalExpenses + portfolioValue);
+  // Calculate account balances (excluding credit cards and loans which are liabilities)
+  const accountsValue = safeAccounts
+    .filter(acc => !['credit_card', 'loan'].includes(acc.type))
+    .reduce((sum, acc) => sum + (acc.balance || 0), 0);
+
+  // Calculate physical assets equity (current value minus loan balance)
+  const assetsValue = safeAssets.reduce((sum, asset) => {
+    const currentValue = asset.currentValue || 0;
+    const loanBalance = asset.hasLoan && asset.loanInfo ? (asset.loanInfo.remainingBalance || 0) : 0;
+    return sum + (currentValue - loanBalance);
+  }, 0);
+
+  // Enhanced Net Worth = Cash position + Portfolio value + Account balances + Asset equity
+  // Prioritize enhanced dashboard stats (from NetWorthCalculator) for consistency
+  const netWorth = dashboardStats?.netWorth?.current ?? (totalIncome - totalExpenses + portfolioValue + accountsValue + assetsValue);
+
+  // Debug: Log net worth sources for consistency verification
+  if (dashboardStats?.netWorth?.current && process.env.NODE_ENV === 'development') {
+    console.log('💰 Net Worth Values:', {
+      fromEnhancedStats: dashboardStats.netWorth.current,
+      fromLocalCalculation: totalIncome - totalExpenses + portfolioValue + accountsValue + assetsValue,
+      difference: dashboardStats.netWorth.current - (totalIncome - totalExpenses + portfolioValue + accountsValue + assetsValue)
+    });
+  }
 
   // Calculate Financial Health Score using real data or backend API
   const calculateFinancialHealth = () => {
@@ -188,7 +240,9 @@ const Dashboard: React.FC = () => {
     // Check if we have any meaningful frontend data for fallback
     const hasTransactionData = safeTransactions.length > 0;
     const hasInvestmentData = safeInvestments.length > 0;
-    const hasAnyFinancialData = hasTransactionData || hasInvestmentData;
+    const hasAccountData = safeAccounts.length > 0;
+    const hasAssetData = safeAssets.length > 0;
+    const hasAnyFinancialData = hasTransactionData || hasInvestmentData || hasAccountData || hasAssetData;
 
     // If no financial data exists anywhere, return zero state
     if (!hasAnyFinancialData) {
@@ -235,7 +289,11 @@ const Dashboard: React.FC = () => {
       {/* Welcome Section */}
       <div className="mb-8">
         <h1 className="text-3xl font-serif font-bold text-gray-900 dark:text-gray-100 mb-2">
-          Welcome back, {user?.name || 'User'}!
+          Welcome back, {userProfile?.profile?.firstName 
+            ? `${userProfile.profile.firstName} ${userProfile.profile?.lastName || ''}`.trim()
+            : userProfile?.email?.split('@')[0] 
+            || user?.name 
+            || 'User'}!
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
           Here's your financial overview for this month.
@@ -280,7 +338,10 @@ const Dashboard: React.FC = () => {
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <NetWorthTrend currency={currency} />
+        <NetWorthTrend 
+          currency={currency} 
+          currentNetWorth={dashboardStats?.netWorth?.current}
+        />
 
         <Card>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Expense Breakdown</h3>

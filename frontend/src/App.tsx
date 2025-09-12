@@ -10,6 +10,7 @@ import Budget from './pages/Budget';
 import Goals from './pages/Goals';
 import Portfolio from './pages/Portfolio';
 import Debt from './pages/Debt';
+import Assets from './pages/Assets';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import Import from './pages/Import';
@@ -124,6 +125,7 @@ function App() {
             <Route path="goals" element={<Goals />} />
             <Route path="portfolio" element={<Portfolio />} />
             <Route path="debt" element={<Debt />} />
+            <Route path="assets" element={<Assets />} />
             <Route path="import" element={<Import />} />
             <Route path="talk-to-finances" element={<TalkToFinances />} />
             <Route path="profile" element={<Profile />} />

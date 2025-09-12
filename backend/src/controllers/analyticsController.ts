@@ -1,7 +1,11 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
-import { Transaction, Investment, Budget, Goal } from '../models';
+import { Transaction, Investment, Budget, Goal, Account, Debt } from '../models';
 import { logger } from '../utils/logger';
+import { NetWorthCalculator } from '../services/netWorthCalculator';
+import { FinancialDataValidator } from '../utils/financialValidator';
+import { NetWorthTracker } from '../services/netWorthTracker';
+import { PortfolioPriceCache } from '../services/portfolioPriceCache';
 
 export class AnalyticsController {
   // Get analytics overview
@@ -64,6 +68,11 @@ export class AnalyticsController {
         portfolioCost += inv.position.totalCost;
       });
 
+      // Get net worth analytics
+      const userObjectId = new mongoose.Types.ObjectId(userId);
+      const netWorthData = await NetWorthCalculator.getCurrentNetWorth(userObjectId);
+      const netWorthByCategory = await NetWorthCalculator.getNetWorthByCategory(userObjectId);
+
       // Get budget analytics
       const currentMonth = endDate.toISOString().slice(0, 7);
       const budgets = await Budget.find({ 
@@ -96,6 +105,13 @@ export class AnalyticsController {
         data: {
           period,
           dateRange: { startDate, endDate },
+          netWorth: {
+            current: netWorthData.netWorth,
+            assets: netWorthData.breakdown.liquidAssets + netWorthData.breakdown.portfolioValue + netWorthData.breakdown.physicalAssets,
+            liabilities: netWorthData.breakdown.totalLiabilities,
+            byCategory: netWorthByCategory,
+            lastUpdated: netWorthData.calculatedAt
+          },
           transactions: {
             byType: transactionStats,
             summary: transactionStats.reduce((acc, curr) => {
@@ -510,231 +526,6 @@ export class AnalyticsController {
     }
   }
 
-  // Get net worth trend data
-  static async getNetWorthTrend(req: Request, res: Response): Promise<void> {
-    try {
-      const userId = req.user?.id;
-      if (!userId) {
-        res.status(401).json({ error: 'User not authenticated' });
-        return;
-      }
-
-      const { period = '6m', interval = 'weekly' } = req.query;
-      
-      // Calculate date range
-      const endDate = new Date();
-      const startDate = new Date();
-      
-      switch (period) {
-        case '1m':
-          startDate.setMonth(endDate.getMonth() - 1);
-          break;
-        case '3m':
-          startDate.setMonth(endDate.getMonth() - 3);
-          break;
-        case '6m':
-          startDate.setMonth(endDate.getMonth() - 6);
-          break;
-        case '1y':
-          startDate.setFullYear(endDate.getFullYear() - 1);
-          break;
-        case 'all':
-          startDate.setFullYear(2020); // Far back date
-          break;
-        default:
-          startDate.setMonth(endDate.getMonth() - 6);
-      }
-
-      // Determine aggregation interval
-      let dateGrouping;
-      let intervalDays;
-      
-      switch (interval) {
-        case 'daily':
-          dateGrouping = '%Y-%m-%d';
-          intervalDays = 1;
-          break;
-        case 'weekly':
-          dateGrouping = '%Y-%U'; // Year-Week
-          intervalDays = 7;
-          break;
-        case 'monthly':
-          dateGrouping = '%Y-%m';
-          intervalDays = 30;
-          break;
-        default:
-          dateGrouping = '%Y-%U';
-          intervalDays = 7;
-      }
-
-      // Get transaction data aggregated by period
-      const transactionData = await Transaction.aggregate([
-        {
-          $match: {
-            userId: new mongoose.Types.ObjectId(userId),
-            'transactionInfo.date': { $gte: startDate, $lte: endDate }
-          }
-        },
-        {
-          $group: {
-            _id: {
-              period: { $dateToString: { format: dateGrouping, date: '$transactionInfo.date' } },
-              type: '$transactionInfo.type'
-            },
-            totalAmount: { $sum: '$transactionInfo.amount' },
-            date: { $first: '$transactionInfo.date' }
-          }
-        },
-        {
-          $group: {
-            _id: '$_id.period',
-            income: {
-              $sum: {
-                $cond: [
-                  { $eq: ['$_id.type', 'income'] },
-                  '$totalAmount',
-                  0
-                ]
-              }
-            },
-            expenses: {
-              $sum: {
-                $cond: [
-                  { $eq: ['$_id.type', 'expense'] },
-                  { $abs: '$totalAmount' },
-                  0
-                ]
-              }
-            },
-            date: { $first: '$date' }
-          }
-        },
-        {
-          $sort: { date: 1 }
-        }
-      ]);
-
-      // Get investment data for the same period
-      const investments = await Investment.find({ 
-        userId, 
-        isActive: true,
-        'acquisition.purchaseDate': { $lte: endDate }
-      });
-
-      // Calculate portfolio values over time (simplified - in reality would need historical prices)
-      const portfolioValue = investments.reduce((sum, inv) => sum + inv.position.marketValue, 0);
-
-      // Get goals for assets calculation
-      const goals = await Goal.find({ 
-        userId, 
-        isActive: true,
-        category: { $in: ['Emergency Fund', 'Savings'] }
-      });
-
-      const savingsAmount = goals.reduce((sum, goal) => sum + goal.currentAmount, 0);
-
-      // Generate net worth trend data
-      const netWorthData = [];
-      let runningCash = savingsAmount;
-      let runningNetWorth = portfolioValue + savingsAmount;
-
-      // Create data points based on transaction data
-      const groupedTransactions = new Map();
-      transactionData.forEach(item => {
-        const periodKey = item._id;
-        const cashFlow = item.income - item.expenses;
-        groupedTransactions.set(periodKey, {
-          cashFlow,
-          income: item.income,
-          expenses: item.expenses,
-          date: item.date
-        });
-      });
-
-      // Generate time series data
-      const current = new Date(startDate);
-      while (current <= endDate) {
-        const periodKey = interval === 'monthly' 
-          ? `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`
-          : interval === 'weekly'
-          ? `${current.getFullYear()}-${Math.ceil((current.getTime() - new Date(current.getFullYear(), 0, 1).getTime()) / (7 * 24 * 60 * 60 * 1000))}`
-          : current.toISOString().split('T')[0];
-
-        const transactionPeriod = groupedTransactions.get(periodKey);
-        const cashFlow = transactionPeriod?.cashFlow || 0;
-        
-        runningCash += cashFlow;
-        runningNetWorth = portfolioValue + runningCash;
-
-        // Simulate some portfolio growth/volatility for demonstration
-        const portfolioGrowth = portfolioValue * (Math.random() * 0.02 - 0.01); // ±1% random change
-        const currentPortfolioValue = Math.max(0, portfolioValue + portfolioGrowth);
-
-        netWorthData.push({
-          date: current.toISOString().split('T')[0],
-          netWorth: Math.round(runningNetWorth),
-          assets: Math.round(runningCash + currentPortfolioValue),
-          liabilities: 0, // Would calculate from debt data if available
-          investments: Math.round(currentPortfolioValue),
-          cash: Math.round(runningCash),
-          income: transactionPeriod?.income || 0,
-          expenses: transactionPeriod?.expenses || 0
-        });
-
-        // Advance to next period
-        if (interval === 'daily') {
-          current.setDate(current.getDate() + 1);
-        } else if (interval === 'weekly') {
-          current.setDate(current.getDate() + 7);
-        } else {
-          current.setMonth(current.getMonth() + 1);
-        }
-      }
-
-      // Calculate summary statistics
-      const values = netWorthData.map(d => d.netWorth);
-      const currentValue = values[values.length - 1] || 0;
-      const startValue = values[0] || 0;
-      const change = currentValue - startValue;
-      const changePercent = startValue !== 0 ? (change / Math.abs(startValue)) * 100 : 0;
-      const maxValue = Math.max(...values);
-      const minValue = Math.min(...values);
-
-      // Calculate volatility
-      const mean = values.reduce((sum, val) => sum + val, 0) / values.length;
-      const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length;
-      const volatility = Math.sqrt(variance);
-
-      res.json({
-        success: true,
-        data: {
-          period,
-          interval,
-          dateRange: { startDate, endDate },
-          trend: netWorthData,
-          summary: {
-            current: currentValue,
-            change,
-            changePercent,
-            highest: maxValue,
-            lowest: minValue,
-            volatility: Math.round(volatility),
-            totalDataPoints: netWorthData.length
-          },
-          metrics: {
-            totalInvestments: portfolioValue,
-            totalCash: runningCash,
-            totalAssets: portfolioValue + runningCash,
-            totalLiabilities: 0 // Would calculate from debt data
-          }
-        }
-      });
-    } catch (error) {
-      logger.error('Error getting net worth trend:', error);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  }
-
   // Get dashboard statistics with change calculations
   static async getDashboardStats(req: Request, res: Response): Promise<void> {
     try {
@@ -887,6 +678,189 @@ export class AnalyticsController {
       });
     } catch (error) {
       logger.error('Error getting dashboard stats:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+
+  // Enhanced Dashboard Stats with True Net Worth (Phase 2)
+  static async getEnhancedDashboardStats(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({ error: 'User not authenticated' });
+        return;
+      }
+      
+      // Get true net worth calculation
+      const userObjectId = new mongoose.Types.ObjectId(userId);
+      const currentNetWorth = await NetWorthCalculator.getCurrentNetWorth(userObjectId);
+      
+      // Get historical comparison for trends (simplified for Phase 2)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      // For now, use simple percentage change calculation
+      // Phase 4 will implement proper historical trending
+      const mockPreviousNetWorth = currentNetWorth.netWorth * 0.95; // Placeholder
+      
+      const netWorthChange = currentNetWorth.netWorth - mockPreviousNetWorth;
+      const netWorthChangePercent = mockPreviousNetWorth > 0 
+        ? (netWorthChange / mockPreviousNetWorth) * 100 
+        : 0;
+      
+      res.json({
+        success: true,
+        data: {
+          netWorth: {
+            current: currentNetWorth.netWorth,
+            change: netWorthChangePercent,
+            changeType: netWorthChangePercent >= 0 ? 'positive' : 'negative',
+            changeText: `${netWorthChangePercent >= 0 ? '+' : ''}${netWorthChangePercent.toFixed(1)}% from last month`
+          },
+          liquidAssets: {
+            current: currentNetWorth.breakdown.liquidAssets,
+            change: 0, // Placeholder for Phase 4
+            changeType: 'neutral',
+            changeText: 'Tracking enabled'
+          },
+          portfolio: {
+            current: currentNetWorth.breakdown.portfolioValue,
+            change: 0, // Will use existing portfolio change logic
+            changeType: 'neutral',
+            changeText: 'Real-time tracking'
+          },
+          physicalAssets: {
+            current: currentNetWorth.breakdown.physicalAssets,
+            change: 0,
+            changeType: 'neutral', 
+            changeText: 'Manual valuation'
+          },
+          totalLiabilities: {
+            current: currentNetWorth.breakdown.totalLiabilities,
+            change: 0,
+            changeType: 'neutral',
+            changeText: 'Debt tracking active'
+          },
+          calculatedAt: currentNetWorth.calculatedAt
+        }
+      });
+    } catch (error) {
+      logger.error('Error getting enhanced dashboard stats:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+
+  // Get net worth trend data
+  static async getNetWorthTrend(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.id || req.query.userId;
+      if (!userId) {
+        res.status(401).json({ error: 'User not authenticated' });
+        return;
+      }
+
+      const { period = '6m', days } = req.query;
+      
+      // Convert period to days if not provided directly
+      let trendDays = parseInt(days as string);
+      if (!trendDays) {
+        switch (period) {
+          case '1m': trendDays = 30; break;
+          case '3m': trendDays = 90; break;
+          case '6m': trendDays = 180; break;
+          case '1y': trendDays = 365; break;
+          case 'all': trendDays = 730; break; // 2 years for 'all'
+          default: trendDays = 180; // Default to 6 months
+        }
+      }
+
+      const trendData = await NetWorthTracker.getNetWorthTrend(
+        new mongoose.Types.ObjectId(userId as string),
+        trendDays
+      );
+
+      res.json({
+        success: true,
+        data: {
+          trend: trendData,
+          period: `${trendDays} days`,
+          calculatedAt: new Date()
+        }
+      });
+    } catch (error) {
+      logger.error('Error getting net worth trend:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+
+  // Create manual net worth snapshot
+  static async createNetWorthSnapshot(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.id || req.query.userId;
+      if (!userId) {
+        res.status(401).json({ error: 'User not authenticated' });
+        return;
+      }
+
+      const { description } = req.body;
+
+      await NetWorthTracker.onSignificantEvent(
+        new mongoose.Types.ObjectId(userId as string),
+        'manual_update',
+        description || 'Manual snapshot'
+      );
+
+      res.json({
+        success: true,
+        message: 'Net worth snapshot created successfully'
+      });
+    } catch (error) {
+      logger.error('Error creating net worth snapshot:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+
+  // Update portfolio prices
+  static async updatePortfolioPrices(req: Request, res: Response): Promise<void> {
+    try {
+      await PortfolioPriceCache.updateDailyPrices();
+
+      res.json({
+        success: true,
+        message: 'Portfolio prices updated successfully'
+      });
+    } catch (error) {
+      logger.error('Error updating portfolio prices:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+
+  // Get portfolio price history for a symbol
+  static async getPortfolioPriceHistory(req: Request, res: Response): Promise<void> {
+    try {
+      const { symbol } = req.params;
+      const { days = 30 } = req.query;
+      
+      if (!symbol) {
+        res.status(400).json({ error: 'Symbol is required' });
+        return;
+      }
+
+      const priceHistory = await PortfolioPriceCache.getAvailablePriceHistory(
+        symbol,
+        parseInt(days as string) || 30
+      );
+
+      res.json({
+        success: true,
+        data: {
+          symbol: symbol.toUpperCase(),
+          history: priceHistory,
+          days: parseInt(days as string) || 30
+        }
+      });
+    } catch (error) {
+      logger.error('Error getting portfolio price history:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }

@@ -53,7 +53,7 @@ interface UserContextValue {
   updateProfile: (data: Partial<UserProfile>) => Promise<void>;
 }
 
-const UserContext = createContext<UserContextValue | undefined>(undefined);
+export const UserContext = createContext<UserContextValue | undefined>(undefined);
 
 interface UserProviderProps {
   children: ReactNode;
@@ -83,8 +83,28 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const isProfileComplete = Boolean(
     userProfile?.profile?.firstName && 
     userProfile?.profile?.lastName && 
-    userProfile?.metadata?.onboardingCompleted
+    userProfile?.profile?.firstName !== 'FirstName' &&  // Not placeholder
+    userProfile?.profile?.lastName !== 'LastName' &&    // Not placeholder
+    userProfile?.metadata?.onboardingCompleted &&
+    !userProfile?.email?.includes('@temp.wealthwise.com') // Not temp email
   );
+
+  // Debug logging for profile completion
+  console.log('🔧 [UserContext] Profile completion check:', {
+    firstName: userProfile?.profile?.firstName,
+    lastName: userProfile?.profile?.lastName,
+    email: userProfile?.email,
+    onboardingCompleted: userProfile?.metadata?.onboardingCompleted,
+    isProfileComplete,
+    conditions: {
+      hasFirstName: !!userProfile?.profile?.firstName,
+      hasLastName: !!userProfile?.profile?.lastName,
+      firstNameNotPlaceholder: userProfile?.profile?.firstName !== 'FirstName',
+      lastNameNotPlaceholder: userProfile?.profile?.lastName !== 'LastName',
+      onboardingComplete: !!userProfile?.metadata?.onboardingCompleted,
+      emailNotTemp: !userProfile?.email?.includes('@temp.wealthwise.com')
+    }
+  });
 
   // Fetch user profile from backend
   const fetchProfile = async () => {
@@ -101,16 +121,30 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         }
       });
       
+      console.log('🔧 [DEBUG] Token retrieved:', !!token, token ? token.substring(0, 30) + '...' : 'null');
+      
       // Configure API service with token
       apiService.setToken(token);
-
-      // Fetch profile
-      const profile = await apiService.getCurrentUser();
       
-      // Debug: Log received profile
-      console.log('🔍 DEBUG - Frontend received profile:', profile);
-      console.log('🔍 DEBUG - Profile role:', profile?.role);
-      console.log('🔍 DEBUG - Profile keys:', Object.keys(profile || {}));
+      console.log('🔧 [DEBUG] Token set in API service:', !!apiService.getCurrentToken());
+
+      // Prepare Auth0 user data to send to backend
+      const auth0UserData = {
+        email: auth0User.email,
+        given_name: auth0User.given_name || auth0User.name?.split(' ')[0],
+        family_name: auth0User.family_name || auth0User.name?.split(' ').slice(1).join(' '),
+        name: auth0User.name
+      };
+
+      console.log('🔧 [FRONTEND] Sending Auth0 user data to backend:', auth0UserData);
+
+      // Fetch profile with Auth0 user data
+      const profile = await apiService.getCurrentUser(auth0UserData);
+      
+  // Debug: Log received profile
+  console.log('🔍 [UserContext] Raw profile received from backend:', JSON.stringify(profile, null, 2));
+  console.log('🔍 DEBUG - Profile role:', profile?.role);
+  console.log('🔍 DEBUG - Profile keys:', Object.keys(profile || {}));
       
       setUserProfile(profile);
       
@@ -145,7 +179,11 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
 
   // Actions
   const login = () => {
-    loginWithRedirect();
+    loginWithRedirect({
+      authorizationParams: {
+        scope: "openid profile email"
+      }
+    });
   };
 
   const logout = () => {

@@ -6,20 +6,32 @@ export async function connectDB(): Promise<void> {
     const baseUri = process.env['MONGODB_URI'] || 'mongodb://localhost:27017';
     const dbName = process.env['MONGODB_DB_NAME'] || 'wealthwise';
     
-    // Construct the full URI with database name
-    const mongoUri = baseUri.includes('mongodb+srv://') 
-      ? `${baseUri.replace('/?', `/${dbName}?`)}`
-      : `${baseUri}/${dbName}`;
+    let mongoUri: string;
+    
+    if (baseUri.includes('mongodb+srv://')) {
+      // Atlas connection - insert database name before query parameters
+      if (baseUri.includes('mongodb.net/?')) {
+        mongoUri = baseUri.replace('mongodb.net/?', `mongodb.net/${dbName}?`);
+      } else if (baseUri.includes('mongodb.net/')) {
+        mongoUri = baseUri.replace('mongodb.net/', `mongodb.net/${dbName}/`);
+      } else {
+        mongoUri = baseUri;
+      }
+    } else {
+      // Local MongoDB connection
+      mongoUri = `${baseUri}/${dbName}`;
+    }
     
     if (!process.env['MONGODB_URI']) {
       logger.warn(`MONGODB_URI environment variable not found, using default: mongodb://localhost:27017/${dbName}`);
     }
     
     logger.info(`Connecting to database: ${dbName}`);
+    logger.info(`Mongo URI: ${mongoUri.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')}`); // Hide credentials for debugging
 
     await mongoose.connect(mongoUri, {
       maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 10000, // Increased for Atlas
       socketTimeoutMS: 45000,
       bufferCommands: false,
     });

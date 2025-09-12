@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { X, Upload, Camera, Calendar, DollarSign, Tag, Repeat } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { Transaction } from '../../types';
 import Button from '../UI/Button';
 import Card from '../UI/Card';
 import { CURRENCIES, convertCurrency } from '../../utils/currency';
+import { apiService } from '../../services/api';
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -31,42 +31,57 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose }) 
     'Business', 'Personal Care', 'Gifts & Donations', 'Other'
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
-    const originalAmount = Number(formData.amount);
-    const convertedAmount = convertCurrency(originalAmount, formData.currency, baseCurrency);
-    const finalAmount = formData.type === 'expense' ? -Math.abs(convertedAmount) : Math.abs(convertedAmount);
-    const transaction: Transaction = {
-      id: Date.now().toString(),
-      userId: user.id,
-      amount: finalAmount,
-      description: formData.description,
-      category: formData.category,
-      type: formData.type,
-      date: new Date(formData.date),
-      currency: baseCurrency,
-      originalCurrency: formData.currency !== baseCurrency ? formData.currency : undefined,
-      originalAmount: formData.currency !== baseCurrency ? originalAmount : undefined,
-      isRecurring: formData.isRecurring,
-      recurringFrequency: formData.isRecurring ? formData.recurringFrequency : undefined,
-      receiptUrl: formData.receiptFile ? URL.createObjectURL(formData.receiptFile) : undefined,
-    };
+    try {
+      const originalAmount = Number(formData.amount);
+      const convertedAmount = convertCurrency(originalAmount, formData.currency, baseCurrency);
+      const finalAmount = formData.type === 'expense' ? -Math.abs(convertedAmount) : Math.abs(convertedAmount);
+      
+      // Prepare transaction data for API (without id, as backend will generate it)
+      const transactionData = {
+        userId: user.id,
+        amount: finalAmount,
+        description: formData.description,
+        category: formData.category,
+        type: formData.type,
+        date: new Date(formData.date),
+        currency: baseCurrency,
+        isRecurring: formData.isRecurring,
+        recurringFrequency: formData.isRecurring ? formData.recurringFrequency : undefined,
+        receiptUrl: formData.receiptFile ? URL.createObjectURL(formData.receiptFile) : undefined,
+        tags: [], // Add empty tags array as expected by backend
+      };
 
-    addTransaction(transaction);
-    onClose();
-    setFormData({
-      amount: '',
-      description: '',
-      category: '',
-      type: 'expense',
-      date: new Date().toISOString().split('T')[0],
-      currency: baseCurrency,
-      isRecurring: false,
-      recurringFrequency: 'monthly',
-      receiptFile: null,
-    });
+      // Call API to create transaction
+      const response = await apiService.createTransaction(transactionData);
+      
+      // Extract the transaction from the response (handle both response formats)
+      const savedTransaction = (response as any).data || response;
+      
+      // Add to local store
+      addTransaction(savedTransaction);
+      
+      // Close modal and reset form
+      onClose();
+      setFormData({
+        amount: '',
+        description: '',
+        category: '',
+        type: 'expense',
+        date: new Date().toISOString().split('T')[0],
+        currency: baseCurrency,
+        isRecurring: false,
+        recurringFrequency: 'monthly',
+        receiptFile: null,
+      });
+    } catch (error) {
+      console.error('Error creating transaction:', error);
+      // TODO: Show error message to user
+      alert('Failed to create transaction. Please try again.');
+    }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

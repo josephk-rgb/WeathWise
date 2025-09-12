@@ -1,32 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from './useAuth';
+import { useUser } from '../contexts/UserContext';
 import { apiService } from '../services/api';
-
-interface BackendUserProfile {
-  id: string;
-  email: string;
-  profile: {
-    firstName?: string;
-    lastName?: string;
-    phone?: string;
-    dateOfBirth?: Date;
-    address?: {
-      street?: string;
-      city?: string;
-      state?: string;
-      zipCode?: string;
-      country?: string;
-    };
-  };
-  metadata: {
-    onboardingCompleted?: boolean;
-    lastLogin?: Date;
-    loginCount: number;
-  };
-  preferences?: any;
-  riskProfile?: any;
-  subscription?: any;
-}
 
 interface ProfileData {
   firstName: string;
@@ -44,126 +19,96 @@ interface ProfileData {
 
 export const useProfileCompletion = () => {
   const { isAuthenticated, tokenReady, user: auth0User } = useAuth();
-  const [userProfile, setUserProfile] = useState<BackendUserProfile | null>(null);
-  const [isProfileComplete, setIsProfileComplete] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const { userProfile, isProfileLoading, isProfileComplete: contextIsProfileComplete, refreshProfile } = useUser();
   const [error, setError] = useState<string | null>(null);
-  const [hasAttemptedFetch, setHasAttemptedFetch] = useState(false);
 
-  // Fetch user profile from backend
-  const fetchUserProfile = async () => {
-    if (!isAuthenticated || !tokenReady) {
-      console.log('🚫 Profile fetch skipped - Auth:', isAuthenticated, 'TokenReady:', tokenReady);
-      return;
-    }
+  // Use UserContext data instead of separate API calls
+  const isLoading = isProfileLoading;
+  const isProfileComplete = contextIsProfileComplete;
 
-    try {
-      console.log('🔄 Fetching user profile...');
-      setIsLoading(true);
-      setError(null);
-      
-      const response = await apiService.getCurrentUser();
-      const profile: BackendUserProfile = response as any;
-      
-      console.log('✅ Profile fetched successfully:', {
-        hasProfile: !!profile,
-        hasProfileData: !!profile.profile,
-        hasMetadata: !!profile.metadata
-      });
-      
-      setUserProfile(profile);
-      
-      // Check if profile is complete
-      const hasRequiredFields = Boolean(profile.profile?.firstName && profile.profile?.lastName);
-      const onboardingCompleted = Boolean(profile.metadata?.onboardingCompleted);
-      
-      console.log('📋 Profile completion check:', {
-        hasRequiredFields,
-        onboardingCompleted,
-        isComplete: hasRequiredFields && onboardingCompleted
-      });
-      
-      setIsProfileComplete(hasRequiredFields && onboardingCompleted);
-    } catch (err: any) {
-      console.error('❌ Error fetching user profile:', err);
-      setError(err.response?.data?.error || err.message || 'Failed to load profile');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  console.log('📋 [useProfileCompletion] State:', {
+    isAuthenticated,
+    tokenReady,
+    isLoading,
+    isProfileComplete,
+    shouldShow: isAuthenticated && tokenReady && !isLoading && !isProfileComplete
+  });
 
-  // Update user profile
+  // Update profile function
   const updateProfile = async (profileData: ProfileData): Promise<void> => {
-    if (!isAuthenticated || !tokenReady) {
-      throw new Error('User not authenticated');
-    }
-
     try {
       setError(null);
       
-      // Complete profile and onboarding in one atomic operation
-      const updateData = {
-        firstName: profileData.firstName,
-        lastName: profileData.lastName,
-        ...(profileData.phone && { phone: profileData.phone }),
-        ...(profileData.dateOfBirth && { dateOfBirth: profileData.dateOfBirth }),
-        ...(profileData.address && { address: profileData.address })
-      };
-
-      await apiService.completeProfile(updateData as any);
+      console.log('🔧 [FRONTEND] Sending profile data:', profileData);
       
-      // Refresh profile data to ensure UI is in sync
-      await fetchUserProfile();
+      // Clean up the data - don't send empty strings
+      const cleanData: any = {
+        firstName: profileData.firstName,
+        lastName: profileData.lastName
+      };
+      
+      // Only include optional fields if they have values
+      if (profileData.phone && profileData.phone.trim()) {
+        cleanData.phone = profileData.phone.trim();
+      }
+      
+      if (profileData.dateOfBirth && profileData.dateOfBirth.trim()) {
+        cleanData.dateOfBirth = profileData.dateOfBirth.trim();
+      }
+      
+      // Only include address if it has meaningful data
+      if (profileData.address) {
+        const hasAddressData = Object.values(profileData.address).some(value => value && value.trim());
+        if (hasAddressData) {
+          cleanData.address = profileData.address;
+        }
+      }
+      
+      console.log('🔧 [FRONTEND] Cleaned data being sent:', cleanData);
+      
+      // Update profile using the updateProfile API
+      await apiService.updateProfile(cleanData);
+
+      console.log('✅ Profile updated successfully');
+      
+      // Mark onboarding as complete
+      console.log('🔧 [FRONTEND] Marking onboarding as complete...');
+      await apiService.completeOnboarding();
+      console.log('✅ Onboarding marked as complete');
+      
+      // Refresh the user profile data to update the completion status
+      console.log('🔧 [FRONTEND] Refreshing user profile data...');
+      await refreshProfile();
+      console.log('✅ Profile data refreshed - modal should close');
+      
     } catch (err: any) {
-      console.error('Error updating profile:', err);
-      throw new Error(err.response?.data?.error || 'Failed to update profile');
+      console.error('❌ Error updating profile:', err);
+      setError(err.message || 'Failed to update profile');
+      throw err;
     }
   };
 
   // Skip profile completion (mark onboarding as completed without full profile)
   const skipProfileCompletion = async (): Promise<void> => {
-    if (!isAuthenticated || !tokenReady) {
-      throw new Error('User not authenticated');
-    }
-
     try {
       setError(null);
       
-      // Just mark onboarding as completed without profile data
-      await apiService.completeProfile({});
+      console.log('⏭️ Skipping profile completion...');
       
-      // Refresh profile data
-      await fetchUserProfile();
+      // Just mark onboarding as completed without profile data
+      await apiService.completeOnboarding();
+      
+      console.log('✅ Profile completion skipped');
+      
+      // Refresh to get updated state
+      window.location.reload();
+      
     } catch (err: any) {
-      console.error('Error skipping profile completion:', err);
-      throw new Error(err.response?.data?.error || 'Failed to skip profile completion');
+      console.error('❌ Error skipping profile completion:', err);
+      setError(err.message || 'Failed to skip profile completion');
+      throw err;
     }
   };
-
-  // Fetch profile when authentication is ready
-  useEffect(() => {
-    if (isAuthenticated && tokenReady && !isLoading && !hasAttemptedFetch) {
-      console.log('🎯 Triggering profile fetch - Auth:', isAuthenticated, 'TokenReady:', tokenReady, 'Loading:', isLoading);
-      setHasAttemptedFetch(true);
-      
-      // Add a timeout to prevent hanging
-      const timeoutId = setTimeout(() => {
-        if (isLoading) {
-          console.error('⏰ Profile fetch timed out after 10 seconds');
-          setError('Profile loading timed out. Please refresh the page.');
-          setIsLoading(false);
-        }
-      }, 10000);
-      
-      fetchUserProfile().finally(() => {
-        clearTimeout(timeoutId);
-      });
-      
-      return () => {
-        clearTimeout(timeoutId);
-      };
-    }
-  }, [isAuthenticated, tokenReady, hasAttemptedFetch]);
 
   return {
     userProfile,
@@ -172,7 +117,7 @@ export const useProfileCompletion = () => {
     error,
     updateProfile,
     skipProfileCompletion,
-    refetchProfile: fetchUserProfile,
+    refetchProfile: () => window.location.reload(),
     // Helper to determine if profile completion modal should be shown
     shouldShowProfileCompletion: isAuthenticated && tokenReady && !isLoading && !isProfileComplete,
     // Auth0 user email for display

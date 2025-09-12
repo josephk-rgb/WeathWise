@@ -13,29 +13,37 @@ export const useAuth = () => {
   } = useAuth0();
 
   const [tokenReady, setTokenReady] = useState(false);
-  const [tokenInitialized, setTokenInitialized] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
   const initializingRef = useRef(false); // Use ref to prevent React Strict Mode issues
 
   // Automatically get and set token when authenticated
   useEffect(() => {
-    if (isAuthenticated && user && !isLoading && !tokenInitialized && !isInitializing && !initializingRef.current) {
+    
+    // FORCE token initialization for debugging - remove the tokenInitialized check temporarily
+    if (isAuthenticated && user && !isLoading && !isInitializing && !initializingRef.current) {
       const initializeToken = async () => {
         try {
           initializingRef.current = true; // Set ref immediately
           setIsInitializing(true);
-          console.log('Initializing Auth0 token for user:', user.email);
           setTokenInitialized(true);
           
           const token = await getAccessTokenSilently({
             authorizationParams: {
               audience: import.meta.env.VITE_AUTH0_AUDIENCE,
+              scope: "openid profile email"
             }
           });
-          console.log('Got Auth0 token:', token.substring(0, 30) + '...');
+          
+          // Decode and log the token payload
+          try {
+            const tokenParts = token.split('.');
+            const payload = JSON.parse(atob(tokenParts[1]));
+          } catch (decodeError) {
+            console.error('🔧 [FRONTEND] Failed to decode token:', decodeError);
+          }
+          
           apiService.setToken(token);
           setTokenReady(true);
-          console.log('Auth0 token successfully set');
         } catch (error) {
           console.error('Error getting Auth0 token:', error);
           setTokenReady(false);
@@ -69,7 +77,13 @@ export const useAuth = () => {
   }, [isAuthenticated, user, isLoading, getAccessTokenSilently]); // Removed tokenInitialized from dependencies
 
   const login = () => {
-    loginWithRedirect();
+    
+    loginWithRedirect({
+      authorizationParams: {
+        audience: import.meta.env.VITE_AUTH0_AUDIENCE,
+        scope: "openid profile email"
+      }
+    });
   };
 
   const handleLogout = () => {
@@ -83,13 +97,21 @@ export const useAuth = () => {
 
   const getToken = async () => {
     try {
-      console.log('Getting fresh Auth0 token...');
       const token = await getAccessTokenSilently({
         authorizationParams: {
           audience: import.meta.env.VITE_AUTH0_AUDIENCE,
+          scope: "openid profile email"
         }
       });
-      console.log('Got fresh token:', token.substring(0, 30) + '...');
+      
+      // Decode and log the fresh token payload too
+      try {
+        const tokenParts = token.split('.');
+        const payload = JSON.parse(atob(tokenParts[1]));
+      } catch (decodeError) {
+        console.error('🔧 [FRONTEND] Failed to decode fresh token:', decodeError);
+      }
+      
       apiService.setToken(token);
       setTokenReady(true);
       return token;

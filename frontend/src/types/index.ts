@@ -263,3 +263,54 @@ export interface DebtPayment {
   paymentDate: Date;
   currency: string;
 }
+
+// Account Management Types
+export interface Account {
+  id: string;
+  userId: string;
+  name: string;
+  type: 'checking' | 'savings' | 'money_market' | 'cd' | 'credit_card' | 'loan' | 'investment' | 'retirement' | 'other';
+  institution: string;
+  balance: number;
+  currency: string;
+  interestRate?: number;
+  lastSynced?: Date;
+  isActive: boolean;
+  accountNumber?: string; // Masked for security
+  routingNumber?: string;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Physical Asset Types
+export interface LoanInfo {
+  loanAmount: number;
+  interestRate: number;
+  loanTerm: number; // in years
+  monthlyPayment: number;
+  remainingBalance: number;
+  lender?: string;
+  startDate: Date;
+}
+
+export interface PhysicalAsset {
+  id: string;
+  userId: string;
+  name: string;
+  type: 'real_estate' | 'vehicle' | 'jewelry' | 'art' | 'collectibles' | 'electronics' | 'furniture' | 'other';
+  currentValue: number;
+  purchasePrice?: number;
+  purchaseDate?: Date;
+  currency: string;
+  hasLoan: boolean;
+  loanInfo?: LoanInfo;
+  equity?: number; // Calculated: currentValue - remainingBalance
+  description?: string;
+  location?: string;
+  condition?: 'excellent' | 'good' | 'fair' | 'poor';
+  images?: string[];
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}

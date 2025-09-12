@@ -61,6 +61,9 @@ export class DatabaseService {
    */
   async updateUser(userId: string, updateData: Partial<IUser>): Promise<IUser | null> {
     try {
+      console.log('🔧 [DATABASE] Updating user:', userId);
+      console.log('🔧 [DATABASE] Update data:', JSON.stringify(updateData, null, 2));
+      
       const user = await User.findByIdAndUpdate(
         userId,
         updateData,
@@ -69,11 +72,20 @@ export class DatabaseService {
       
       if (user) {
         logger.info(`User updated successfully: ${user.email}`);
+        console.log('🔧 [DATABASE] User updated successfully:', {
+          id: user._id,
+          email: user.email,
+          profile: user.profile,
+          metadata: user.metadata
+        });
+      } else {
+        console.log('🔧 [DATABASE] User not found for update:', userId);
       }
       
       return user;
     } catch (error) {
       logger.error('Error updating user:', error);
+      console.log('🔧 [DATABASE] Error updating user:', error);
       throw error;
     }
   }

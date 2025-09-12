@@ -105,30 +105,43 @@ const PortfolioPage: React.FC = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
-    const investmentData: Investment = {
-      id: editingInvestment?.id || Date.now().toString(),
-      userId: user.id,
-      symbol: formData.symbol,
-      name: formData.name,
-      shares: Number(formData.shares),
-      purchasePrice: Number(formData.purchasePrice),
-      currentPrice: Number(formData.currentPrice),
-      type: formData.type,
-      purchaseDate: new Date(formData.purchaseDate),
-      currency,
-    };
+    try {
+      const investmentData = {
+        userId: user.id,
+        symbol: formData.symbol,
+        name: formData.name,
+        shares: Number(formData.shares),
+        purchasePrice: Number(formData.purchasePrice),
+        currentPrice: Number(formData.currentPrice),
+        type: formData.type,
+        purchaseDate: new Date(formData.purchaseDate),
+        currency,
+        // Add fields expected by backend
+        purchaseMethod: 'buy',
+        fees: 0,
+      };
 
-    if (editingInvestment) {
-      setInvestments(safeInvestments.map(inv => inv.id === editingInvestment.id ? investmentData : inv));
-    } else {
-      setInvestments([...safeInvestments, investmentData]);
+      if (editingInvestment) {
+        // Update existing investment
+        const response = await apiService.updateInvestment(editingInvestment.id, investmentData);
+        const updatedInvestment = (response as any).data || response;
+        setInvestments(safeInvestments.map(inv => inv.id === editingInvestment.id ? updatedInvestment : inv));
+      } else {
+        // Create new investment
+        const response = await apiService.createInvestment(investmentData);
+        const savedInvestment = (response as any).data || response;
+        setInvestments([...safeInvestments, savedInvestment]);
+      }
+
+      resetForm();
+    } catch (error) {
+      console.error('Error saving investment:', error);
+      alert('Failed to save investment. Please try again.');
     }
-
-    resetForm();
   };
 
   const resetForm = () => {

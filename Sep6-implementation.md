@@ -1446,7 +1446,7 @@ class AccountBalanceTracker {
 
 ### Account-Transaction Linking System
 ```typescript
-// Enhanced Transaction model with smart linking
+// Enhanced Transaction model with simple linking
 interface ITransaction {
   // ... existing fields
   sourceAccountId?: ObjectId;    // Link to Account if known
@@ -1454,53 +1454,97 @@ interface ITransaction {
   merchantInfo?: {
     name: string;
     category: string;
-    lastFourDigits?: string;     // For matching to accounts
   };
-  confidence?: number;          // AI confidence in categorization
 }
 
-interface TransactionCategorization {
+interface UserAccountPreferences {
   userId: ObjectId;
-  rules: Array<{
-    description_pattern: string;     // regex or keyword
-    merchant_pattern: string;
-    suggested_account: ObjectId;
-    confidence: number;
+  defaultAccounts: {
+    grocery?: ObjectId;           // Default account for grocery transactions
+    gas?: ObjectId;              // Default account for gas stations
+    online?: ObjectId;           // Default account for online purchases
+    cash?: ObjectId;             // Default account for cash transactions
+  };
+  merchantMappings: Array<{
+    merchantName: string;        // Simple merchant name match
+    accountId: ObjectId;         // Preferred account for this merchant
   }>;
 }
 
-class SmartTransactionLinker {
-  async suggestAccountForTransaction(transaction: ITransaction, userId: ObjectId) {
-    const rules = await TransactionCategorization.findOne({ userId });
+class TransactionAccountLinker {
+  async suggestAccountForTransaction(transaction: ITransaction, userId: ObjectId): Promise<ObjectId | null> {
+    const preferences = await UserAccountPreferences.findOne({ userId });
+    if (!preferences) return null;
     
-    // Find matching patterns
-    const suggestions = rules.rules
-      .filter(rule => {
-        const descMatch = transaction.transactionInfo.description.match(rule.description_pattern);
-        const merchantMatch = transaction.merchantInfo?.name?.includes(rule.merchant_pattern);
-        return descMatch || merchantMatch;
-      })
-      .sort((a, b) => b.confidence - a.confidence);
+    const description = transaction.transactionInfo.description.toLowerCase();
+    const category = transaction.transactionInfo.category?.toLowerCase();
     
-    return suggestions[0]?.suggested_account || null;
+    // 1. Check for exact merchant mapping first
+    const merchantMapping = preferences.merchantMappings.find(mapping => 
+      description.includes(mapping.merchantName.toLowerCase())
+    );
+    if (merchantMapping) {
+      return merchantMapping.accountId;
+    }
+    
+    // 2. Check category-based defaults
+    if (category) {
+      switch (category) {
+        case 'groceries':
+        case 'food':
+          return preferences.defaultAccounts.grocery || null;
+        case 'gas':
+        case 'fuel':
+          return preferences.defaultAccounts.gas || null;
+        case 'online':
+        case 'shopping':
+          return preferences.defaultAccounts.online || null;
+        case 'cash':
+          return preferences.defaultAccounts.cash || null;
+      }
+    }
+    
+    // 3. Simple keyword matching for common patterns
+    if (description.includes('walmart') || description.includes('target') || description.includes('grocery')) {
+      return preferences.defaultAccounts.grocery || null;
+    }
+    
+    if (description.includes('shell') || description.includes('exxon') || description.includes('gas')) {
+      return preferences.defaultAccounts.gas || null;
+    }
+    
+    return null; // No suggestion found
   }
   
-  async learnFromUserCorrections(transaction: ITransaction, correctedAccountId: ObjectId) {
-    // Machine learning approach: update rules based on user corrections
-    const userId = transaction.userId;
-    const description = transaction.transactionInfo.description;
-    const merchant = transaction.merchantInfo?.name;
-    
-    await TransactionCategorization.updateOne(
+  async saveUserAccountPreference(
+    userId: ObjectId, 
+    merchantName: string, 
+    accountId: ObjectId
+  ) {
+    await UserAccountPreferences.updateOne(
       { userId },
       {
         $push: {
-          rules: {
-            description_pattern: this.extractKeywords(description),
-            merchant_pattern: merchant || '',
-            suggested_account: correctedAccountId,
-            confidence: 0.8
+          merchantMappings: {
+            merchantName: merchantName.trim(),
+            accountId
           }
+        }
+      },
+      { upsert: true }
+    );
+  }
+  
+  async setDefaultAccountForCategory(
+    userId: ObjectId, 
+    category: 'grocery' | 'gas' | 'online' | 'cash', 
+    accountId: ObjectId
+  ) {
+    await UserAccountPreferences.updateOne(
+      { userId },
+      {
+        $set: {
+          [`defaultAccounts.${category}`]: accountId
         }
       },
       { upsert: true }
