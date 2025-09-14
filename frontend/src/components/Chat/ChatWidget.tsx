@@ -1,14 +1,26 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Bot, User, Image } from 'lucide-react';
+import { MessageCircle, X, Send, Bot, User, Image, History } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { apiService } from '../../services/api';
+import { ChatSessionManager } from '../../utils/chatSessionManager';
 import Button from '../UI/Button';
+import ChatHistory from './ChatHistory';
 
 const ChatWidget: React.FC = () => {
-  const { isChatOpen, setChatOpen, chatMessages, addChatMessage } = useStore();
+  const { 
+    isChatOpen, 
+    setChatOpen, 
+    chatMessages, 
+    addChatMessage,
+    setChatMessages,
+    currentSessionId,
+    setCurrentSessionId
+  } = useStore();
   const [message, setMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [currentSession, setCurrentSession] = useState<string | null>(currentSessionId);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -23,6 +35,15 @@ const ChatWidget: React.FC = () => {
   const handleSendMessage = async () => {
     if (!message.trim()) return;
 
+    // Generate session ID if none exists
+    let sessionId = currentSession;
+    if (!sessionId) {
+      const newSession = ChatSessionManager.createSession();
+      sessionId = newSession.id;
+      setCurrentSession(sessionId);
+      setCurrentSessionId(sessionId);
+    }
+
     const userMessage = {
       id: Date.now().toString(),
       content: message,
@@ -32,6 +53,10 @@ const ChatWidget: React.FC = () => {
     };
 
     addChatMessage(userMessage);
+    
+    // Update session with user message
+    ChatSessionManager.updateSessionWithMessage(sessionId, message, true);
+    
     setMessage('');
     setSelectedImage(null);
     setIsTyping(true);
@@ -47,11 +72,45 @@ const ChatWidget: React.FC = () => {
         timestamp: new Date(),
       };
       addChatMessage(aiMessage);
+      
+      // Update session with AI response
+      ChatSessionManager.updateSessionWithMessage(sessionId, aiMessage.content, false);
     } catch (error) {
       console.error('Error sending message:', error);
     } finally {
       setIsTyping(false);
     }
+  };
+
+  const handleSelectSession = async (sessionId: string) => {
+    try {
+      setCurrentSession(sessionId);
+      setCurrentSessionId(sessionId);
+      setShowHistory(false);
+      
+      // Load messages for this session
+      const history = await apiService.getMLChatHistory(sessionId);
+      if (history && history.messages) {
+        const messages = history.messages.map((msg: any) => ({
+          id: msg.id,
+          content: msg.content,
+          sender: msg.message_type === 'user' ? 'user' : 'ai',
+          timestamp: new Date(msg.timestamp),
+          imageUrl: msg.metadata?.imageUrl
+        }));
+        setChatMessages(messages);
+      }
+    } catch (error) {
+      console.error('Failed to load session:', error);
+    }
+  };
+
+  const handleCreateNewSession = () => {
+    const newSession = ChatSessionManager.createSession();
+    setCurrentSession(newSession.id);
+    setCurrentSessionId(newSession.id);
+    setChatMessages([]);
+    setShowHistory(false);
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -91,13 +150,33 @@ const ChatWidget: React.FC = () => {
             <p className="text-xs text-white text-opacity-80">Your financial assistant</p>
           </div>
         </div>
-        <button
-          onClick={() => setChatOpen(false)}
-          className="text-white text-opacity-80 hover:text-white transition-colors duration-200"
-        >
-          <X className="w-5 h-5" />
-        </button>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setShowHistory(!showHistory)}
+            className="text-white text-opacity-80 hover:text-white transition-colors duration-200"
+            title="Chat History"
+          >
+            <History className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setChatOpen(false)}
+            className="text-white text-opacity-80 hover:text-white transition-colors duration-200"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
       </div>
+
+      {/* Chat History Sidebar */}
+      {showHistory && (
+        <div className="absolute top-16 left-0 w-80 h-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-10">
+          <ChatHistory
+            onSelectSession={handleSelectSession}
+            onCreateNewSession={handleCreateNewSession}
+            className="h-full"
+          />
+        </div>
+      )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">

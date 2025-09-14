@@ -1,6 +1,26 @@
 import { create } from 'zustand';
 import { User, Transaction, Budget, Goal, Investment, ChatMessage, Recommendation, Debt } from '../types';
 
+// Enhanced chat types
+export interface ChatSession {
+  id: string;
+  title: string;
+  lastMessage: string;
+  messageCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+  isActive: boolean;
+}
+
+export interface ChatHistoryFilters {
+  searchTerm: string;
+  dateRange: {
+    start: Date | null;
+    end: Date | null;
+  };
+  sortBy: 'newest' | 'oldest' | 'mostMessages';
+}
+
 interface Store {
   // User state
   user: User | null;
@@ -40,6 +60,18 @@ interface Store {
   chatMessages: ChatMessage[];
   addChatMessage: (message: ChatMessage) => void;
   clearChat: () => void;
+  setChatMessages: (messages: ChatMessage[]) => void;
+  
+  // Chat Sessions & History
+  chatSessions: ChatSession[];
+  currentSessionId: string | null;
+  chatHistoryFilters: ChatHistoryFilters;
+  setChatSessions: (sessions: ChatSession[]) => void;
+  addChatSession: (session: ChatSession) => void;
+  updateChatSession: (sessionId: string, updates: Partial<ChatSession>) => void;
+  setCurrentSessionId: (sessionId: string | null) => void;
+  setChatHistoryFilters: (filters: Partial<ChatHistoryFilters>) => void;
+  clearChatHistoryFilters: () => void;
   
   // Recommendations
   recommendations: Recommendation[];
@@ -99,6 +131,36 @@ export const useStore = create<Store>((set) => ({
     chatMessages: [...state.chatMessages, message]
   })),
   clearChat: () => set({ chatMessages: [] }),
+  setChatMessages: (messages) => set({ chatMessages: messages }),
+  
+  // Chat Sessions & History
+  chatSessions: [],
+  currentSessionId: null,
+  chatHistoryFilters: {
+    searchTerm: '',
+    dateRange: { start: null, end: null },
+    sortBy: 'newest'
+  },
+  setChatSessions: (sessions) => set({ chatSessions: sessions }),
+  addChatSession: (session) => set((state) => ({
+    chatSessions: [session, ...state.chatSessions]
+  })),
+  updateChatSession: (sessionId, updates) => set((state) => ({
+    chatSessions: state.chatSessions.map(session =>
+      session.id === sessionId ? { ...session, ...updates } : session
+    )
+  })),
+  setCurrentSessionId: (sessionId) => set({ currentSessionId: sessionId }),
+  setChatHistoryFilters: (filters) => set((state) => ({
+    chatHistoryFilters: { ...state.chatHistoryFilters, ...filters }
+  })),
+  clearChatHistoryFilters: () => set({
+    chatHistoryFilters: {
+      searchTerm: '',
+      dateRange: { start: null, end: null },
+      sortBy: 'newest'
+    }
+  }),
   
   // Recommendations
   recommendations: [],

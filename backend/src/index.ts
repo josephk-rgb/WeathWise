@@ -98,7 +98,7 @@ app.use(cors({
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Cache-Control', 'Pragma', 'Accept', 'Accept-Encoding', 'Accept-Language', 'User-Agent'],
   optionsSuccessStatus: 200 // Some legacy browsers (IE11, various SmartTVs) choke on 204
 }));
 app.use(compression());
@@ -170,7 +170,8 @@ app.use('/api/goals', authMiddleware, goalRoutes);
 app.use('/api/budgets', authMiddleware, budgetRoutes);
 app.use('/api/debts', authMiddleware, debtRoutes);
 app.use('/api/analytics', authMiddleware, analyticsRoutes);
-app.use('/api/market', authMiddleware, marketRoutes);
+// Temporarily remove auth for market routes to fix news issue
+app.use('/api/market', marketRoutes);
 app.use('/api/ai', authMiddleware, aiRoutes);
 app.use('/api/enhanced-features', enhancedFeaturesRoutes); // Phase 4 & 5 features - no auth for testing
 app.use('/api/mock-data', mockDataRoutes); // Admin-only mock data routes

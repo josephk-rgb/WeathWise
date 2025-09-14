@@ -194,6 +194,17 @@ class ApiService {
     // Always add Authorization header if token exists
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
+      // Debug: Log token details for news endpoints
+      if (endpoint.includes('/market/news')) {
+        console.log('🔧 [NEWS DEBUG] Token details:', {
+          hasToken: !!token,
+          tokenType: typeof token,
+          tokenLength: token.length,
+          tokenStart: token.substring(0, 20),
+          tokenEnd: token.substring(token.length - 20),
+          isJWTFormat: token.split('.').length === 3
+        });
+      }
     }
 
     const config: RequestInit = {
@@ -839,6 +850,53 @@ class ApiService {
 
   async getMLChatHistory(sessionId: string, limit: number = 50): Promise<any> {
     return this.makeRequest(`/ml/chat/history/${sessionId}?limit=${limit}`);
+  }
+
+  // Enhanced chat session management
+  async getChatSessions(limit: number = 20, offset: number = 0): Promise<any> {
+    return this.makeRequest(`/ml/chat/sessions?limit=${limit}&offset=${offset}`);
+  }
+
+  async getChatSessionById(sessionId: string): Promise<any> {
+    return this.makeRequest(`/ml/chat/sessions/${sessionId}`);
+  }
+
+  async createChatSession(title?: string): Promise<any> {
+    return this.makeRequest('/ml/chat/sessions', {
+      method: 'POST',
+      body: JSON.stringify({ title }),
+    });
+  }
+
+  async updateChatSession(sessionId: string, updates: any): Promise<any> {
+    return this.makeRequest(`/ml/chat/sessions/${sessionId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+
+  async deleteChatSession(sessionId: string): Promise<any> {
+    return this.makeRequest(`/ml/chat/sessions/${sessionId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async searchChatHistory(query: string, limit: number = 20): Promise<any> {
+    return this.makeRequest(`/ml/chat/search?q=${encodeURIComponent(query)}&limit=${limit}`);
+  }
+
+  async exportChatSession(sessionId: string, format: 'json' | 'txt' = 'json'): Promise<Blob> {
+    const response = await fetch(`${this.baseUrl}/ml/chat/sessions/${sessionId}/export?format=${format}`, {
+      headers: {
+        Authorization: `Bearer ${this.currentToken}`,
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Export failed: ${response.status}`);
+    }
+    
+    return response.blob();
   }
 
   async checkMLServiceHealth(): Promise<any> {

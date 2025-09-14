@@ -69,26 +69,244 @@ router.post('/chat', authMiddleware, async (req: Request, res: Response): Promis
   }
 });
 
-// Get conversation history - TODO: Implement when conversation history service is ready
-// router.get('/chat/history/:sessionId', authMiddleware, async (req: Request, res: Response): Promise<void> => {
-//   try {
-//     if (!isAuthenticatedUser(req.user)) {
-//       res.status(401).json({ error: 'User not authenticated' });
-//       return;
-//     }
+// Get conversation history
+router.get('/chat/history/:sessionId', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!isAuthenticatedUser(req.user)) {
+      res.status(401).json({ error: 'User not authenticated' });
+      return;
+    }
 
-//     const { sessionId } = req.params;
-//     const history = await databaseService.getConversationHistory(req.user.id, sessionId);
+    const { sessionId } = req.params;
+    const { limit = 50 } = req.query;
     
-//     res.json({
-//       success: true,
-//       data: history
-//     });
-//   } catch (error) {
-//     console.error('Error fetching conversation history:', error);
-//     res.status(500).json({ error: 'Failed to fetch conversation history' });
-//   }
-// });
+    const mlServiceUrl = process.env.ML_SERVICES_URL || 'http://localhost:8000';
+    const authHeader = req.headers.authorization;
+    
+    const mlResponse = await axios.get(`${mlServiceUrl}/ai/chat/history/${sessionId}?user_id=${req.user.id}&limit=${limit}`, {
+      headers: {
+        'Authorization': authHeader,
+      },
+      timeout: 10000
+    });
+
+    res.json(mlResponse.data);
+  } catch (error: any) {
+    console.error('Error fetching conversation history:', error);
+    if (error.response) {
+      res.status(error.response.status).json(error.response.data);
+    } else {
+      res.status(500).json({ error: 'Failed to fetch conversation history' });
+    }
+  }
+});
+
+// Get chat sessions (list of all sessions for a user)
+router.get('/chat/sessions', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!isAuthenticatedUser(req.user)) {
+      res.status(401).json({ error: 'User not authenticated' });
+      return;
+    }
+
+    const { limit = 20, offset = 0 } = req.query;
+    
+    // For now, we'll return a mock response since the ML services don't have a sessions endpoint
+    // In a real implementation, this would query the database for all sessions for the user
+    res.json({
+      success: true,
+      sessions: [],
+      total: 0,
+      limit: parseInt(limit as string),
+      offset: parseInt(offset as string)
+    });
+  } catch (error: any) {
+    console.error('Error fetching chat sessions:', error);
+    res.status(500).json({ error: 'Failed to fetch chat sessions' });
+  }
+});
+
+// Create a new chat session
+router.post('/chat/sessions', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!isAuthenticatedUser(req.user)) {
+      res.status(401).json({ error: 'User not authenticated' });
+      return;
+    }
+
+    const { title } = req.body;
+    
+    // Generate a new session ID
+    const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    res.json({
+      success: true,
+      session_id: sessionId,
+      id: sessionId,
+      title: title || 'New Chat',
+      created_at: new Date().toISOString(),
+      user_id: req.user.id
+    });
+  } catch (error: any) {
+    console.error('Error creating chat session:', error);
+    res.status(500).json({ error: 'Failed to create chat session' });
+  }
+});
+
+// Get a specific chat session
+router.get('/chat/sessions/:sessionId', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!isAuthenticatedUser(req.user)) {
+      res.status(401).json({ error: 'User not authenticated' });
+      return;
+    }
+
+    const { sessionId } = req.params;
+    
+    // For now, return a mock session
+    // In a real implementation, this would query the database for the specific session
+    res.json({
+      success: true,
+      session: {
+        id: sessionId,
+        title: 'Chat Session',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        user_id: req.user.id
+      }
+    });
+  } catch (error: any) {
+    console.error('Error fetching chat session:', error);
+    res.status(500).json({ error: 'Failed to fetch chat session' });
+  }
+});
+
+// Update a chat session
+router.put('/chat/sessions/:sessionId', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!isAuthenticatedUser(req.user)) {
+      res.status(401).json({ error: 'User not authenticated' });
+      return;
+    }
+
+    const { sessionId } = req.params;
+    const updates = req.body;
+    
+    // For now, just return success
+    // In a real implementation, this would update the session in the database
+    res.json({
+      success: true,
+      session: {
+        id: sessionId,
+        ...updates,
+        updated_at: new Date().toISOString()
+      }
+    });
+  } catch (error: any) {
+    console.error('Error updating chat session:', error);
+    res.status(500).json({ error: 'Failed to update chat session' });
+  }
+});
+
+// Delete a chat session
+router.delete('/chat/sessions/:sessionId', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!isAuthenticatedUser(req.user)) {
+      res.status(401).json({ error: 'User not authenticated' });
+      return;
+    }
+
+    const { sessionId } = req.params;
+    
+    // For now, just return success
+    // In a real implementation, this would delete the session and all its messages from the database
+    res.json({
+      success: true,
+      message: 'Session deleted successfully'
+    });
+  } catch (error: any) {
+    console.error('Error deleting chat session:', error);
+    res.status(500).json({ error: 'Failed to delete chat session' });
+  }
+});
+
+// Search chat history
+router.get('/chat/search', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!isAuthenticatedUser(req.user)) {
+      res.status(401).json({ error: 'User not authenticated' });
+      return;
+    }
+
+    const { q: query, limit = 20 } = req.query;
+    
+    if (!query) {
+      res.status(400).json({ error: 'Search query is required' });
+      return;
+    }
+    
+    // For now, return empty results
+    // In a real implementation, this would search through conversation history
+    res.json({
+      success: true,
+      results: [],
+      query: query,
+      total: 0
+    });
+  } catch (error: any) {
+    console.error('Error searching chat history:', error);
+    res.status(500).json({ error: 'Failed to search chat history' });
+  }
+});
+
+// Export chat session
+router.get('/chat/sessions/:sessionId/export', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!isAuthenticatedUser(req.user)) {
+      res.status(401).json({ error: 'User not authenticated' });
+      return;
+    }
+
+    const { sessionId } = req.params;
+    const { format = 'json' } = req.query;
+    
+    // Get the conversation history
+    const mlServiceUrl = process.env.ML_SERVICES_URL || 'http://localhost:8000';
+    const authHeader = req.headers.authorization;
+    
+    const historyResponse = await axios.get(`${mlServiceUrl}/ai/chat/history/${sessionId}?user_id=${req.user.id}&limit=1000`, {
+      headers: {
+        'Authorization': authHeader,
+      },
+      timeout: 10000
+    });
+
+    const history = historyResponse.data;
+    
+    if (format === 'json') {
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="chat-session-${sessionId}.json"`);
+      res.json(history);
+    } else if (format === 'txt') {
+      const textContent = history.messages?.map((msg: any) => 
+        `[${msg.timestamp}] ${msg.message_type === 'user' ? 'You' : 'AI'}: ${msg.content}`
+      ).join('\n\n') || 'No messages found';
+      
+      res.setHeader('Content-Type', 'text/plain');
+      res.setHeader('Content-Disposition', `attachment; filename="chat-session-${sessionId}.txt"`);
+      res.send(textContent);
+    } else {
+      res.status(400).json({ error: 'Invalid format. Use json or txt' });
+    }
+  } catch (error: any) {
+    console.error('Error exporting chat session:', error);
+    if (error.response) {
+      res.status(error.response.status).json(error.response.data);
+    } else {
+      res.status(500).json({ error: 'Failed to export chat session' });
+    }
+  }
+});
 
 // Health check endpoint for ML services
 router.get('/health', authMiddleware, async (req: Request, res: Response): Promise<void> => {

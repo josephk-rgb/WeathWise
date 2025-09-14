@@ -13,13 +13,16 @@ import {
   Lightbulb,
   History,
   Bookmark,
-  Clock
+  Clock,
+  Plus
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { apiService } from '../services/api';
+import { ChatSessionManager } from '../utils/chatSessionManager';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import MarkdownMessage from '../components/Chat/MarkdownMessage';
+import ChatHistory from '../components/Chat/ChatHistory';
 import { formatCurrency } from '../utils/currency';
 
 interface QuickAction {
@@ -33,7 +36,10 @@ interface QuickAction {
 const TalkToFinances: React.FC = () => {
   const { 
     chatMessages, 
-    addChatMessage, 
+    addChatMessage,
+    setChatMessages,
+    currentSessionId,
+    setCurrentSessionId,
     transactions, 
     investments, 
     goals,
@@ -45,6 +51,8 @@ const TalkToFinances: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(true);
+  const [showHistory, setShowHistory] = useState(false);
+  const [currentSession, setCurrentSession] = useState<string | null>(currentSessionId);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -106,6 +114,15 @@ const TalkToFinances: React.FC = () => {
     const messageToSend = customMessage || message;
     if (!messageToSend.trim()) return;
 
+    // Generate session ID if none exists
+    let sessionId = currentSession;
+    if (!sessionId) {
+      const newSession = ChatSessionManager.createSession();
+      sessionId = newSession.id;
+      setCurrentSession(sessionId);
+      setCurrentSessionId(sessionId);
+    }
+
     const userMessage = {
       id: Date.now().toString(),
       content: messageToSend,
@@ -115,6 +132,10 @@ const TalkToFinances: React.FC = () => {
     };
 
     addChatMessage(userMessage);
+    
+    // Update session with user message
+    ChatSessionManager.updateSessionWithMessage(sessionId, messageToSend, true);
+    
     setMessage('');
     setSelectedImage(null);
     setIsTyping(true);
@@ -134,6 +155,9 @@ const TalkToFinances: React.FC = () => {
         timestamp: new Date(),
       };
       addChatMessage(aiMessage);
+      
+      // Update session with AI response
+      ChatSessionManager.updateSessionWithMessage(sessionId, aiMessage.content, false);
     } catch (error) {
       console.error('Error sending message:', error);
       
@@ -148,6 +172,37 @@ const TalkToFinances: React.FC = () => {
     } finally {
       setIsTyping(false);
     }
+  };
+
+  const handleSelectSession = async (sessionId: string) => {
+    try {
+      setCurrentSession(sessionId);
+      setCurrentSessionId(sessionId);
+      setShowHistory(false);
+      
+      // Load messages for this session
+      const history = await apiService.getMLChatHistory(sessionId);
+      if (history && history.messages) {
+        const messages = history.messages.map((msg: any) => ({
+          id: msg.id,
+          content: msg.content,
+          sender: msg.message_type === 'user' ? 'user' : 'ai',
+          timestamp: new Date(msg.timestamp),
+          imageUrl: msg.metadata?.imageUrl
+        }));
+        setChatMessages(messages);
+      }
+    } catch (error) {
+      console.error('Failed to load session:', error);
+    }
+  };
+
+  const handleCreateNewSession = () => {
+    const newSession = ChatSessionManager.createSession();
+    setCurrentSession(newSession.id);
+    setCurrentSessionId(newSession.id);
+    setChatMessages([]);
+    setShowHistory(false);
   };
 
   const handleQuickAction = (action: QuickAction) => {
@@ -218,8 +273,19 @@ const TalkToFinances: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-8" style={{ height: 'calc(100vh - 200px)' }}>
+          {/* Chat History Sidebar */}
+          {showHistory && (
+            <div className="xl:col-span-1 space-y-6 overflow-y-auto h-full max-h-full">
+              <ChatHistory
+                onSelectSession={handleSelectSession}
+                onCreateNewSession={handleCreateNewSession}
+                className="h-full"
+              />
+            </div>
+          )}
+
           {/* Financial Context Panel */}
-          <div className="xl:col-span-1 space-y-6 overflow-y-auto h-full max-h-full">
+          <div className={`space-y-6 overflow-y-auto h-full max-h-full ${showHistory ? 'xl:col-span-1' : 'xl:col-span-1'}`}>
             <Card>
               <div className="flex items-center space-x-2 mb-4">
                 <DollarSign className="w-5 h-5 text-violet-500" />
@@ -315,7 +381,7 @@ const TalkToFinances: React.FC = () => {
           </div>
 
           {/* Main Chat Interface */}
-          <div className="xl:col-span-3 flex flex-col h-full">
+          <div className={`flex flex-col h-full ${showHistory ? 'xl:col-span-2' : 'xl:col-span-3'}`}>
             <Card className="flex-1 flex flex-col h-full max-h-[calc(100vh-220px)]">
               {/* Chat Header */}
               <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
@@ -329,11 +395,19 @@ const TalkToFinances: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setShowHistory(!showHistory)}
+                  >
                     <History className="w-4 h-4" />
                   </Button>
-                  <Button variant="outline" size="sm">
-                    <Bookmark className="w-4 h-4" />
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleCreateNewSession}
+                  >
+                    <Plus className="w-4 h-4" />
                   </Button>
                 </div>
               </div>

@@ -84,6 +84,9 @@ app.use(helmet());
 app.use(cors({
   origin: process.env['CORS_ORIGIN'] || 'http://localhost:5173',
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Cache-Control', 'Pragma', 'Accept', 'Accept-Encoding', 'Accept-Language', 'User-Agent'],
+  optionsSuccessStatus: 200
 }));
 app.use(compression());
 app.use(morgan('combined', { stream: { write: (message) => logger.info(message.trim()) } }));
