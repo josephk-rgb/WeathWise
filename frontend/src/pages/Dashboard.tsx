@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { DollarSign, TrendingUp, Target, CreditCard, ArrowUpRight, ArrowDownRight, Lightbulb, PieChart, RefreshCw } from 'lucide-react';
+import { DollarSign, Target, CreditCard, ArrowUpRight, ArrowDownRight, Lightbulb, PieChart, RefreshCw } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { apiService } from '../services/api';
 import Button from '../components/UI/Button';
@@ -279,30 +279,9 @@ const Dashboard: React.FC = () => {
     return sum + ((inv.shares || 0) * (inv.currentPrice || 0));
   }, 0);
 
-  // Calculate account balances (excluding credit cards and loans which are liabilities)
-  const accountsValue = safeAccounts
-    .filter(acc => !['credit_card', 'loan'].includes(acc.type))
-    .reduce((sum, acc) => sum + (acc.balance || 0), 0);
+  // Account and asset summaries are calculated where needed in their respective widgets
 
-  // Calculate physical assets equity (current value minus loan balance)
-  const assetsValue = safeAssets.reduce((sum, asset) => {
-    const currentValue = asset.currentValue || 0;
-    const loanBalance = asset.hasLoan && asset.loanInfo ? (asset.loanInfo.remainingBalance || 0) : 0;
-    return sum + (currentValue - loanBalance);
-  }, 0);
-
-  // Enhanced Net Worth = Cash position + Portfolio value + Account balances + Asset equity
-  // Prioritize enhanced dashboard stats (from NetWorthCalculator) for consistency
-  const netWorth = dashboardStats?.netWorth?.current ?? (totalIncome - totalExpenses + portfolioValue + accountsValue + assetsValue);
-
-  // Debug: Log net worth sources for consistency verification
-  if (dashboardStats?.netWorth?.current && process.env.NODE_ENV === 'development') {
-    console.log('💰 Net Worth Values:', {
-      fromEnhancedStats: dashboardStats.netWorth.current,
-      fromLocalCalculation: totalIncome - totalExpenses + portfolioValue + accountsValue + assetsValue,
-      difference: dashboardStats.netWorth.current - (totalIncome - totalExpenses + portfolioValue + accountsValue + assetsValue)
-    });
-  }
+  // Enhanced Net Worth was previously calculated here; now derived where needed from dashboardStats
 
   // Calculate Financial Health Score using real data or backend API
   const calculateFinancialHealth = () => {
@@ -374,41 +353,99 @@ const Dashboard: React.FC = () => {
         </p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <StatCard
-          title="Net Worth"
-          value={formatCurrency(netWorth, currency)}
-          change={dashboardStats?.netWorth?.changeText || "Calculating..."}
-          changeType={dashboardStats?.netWorth?.changeType || "neutral"}
-          icon={DollarSign}
-          iconColor="text-green-500"
-        />
-        <StatCard
-          title="Total Income"
-          value={formatCurrency(totalIncome, currency)}
-          change={dashboardStats?.income?.changeText || "Calculating..."}
-          changeType={dashboardStats?.income?.changeType || "neutral"}
-          icon={ArrowUpRight}
-          iconColor="text-green-500"
-        />
-        <StatCard
-          title="Portfolio Value"
-          value={formatCurrency(portfolioValue, currency)}
-          change={dashboardStats?.portfolio?.changeText || "Calculating..."}
-          changeType={dashboardStats?.portfolio?.changeType || "neutral"}
-          icon={TrendingUp}
-          iconColor="text-violet-500"
-        />
-        <StatCard
-          title="Total Expenses"
-          value={formatCurrency(totalExpenses, currency)}
-          change={dashboardStats?.expenses?.changeText || "Calculating..."}
-          changeType={dashboardStats?.expenses?.changeType || "neutral"}
-          icon={CreditCard}
-          iconColor="text-blue-500"
-        />
-      </div>
+      {/* Stats Grid: This Month - Income, Expenses, Cashflow */}
+      {(() => {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+        const withinCurrentMonth = (d: Date) => d >= startOfMonth && d < startOfNextMonth;
+        const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const startOfThisMonth = startOfMonth; // alias for clarity
+        const withinPrevMonth = (d: Date) => d >= startOfPrevMonth && d < startOfThisMonth;
+
+        const currentMonthIncome = safeTransactions
+          .filter((t: any) => (t.transactionInfo?.type || t.type) === 'income')
+          .filter((t: any) => {
+            const raw = (t.transactionInfo?.date || t.date);
+            const dt = raw ? new Date(raw) : null;
+            return dt ? withinCurrentMonth(dt) : false;
+          })
+          .reduce((sum: number, t: any) => sum + Math.abs(t.transactionInfo?.amount || t.amount || 0), 0);
+
+        const currentMonthExpenses = Math.abs(safeTransactions
+          .filter((t: any) => (t.transactionInfo?.type || t.type) === 'expense')
+          .filter((t: any) => {
+            const raw = (t.transactionInfo?.date || t.date);
+            const dt = raw ? new Date(raw) : null;
+            return dt ? withinCurrentMonth(dt) : false;
+          })
+          .reduce((sum: number, t: any) => sum + Math.abs(t.transactionInfo?.amount || t.amount || 0), 0));
+
+        const currentMonthCashflow = currentMonthIncome - currentMonthExpenses;
+
+        const prevMonthIncome = safeTransactions
+          .filter((t: any) => (t.transactionInfo?.type || t.type) === 'income')
+          .filter((t: any) => {
+            const raw = (t.transactionInfo?.date || t.date);
+            const dt = raw ? new Date(raw) : null;
+            return dt ? withinPrevMonth(dt) : false;
+          })
+          .reduce((sum: number, t: any) => sum + Math.abs(t.transactionInfo?.amount || t.amount || 0), 0);
+
+        const prevMonthExpenses = Math.abs(safeTransactions
+          .filter((t: any) => (t.transactionInfo?.type || t.type) === 'expense')
+          .filter((t: any) => {
+            const raw = (t.transactionInfo?.date || t.date);
+            const dt = raw ? new Date(raw) : null;
+            return dt ? withinPrevMonth(dt) : false;
+          })
+          .reduce((sum: number, t: any) => sum + Math.abs(t.transactionInfo?.amount || t.amount || 0), 0));
+
+        const prevMonthCashflow = prevMonthIncome - prevMonthExpenses;
+
+        const formatDelta = (curr: number, prev: number) => {
+          const delta = curr - prev;
+          const pct = prev === 0 ? (curr === 0 ? 0 : 100) : (delta / prev) * 100;
+          return { delta, pct };
+        };
+
+        const incomeDelta = formatDelta(currentMonthIncome, prevMonthIncome);
+        const expenseDelta = formatDelta(currentMonthExpenses, prevMonthExpenses);
+        const cashflowDelta = formatDelta(currentMonthCashflow, prevMonthCashflow);
+
+        return (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-3">
+              <StatCard
+                title={`Income (${now.toLocaleDateString('en-US', { month: 'short' })})`}
+                value={formatCurrency(currentMonthIncome, currency)}
+                change={`${incomeDelta.delta >= 0 ? '+' : ''}${formatCurrency(incomeDelta.delta, currency)} (${Math.abs(incomeDelta.pct).toFixed(0)}%) vs last month`}
+                changeType={incomeDelta.delta >= 0 ? 'positive' : 'negative'}
+                icon={ArrowUpRight}
+                iconColor="text-green-500"
+              />
+              <StatCard
+                title={`Expenses (${now.toLocaleDateString('en-US', { month: 'short' })})`}
+                value={formatCurrency(currentMonthExpenses, currency)}
+                change={`${expenseDelta.delta >= 0 ? '+' : ''}${formatCurrency(expenseDelta.delta, currency)} (${Math.abs(expenseDelta.pct).toFixed(0)}%) vs last month`}
+                changeType={expenseDelta.delta <= 0 ? 'positive' : 'negative'}
+                icon={ArrowDownRight}
+                iconColor="text-red-500"
+              />
+              <StatCard
+                title={`Cashflow (${now.toLocaleDateString('en-US', { month: 'short' })})`}
+                value={formatCurrency(currentMonthCashflow, currency)}
+                change={`${cashflowDelta.delta >= 0 ? '+' : ''}${formatCurrency(cashflowDelta.delta, currency)} (${Math.abs(cashflowDelta.pct).toFixed(0)}%) vs last month`}
+                changeType={cashflowDelta.delta >= 0 ? 'positive' : 'negative'}
+                icon={DollarSign}
+                iconColor={currentMonthCashflow >= 0 ? 'text-green-600' : 'text-red-600'}
+              />
+            </div>
+            
+          </>
+        );
+      })()}
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
