@@ -1005,6 +1005,32 @@ class ApiService {
     return this.makeRequest('/ml/health');
   }
 
+  // ML: Portfolio optimization and sentiment
+  async getPortfolioOptimization(symbols: string[], riskTolerance: 'conservative'|'moderate'|'aggressive' = 'moderate', currentWeights?: number[], targetReturn?: number): Promise<any> {
+    return this.makeRequest('/ml/optimize-portfolio', {
+      method: 'POST',
+      body: JSON.stringify({ symbols, risk_tolerance: riskTolerance, current_weights: currentWeights, target_return: targetReturn })
+    });
+  }
+
+  async getEfficientFrontier(symbols: string[], numPortfolios: number = 100): Promise<any> {
+    return this.makeRequest('/ml/efficient-frontier', {
+      method: 'POST',
+      body: JSON.stringify({ symbols, num_portfolios: numPortfolios })
+    });
+  }
+
+  async getSymbolSentiment(symbol: string): Promise<any> {
+    return this.makeRequest(`/ml/sentiment/${encodeURIComponent(symbol)}`);
+  }
+
+  async trainSentiment(symbols: string[]): Promise<any> {
+    return this.makeRequest('/ml/sentiment/train', {
+      method: 'POST',
+      body: JSON.stringify({ symbols })
+    });
+  }
+
   async getFinancialInsights(): Promise<any> {
     return this.makeRequest('/ai/insights');
   }

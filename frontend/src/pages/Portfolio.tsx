@@ -13,6 +13,8 @@ import PortfolioMetrics from '../components/Dashboard/PortfolioMetrics';
 import HoldingCard from '../components/Dashboard/HoldingCard';
 import AdvancedAnalytics from '../components/Dashboard/AdvancedAnalytics';
 import { formatPortfolioHistory } from '../utils/portfolioData';
+import PortfolioSentiment from '../components/Portfolio/PortfolioSentiment';
+import PortfolioRebalance from '../components/Portfolio/PortfolioRebalance';
 
 const PortfolioPage: React.FC = () => {
   const { user, investments, setInvestments, currency } = useStore();
@@ -282,6 +284,24 @@ const PortfolioPage: React.FC = () => {
 
   const assetAllocation = getAssetAllocation();
 
+  // Derive holdings with current value and allocation for ML components
+  const holdings = (() => {
+    const list = safeInvestments.map(inv => {
+      const value = (inv.shares || 0) * (inv.currentPrice || 0);
+      return { symbol: inv.symbol, name: inv.name, value };
+    });
+    const total = list.reduce((s, h) => s + (h.value || 0), 0);
+    return list.map(h => ({ ...h, allocation: total > 0 ? (h.value / total) * 100 : 0 }));
+  })();
+
+  // Normalize risk tolerance from user profile
+  const getRiskTolerance = () => {
+    const rp: any = (user as any)?.riskProfile;
+    if (rp && typeof rp === 'object' && rp.level) return rp.level as 'conservative'|'moderate'|'aggressive';
+    if (typeof rp === 'string') return rp as 'conservative'|'moderate'|'aggressive';
+    return 'moderate' as const;
+  };
+
   // Debug: Log data being passed to chart
   console.log('=== PASSING DATA TO CHART ===', {
     portfolioHistory,
@@ -391,6 +411,12 @@ const PortfolioPage: React.FC = () => {
       {/* 🚀 NEW: Advanced Portfolio Analytics */}
       <div className="mb-8">
         <AdvancedAnalytics />
+      </div>
+
+      {/* 🚀 NEW: Portfolio ML Components */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <PortfolioRebalance holdings={holdings} riskTolerance={getRiskTolerance()} />
+        <PortfolioSentiment holdings={holdings} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

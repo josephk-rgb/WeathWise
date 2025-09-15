@@ -331,3 +331,125 @@ router.get('/health', authMiddleware, async (req: Request, res: Response): Promi
 });
 
 export default router;
+
+// New: Proxy market sentiment endpoint to ml-services
+router.get('/sentiment/:symbol', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { symbol } = req.params;
+    if (!symbol || typeof symbol !== 'string') {
+      res.status(400).json({ error: 'Invalid symbol' });
+      return;
+    }
+
+    const mlServiceUrl = process.env.ML_SERVICES_URL || 'http://localhost:8000';
+    const authHeader = req.headers.authorization;
+
+    const mlResponse = await axios.get(`${mlServiceUrl}/api/ml/market/sentiment/${encodeURIComponent(symbol)}`, {
+      headers: {
+        'Authorization': authHeader || '',
+      },
+      timeout: 15000
+    });
+
+    res.json(mlResponse.data);
+  } catch (error: any) {
+    console.error('ML sentiment proxy error:', error?.message || error);
+    if (error.response) {
+      res.status(error.response.status).json(error.response.data);
+    } else {
+      res.status(500).json({ error: 'Failed to fetch sentiment' });
+    }
+  }
+});
+
+// Train sentiment model via ml-services
+router.post('/sentiment/train', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { symbols } = req.body || {};
+    if (!Array.isArray(symbols) || symbols.length < 3) {
+      res.status(400).json({ error: 'Provide at least 3 symbols' });
+      return;
+    }
+
+    const mlServiceUrl = process.env.ML_SERVICES_URL || 'http://localhost:8000';
+    const authHeader = req.headers.authorization;
+    const mlResponse = await axios.post(`${mlServiceUrl}/api/ml/market/train-sentiment-model`, { symbols }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': authHeader || '',
+      },
+      timeout: 60000
+    });
+
+    res.json(mlResponse.data);
+  } catch (error: any) {
+    console.error('ML sentiment train proxy error:', error?.message || error);
+    if (error.response) {
+      res.status(error.response.status).json(error.response.data);
+    } else {
+      res.status(500).json({ error: 'Failed to start sentiment training' });
+    }
+  }
+});
+
+// New: Proxy optimize-portfolio to ml-services
+router.post('/optimize-portfolio', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!isAuthenticatedUser(req.user)) {
+      res.status(401).json({ error: 'User not authenticated' });
+      return;
+    }
+
+    const mlServiceUrl = process.env.ML_SERVICES_URL || 'http://localhost:8000';
+    const authHeader = req.headers.authorization;
+    const payload = req.body;
+
+    const mlResponse = await axios.post(`${mlServiceUrl}/api/ml/portfolio/optimize-portfolio`, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': authHeader || '',
+      },
+      timeout: 60000
+    });
+
+    res.json(mlResponse.data);
+  } catch (error: any) {
+    console.error('ML optimize-portfolio proxy error:', error?.message || error);
+    if (error.response) {
+      res.status(error.response.status).json(error.response.data);
+    } else {
+      res.status(500).json({ error: 'Failed to optimize portfolio' });
+    }
+  }
+});
+
+// New: Proxy efficient-frontier to ml-services
+router.post('/efficient-frontier', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!isAuthenticatedUser(req.user)) {
+      res.status(401).json({ error: 'User not authenticated' });
+      return;
+    }
+
+    const mlServiceUrl = process.env.ML_SERVICES_URL || 'http://localhost:8000';
+    const authHeader = req.headers.authorization;
+    const payload = req.body;
+
+    const mlResponse = await axios.post(`${mlServiceUrl}/api/ml/portfolio/efficient-frontier`, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': authHeader || '',
+      },
+      timeout: 60000
+    });
+
+    res.json(mlResponse.data);
+  } catch (error: any) {
+    console.error('ML efficient-frontier proxy error:', error?.message || error);
+    if (error.response) {
+      res.status(error.response.status).json(error.response.data);
+    } else {
+      res.status(500).json({ error: 'Failed to get efficient frontier' });
+    }
+  }
+});
