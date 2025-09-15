@@ -3,11 +3,13 @@ import { logger } from '../utils/logger';
 
 export class DatabaseService {
   /**
-   * Create a new user
+   * Create a new user with complete required fields
    */
   async createUser(userData: Partial<IUser>): Promise<IUser> {
     try {
-      const user = new User(userData);
+      // Ensure all required fields are present
+      const completeUserData = this.ensureCompleteUserData(userData);
+      const user = new User(completeUserData);
       const savedUser = await user.save();
       logger.info(`User created successfully: ${savedUser.email}`);
       return savedUser;
@@ -15,6 +17,60 @@ export class DatabaseService {
       logger.error('Error creating user:', error);
       throw error;
     }
+  }
+
+  /**
+   * Ensure user data has all required fields for validation
+   */
+  private ensureCompleteUserData(userData: Partial<IUser>): Partial<IUser> {
+    const defaults = {
+      preferences: {
+        currency: 'USD',
+        timezone: 'America/New_York',
+        language: 'en',
+        theme: 'light' as const,
+        notifications: {
+          email: true,
+          push: false,
+          sms: false,
+          trading: true,
+          news: true
+        }
+      },
+      riskProfile: {
+        level: 'moderate' as const,
+        questionnaire: {
+          age: 30,
+          experience: 'beginner',
+          timeline: 'long_term',
+          riskTolerance: 5,
+          completedAt: new Date()
+        }
+      },
+      subscription: {
+        plan: 'free' as const,
+        startDate: new Date()
+      },
+      encryption: {
+        keyVersion: 1,
+        encryptedKey: 'default-encrypted-key'
+      },
+      metadata: {
+        onboardingCompleted: false,
+        loginCount: 0,
+        lastLoginAt: new Date()
+      }
+    };
+
+    return {
+      ...defaults,
+      ...userData,
+      preferences: { ...defaults.preferences, ...userData.preferences },
+      riskProfile: { ...defaults.riskProfile, ...userData.riskProfile },
+      subscription: { ...defaults.subscription, ...userData.subscription },
+      encryption: { ...defaults.encryption, ...userData.encryption },
+      metadata: { ...defaults.metadata, ...userData.metadata }
+    };
   }
 
   /**

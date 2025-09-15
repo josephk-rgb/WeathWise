@@ -358,6 +358,28 @@ const NetWorthTrend: React.FC<NetWorthTrendProps> = ({
         </div>
       ) : hasRealData ? (
         <div className="relative">
+          {/* Legend for breakdown chart - only show in breakdown mode */}
+          {viewMode === 'breakdown' && (
+            <div className="flex justify-center gap-6 mb-4 text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-sm bg-emerald-500"></div>
+                <span className="text-gray-600 dark:text-gray-400">Assets</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-sm bg-purple-600"></div>
+                <span className="text-gray-600 dark:text-gray-400">Investments</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-sm bg-blue-500"></div>
+                <span className="text-gray-600 dark:text-gray-400">Cash</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-sm bg-red-500"></div>
+                <span className="text-gray-600 dark:text-gray-400">Net Worth</span>
+              </div>
+            </div>
+          )}
+          
           <ResponsiveContainer width="100%" height={height}>
             {viewMode === 'trend' ? (
               <AreaChart data={filteredData} margin={{ left: 20, right: 20, top: 20, bottom: 20 }}>

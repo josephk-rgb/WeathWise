@@ -1,7 +1,8 @@
 import mongoose from 'mongoose';
-import { Account, Investment, Debt, PhysicalAsset } from '../models';
+import { Account, Investment, Debt, PhysicalAsset, Goal } from '../models';
 import { logger } from '../utils/logger';
 import { PerformanceOptimizer } from '../utils/performanceOptimizer';
+import { GoalAccountService } from './GoalAccountService';
 
 // TypeScript interfaces
 export interface NetWorthBreakdown {
@@ -11,6 +12,8 @@ export interface NetWorthBreakdown {
     portfolioValue: number;
     physicalAssets: number;
     totalLiabilities: number;
+    goalAllocations: number; // Money allocated to goals
+    availableCash: number; // Cash available after goal allocations
   };
   calculatedAt: Date;
 }
@@ -98,6 +101,11 @@ export class NetWorthCalculator {
 
       const totalLiabilities = debtFromDebts + loansOnAssets;
 
+      // Calculate goal allocations
+      const goalImpact = await GoalAccountService.getGoalNetWorthImpact(userId);
+      const goalAllocations = goalImpact.totalAllocated;
+      const availableCash = goalImpact.totalAvailable;
+
       const netWorth = liquidAssets + portfolioValue + physicalValue - totalLiabilities;
 
       logger.info(`Net worth calculated for user ${userId}: ${netWorth}`);
@@ -108,7 +116,9 @@ export class NetWorthCalculator {
           liquidAssets,
           portfolioValue,
           physicalAssets: physicalValue,
-          totalLiabilities
+          totalLiabilities,
+          goalAllocations,
+          availableCash
         },
         calculatedAt: new Date()
       };

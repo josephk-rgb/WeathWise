@@ -2,6 +2,8 @@ import mongoose from 'mongoose';
 import { Account } from '../models/Account';
 import { Transaction } from '../models/Transaction';
 import { UserAccountPreferences } from '../models/UserAccountPreferences';
+import { Goal } from '../models/Goal';
+import { GoalAccountService } from './GoalAccountService';
 
 export interface AccountLinkingRule {
   pattern: string;
@@ -259,6 +261,87 @@ export class TransactionAccountLinker {
       await userPreferences.save();
     } catch (error) {
       console.error('Error learning from correction:', error);
+    }
+  }
+
+  /**
+   * Check if transaction is goal-related and link to appropriate goal
+   */
+  static async checkGoalTransaction(
+    userId: mongoose.Types.ObjectId,
+    transactionData: {
+      description: string;
+      merchant?: string;
+      amount: number;
+      category?: string;
+    }
+  ): Promise<{
+    isGoalRelated: boolean;
+    goalId?: mongoose.Types.ObjectId;
+    goalTitle?: string;
+    suggestedAction?: 'allocate' | 'withdraw';
+  }> {
+    try {
+      // Get all active goals for the user
+      const goals = await Goal.find({ userId, isActive: true });
+      
+      // Check transaction description against goal titles/categories
+      const description = transactionData.description.toLowerCase();
+      const merchant = transactionData.merchant?.toLowerCase() || '';
+      
+      for (const goal of goals) {
+        const goalTitle = goal.title.toLowerCase();
+        const goalCategory = goal.category.toLowerCase();
+        
+        // Check for direct matches
+        if (description.includes(goalTitle) || 
+            description.includes(goalCategory) ||
+            merchant.includes(goalTitle) ||
+            merchant.includes(goalCategory)) {
+          
+          // Determine if this is an allocation or withdrawal based on amount
+          const suggestedAction = transactionData.amount > 0 ? 'allocate' : 'withdraw';
+          
+          return {
+            isGoalRelated: true,
+            goalId: goal._id,
+            goalTitle: goal.title,
+            suggestedAction
+          };
+        }
+        
+        // Check for common goal-related keywords
+        const goalKeywords = {
+          'Emergency Fund': ['emergency', 'safety', 'rainy day'],
+          'Vacation': ['vacation', 'trip', 'travel', 'holiday'],
+          'Home Purchase': ['house', 'home', 'mortgage', 'down payment'],
+          'Car Purchase': ['car', 'vehicle', 'auto', 'automobile'],
+          'Education': ['education', 'school', 'tuition', 'college'],
+          'Retirement': ['retirement', 'pension', '401k', 'ira'],
+          'Wedding': ['wedding', 'marriage', 'ceremony'],
+          'Business': ['business', 'startup', 'entrepreneur']
+        };
+        
+        const keywords = goalKeywords[goalCategory as keyof typeof goalKeywords] || [];
+        for (const keyword of keywords) {
+          if (description.includes(keyword) || merchant.includes(keyword)) {
+            const suggestedAction = transactionData.amount > 0 ? 'allocate' : 'withdraw';
+            
+            return {
+              isGoalRelated: true,
+              goalId: goal._id,
+              goalTitle: goal.title,
+              suggestedAction
+            };
+          }
+        }
+      }
+      
+      return { isGoalRelated: false };
+      
+    } catch (error) {
+      console.error('Error checking goal transaction:', error);
+      return { isGoalRelated: false };
     }
   }
 

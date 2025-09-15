@@ -171,15 +171,16 @@ const RealtimePortfolioValueComponent: React.FC<RealtimePortfolioValueProps> = (
             <span className={`text-xs ${status.color}`}>{status.label}</span>
           </div>
           
-          {/* Manual Refresh */}
-          <button
-            onClick={handleManualRefresh}
-            disabled={isLoading}
-            className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-            title="Refresh portfolio value"
-          >
-            <RefreshCw className={`h-4 w-4 text-gray-500 ${isLoading ? 'animate-spin' : ''}`} />
-          </button>
+          {/* Manual Refresh - Only show when not loading */}
+          {!isLoading && (
+            <button
+              onClick={handleManualRefresh}
+              className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              title="Refresh portfolio value"
+            >
+              <RefreshCw className="h-4 w-4 text-gray-500" />
+            </button>
+          )}
         </div>
       </div>
 

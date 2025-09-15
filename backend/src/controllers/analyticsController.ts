@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { Transaction, Investment, Budget, Goal, Account, Debt } from '../models';
+import { PhysicalAsset } from '../models/PhysicalAsset';
 import { logger } from '../utils/logger';
 import { NetWorthCalculator } from '../services/netWorthCalculator';
 import { FinancialDataValidator } from '../utils/financialValidator';
@@ -863,5 +864,246 @@ export class AnalyticsController {
       logger.error('Error getting portfolio price history:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
+  }
+
+  // 🚀 PERFORMANCE OPTIMIZATION: Single dashboard endpoint
+  // Combines all dashboard data into one optimized API call
+  static async getCompleteDashboardData(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        logger.error('❌ User not authenticated for dashboard-complete endpoint');
+        res.status(401).json({ error: 'User not authenticated' });
+        return;
+      }
+
+      // Check for date filtering parameters
+      const { period = 'current_month' } = req.query;
+      let dateFilter = {};
+      
+      if (period === 'current_month') {
+        const now = new Date();
+        const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        dateFilter = {
+          'transactionInfo.date': {
+            $gte: currentMonthStart,
+            $lte: currentMonthEnd
+          }
+        };
+        logger.info(`📅 Filtering for current month: ${currentMonthStart.toISOString()} to ${currentMonthEnd.toISOString()}`);
+      }
+
+      logger.info(`🚀 Loading complete dashboard data for user ${userId} with period: ${period}`);
+      const userObjectId = new mongoose.Types.ObjectId(userId);
+
+      // 🚀 PERFORMANCE: Parallel data fetching with .lean() for speed
+      const [
+        recentTransactions, // For recent transactions display
+        filteredTransactions, // For spending analysis - filtered by period
+        investments,
+        goals,
+        accounts,
+        assets,
+        debts,
+        budgets
+      ] = await Promise.all([
+        Transaction.find({ userId: userObjectId }).lean().limit(25),
+        Transaction.find({ userId: userObjectId, ...dateFilter }).lean(),
+        Investment.find({ userId: userObjectId }).lean(),
+        Goal.find({ userId: userObjectId }).lean(),
+        Account.find({ userId: userObjectId }).lean(),
+        PhysicalAsset.find({ userId: userObjectId }).lean(),
+        Debt.find({ userId: userObjectId }).lean(),
+        Budget.find({ userId: userObjectId }).lean()
+      ]);
+
+      logger.info(`📊 Data fetched for user ${userId}:`, {
+        recentTransactions: recentTransactions.length,
+        filteredTransactions: filteredTransactions.length,
+        investments: investments.length,
+        goals: goals.length,
+        accounts: accounts.length,
+        assets: assets.length,
+        debts: debts.length,
+        budgets: budgets.length,
+        period: period
+      });
+
+      // Calculate enhanced stats (using filtered transactions for current period)
+      const dashboardStats = AnalyticsController.calculateEnhancedStats(
+        filteredTransactions,
+        investments,
+        goals,
+        accounts,
+        assets,
+        debts,
+        budgets
+      );
+
+      // Calculate spending analysis (using filtered transactions for current period)
+      const spendingAnalysis = AnalyticsController.calculateSpendingAnalysis(filteredTransactions);
+
+      // Calculate financial health
+      const financialHealth = AnalyticsController.calculateFinancialHealth(
+        accounts,
+        debts,
+        assets,
+        investments
+      );
+
+      // Get recommendations (simplified for now)
+      const recommendations = [];
+
+      logger.info(`✅ Complete dashboard data prepared successfully for user ${userId}`);
+
+      res.json({
+        success: true,
+        data: {
+          transactions: recentTransactions, // Return recent transactions for dashboard display
+          investments,
+          goals,
+          accounts,
+          assets,
+          recommendations,
+          dashboardStats,
+          spendingAnalysis,
+          financialHealth,
+          dataCounts: {
+            transactions: recentTransactions.length,
+            totalTransactions: filteredTransactions.length,
+            goals: goals.length,
+            investments: investments.length,
+            accounts: accounts.length,
+            assets: assets.length
+          },
+          loadedAt: new Date().toISOString()
+        }
+      });
+
+    } catch (error) {
+      logger.error('❌ Error getting complete dashboard data:', error);
+      logger.error('❌ Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        userId: req.user?.id
+      });
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
+  // Helper method to calculate enhanced dashboard stats
+  private static calculateEnhancedStats(
+    transactions: any[],
+    investments: any[],
+    goals: any[],
+    accounts: any[],
+    assets: any[],
+    debts: any[],
+    budgets: any[]
+  ) {
+    const totalIncome = transactions
+      .filter(t => t.transactionInfo?.type === 'income')
+      .reduce((sum, t) => sum + (t.transactionInfo?.amount || 0), 0);
+
+    const totalExpenses = transactions
+      .filter(t => t.transactionInfo?.type === 'expense')
+      .reduce((sum, t) => sum + Math.abs(t.transactionInfo?.amount || 0), 0);
+
+    const totalInvestments = investments
+      .reduce((sum, inv) => sum + (inv.currentValue || inv.amount || 0), 0);
+
+    const totalAssets = assets
+      .reduce((sum, asset) => sum + (asset.currentValue || asset.purchasePrice || 0), 0);
+
+    const totalDebts = debts
+      .reduce((sum, debt) => sum + (debt.currentBalance || debt.originalAmount || 0), 0);
+
+    const netWorth = totalInvestments + totalAssets - totalDebts;
+
+    return {
+      totalIncome,
+      totalExpenses,
+      totalInvestments,
+      totalAssets,
+      totalDebts,
+      netWorth,
+      monthlySavings: totalIncome - totalExpenses,
+      investmentCount: investments.length,
+      goalCount: goals.length,
+      accountCount: accounts.length,
+      assetCount: assets.length
+    };
+  }
+
+  // Helper method to calculate spending analysis
+  private static calculateSpendingAnalysis(transactions: any[]) {
+    const expenses = transactions.filter(t => t.transactionInfo?.type === 'expense');
+    
+    const categoryBreakdown = expenses.reduce((acc, transaction) => {
+      const category = transaction.transactionInfo?.category || 'Other';
+      const amount = Math.abs(transaction.transactionInfo?.amount || 0);
+      acc[category] = (acc[category] || 0) + amount;
+      return acc;
+    }, {});
+
+    const categoryArray = Object.entries(categoryBreakdown).map(([category, amount]) => ({
+      _id: category,
+      totalAmount: amount
+    }));
+
+    return {
+      categoryBreakdown: categoryArray,
+      totalExpenses: expenses.reduce((sum, t) => sum + Math.abs(t.transactionInfo?.amount || 0), 0),
+      expenseCount: expenses.length
+    };
+  }
+
+  // Helper method to calculate financial health
+  private static calculateFinancialHealth(
+    accounts: any[],
+    debts: any[],
+    assets: any[],
+    investments: any[]
+  ) {
+    const totalLiquidAssets = accounts
+      .filter(acc => acc.accountInfo?.type === 'checking' || acc.accountInfo?.type === 'savings')
+      .reduce((sum, acc) => sum + (acc.balance || 0), 0);
+
+    const totalDebts = debts
+      .reduce((sum, debt) => sum + (debt.currentBalance || debt.originalAmount || 0), 0);
+
+    const totalInvestments = investments
+      .reduce((sum, inv) => sum + (inv.currentValue || inv.amount || 0), 0);
+
+    const totalAssets = assets
+      .reduce((sum, asset) => sum + (asset.currentValue || asset.purchasePrice || 0), 0);
+
+    const netWorth = totalInvestments + totalAssets - totalDebts;
+    const debtToAssetRatio = totalAssets > 0 ? totalDebts / totalAssets : 0;
+    const emergencyFundRatio = totalDebts > 0 ? totalLiquidAssets / totalDebts : 0;
+
+    // Simple health score calculation
+    let healthScore = 100;
+    if (debtToAssetRatio > 0.5) healthScore -= 30;
+    if (emergencyFundRatio < 0.1) healthScore -= 25;
+    if (totalInvestments < totalDebts) healthScore -= 20;
+    if (totalLiquidAssets < 1000) healthScore -= 15;
+
+    return {
+      netWorth,
+      totalLiquidAssets,
+      totalDebts,
+      totalInvestments,
+      totalAssets,
+      debtToAssetRatio,
+      emergencyFundRatio,
+      healthScore: Math.max(0, Math.min(100, healthScore)),
+      riskLevel: healthScore > 80 ? 'Low' : healthScore > 60 ? 'Medium' : 'High'
+    };
   }
 }

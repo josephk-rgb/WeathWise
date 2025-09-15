@@ -257,7 +257,59 @@ class ApiService {
 
   private async executeRequest(url: string, config: RequestInit, endpoint: string, options: RequestInit, retryCount: number, cacheKey?: string, cacheTTL?: number): Promise<any> {
     try {
-      const response = await fetch(url, config);
+      // Set timeout for long-running operations (like clear data)
+      const timeoutMs = endpoint.includes('/clear/') || endpoint.includes('/backup') ? 300000 : 30000; // 5 minutes for clear/backup, 30 seconds for others
+      
+      // Enhanced debugging for clear operations
+      if (endpoint.includes('/clear/') || endpoint.includes('/backup')) {
+        console.log('🔧 [DEBUG] Long-running operation detected:', {
+          endpoint,
+          timeoutMs,
+          url,
+          method: config.method,
+          hasBody: !!config.body,
+          bodySize: config.body ? JSON.stringify(config.body).length : 0,
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        console.log('⏰ [DEBUG] Request timeout triggered:', {
+          endpoint,
+          timeoutMs,
+          elapsed: timeoutMs,
+          timestamp: new Date().toISOString()
+        });
+        controller.abort();
+      }, timeoutMs);
+      
+      const startTime = Date.now();
+      console.log('🚀 [DEBUG] Starting request:', {
+        endpoint,
+        url,
+        method: config.method,
+        timeoutMs,
+        timestamp: new Date().toISOString()
+      });
+      
+      const response = await fetch(url, {
+        ...config,
+        signal: controller.signal
+      });
+      
+      const endTime = Date.now();
+      const duration = endTime - startTime;
+      
+      clearTimeout(timeoutId);
+      
+      console.log('📡 [DEBUG] Request completed:', {
+        endpoint,
+        status: response.status,
+        statusText: response.statusText,
+        duration: `${duration}ms`,
+        timestamp: new Date().toISOString()
+      });
       
       if (this.debugMode) {
         console.log('📡 API response status:', response.status);
@@ -321,6 +373,19 @@ class ApiService {
 
       const result = await response.json();
       
+      // Enhanced debugging for clear operations
+      if (endpoint.includes('/clear/') || endpoint.includes('/backup')) {
+        console.log('📋 [DEBUG] Response data received:', {
+          endpoint,
+          success: result.success,
+          message: result.message,
+          dataKeys: result.data ? Object.keys(result.data) : [],
+          recordsDeleted: result.data?.recordsDeleted,
+          backupCreated: result.data?.backupCreated,
+          timestamp: new Date().toISOString()
+        });
+      }
+      
       if (this.debugMode) {
         console.log('📦 API response data received:', !!result);
       }
@@ -338,8 +403,14 @@ class ApiService {
       }
       
       return result;
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ API request failed:', error);
+      
+      // Handle timeout errors
+      if (error.name === 'AbortError') {
+        throw new Error(`Request timed out after ${endpoint.includes('/clear/') || endpoint.includes('/backup') ? '5 minutes' : '30 seconds'}. The operation may still be running on the server.`);
+      }
+      
       throw error;
     }
   }
@@ -622,7 +693,7 @@ class ApiService {
 
   // Physical Asset methods
   async getAssets(): Promise<PhysicalAsset[]> {
-    const response = await this.makeRequest('/assets');
+    const response = await this.makeRequest('/physical-assets');
     if (response && response.success && Array.isArray(response.data)) {
       return response.data;
     }
@@ -633,21 +704,21 @@ class ApiService {
   }
 
   async createAsset(assetData: Omit<PhysicalAsset, 'id' | 'userId' | 'equity' | 'createdAt' | 'updatedAt'>): Promise<PhysicalAsset> {
-    return this.makeRequest('/assets', {
+    return this.makeRequest('/physical-assets', {
       method: 'POST',
       body: JSON.stringify(assetData),
     });
   }
 
   async updateAsset(id: string, assetData: Partial<PhysicalAsset>): Promise<PhysicalAsset> {
-    return this.makeRequest(`/assets/${id}`, {
+    return this.makeRequest(`/physical-assets/${id}`, {
       method: 'PUT',
       body: JSON.stringify(assetData),
     });
   }
 
   async deleteAsset(id: string): Promise<void> {
-    return this.makeRequest(`/assets/${id}`, {
+    return this.makeRequest(`/physical-assets/${id}`, {
       method: 'DELETE',
     });
   }
@@ -938,6 +1009,22 @@ class ApiService {
     return this.makeRequest('/analytics/enhanced-dashboard-stats', {}, 0, 300000);
   }
 
+  // 🚀 PERFORMANCE OPTIMIZATION: Single dashboard endpoint
+  // Combines all dashboard data into one optimized API call
+  async getCompleteDashboardData(period: string = 'current_month'): Promise<any> {
+    console.log('🚀 Calling optimized dashboard endpoint with period:', period);
+    // Cache complete dashboard data for 5 minutes (longer than individual endpoints)
+    // This replaces 9 separate API calls with a single optimized call
+    const result = await this.makeRequest(`/analytics/dashboard-complete?period=${period}`, {}, 0, 300000);
+    console.log('🚀 Optimized dashboard endpoint response:', {
+      success: result?.success,
+      hasData: !!result?.data,
+      dataKeys: result?.data ? Object.keys(result.data) : [],
+      period: period
+    });
+    return result;
+  }
+
   async getFinancialHealth(): Promise<any> {
     // Cache financial health for 10 minutes since it changes infrequently
     return this.makeRequest('/analytics/financial-health', {}, 0, 600000);
@@ -986,27 +1073,197 @@ class ApiService {
     return this.makeRequest(endpoint, options, 0, cacheTTL);
   }
 
-  // Mock Data Methods for Admin Users
-  async generateMockData(config: any): Promise<any> {
-    return this.makeRequest('/mock-data/generate', {
+  // Persona Management Methods for Admin Users
+  
+  // Get available personas
+  async getAvailablePersonas(): Promise<any> {
+    return this.makeRequest('/admin/persona/available');
+  }
+
+  // Get persona information
+  async getPersonaInfo(personaName: string): Promise<any> {
+    return this.makeRequest(`/admin/persona/info/${personaName}`);
+  }
+
+  // Load persona data for a user
+  async loadPersonaData(userId: string, personaName: string, options?: any): Promise<any> {
+    return this.makeRequest(`/admin/persona/load/${userId}`, {
       method: 'POST',
-      body: JSON.stringify(config),
+      body: JSON.stringify({ personaName, options }),
     });
   }
 
-  async getMockDataSummary(): Promise<any> {
-    return this.makeRequest('/mock-data/summary');
+  // Load persona data for multiple users
+  async loadPersonaDataBulk(userIds: string[], personaName: string, options?: any): Promise<any> {
+    return this.makeRequest('/admin/persona/load-bulk', {
+      method: 'POST',
+      body: JSON.stringify({ userIds, personaName, options }),
+    });
   }
 
-  async clearMockData(): Promise<any> {
-    return this.makeRequest('/mock-data/clear', {
+  // Validate persona data for a user
+  async validatePersonaData(userId: string, config?: any): Promise<any> {
+    const params = config ? `?config=${encodeURIComponent(JSON.stringify(config))}` : '';
+    return this.makeRequest(`/admin/persona/validate/${userId}${params}`);
+  }
+
+  // Generate historical data for a user
+  async generateHistoricalData(userId: string, config?: any): Promise<any> {
+    return this.makeRequest(`/admin/persona/generate-historical/${userId}`, {
+      method: 'POST',
+      body: JSON.stringify({ config }),
+    });
+  }
+
+  // Clear all persona data for a user
+  async clearPersonaData(userId: string, confirm: boolean = false, backup: boolean = true): Promise<any> {
+    return this.makeRequest(`/admin/persona/clear/${userId}`, {
       method: 'DELETE',
+      body: JSON.stringify({ confirm, backup }),
     });
   }
 
-  async getMockDataConfig(): Promise<any> {
-    return this.makeRequest('/mock-data/config');
+  // Get persona data status for a user
+  async getPersonaStatus(userId: string): Promise<any> {
+    return this.makeRequest(`/admin/persona/status/${userId}`);
   }
+
+  // Get summary of all persona data
+  async getPersonaSummary(personaName?: string, limit?: number, offset?: number): Promise<any> {
+    const params = new URLSearchParams();
+    if (personaName) params.append('personaName', personaName);
+    if (limit) params.append('limit', limit.toString());
+    if (offset) params.append('offset', offset.toString());
+    
+    const queryString = params.toString();
+    return this.makeRequest(`/admin/persona/summary${queryString ? `?${queryString}` : ''}`);
+  }
+
+  // Create backup of persona data
+  async createPersonaBackup(userId?: string, personaName?: string, includeHistoricalData: boolean = true): Promise<any> {
+    return this.makeRequest('/admin/persona/backup', {
+      method: 'POST',
+      body: JSON.stringify({ userId, personaName, includeHistoricalData }),
+    });
+  }
+
+  // Restore persona data from backup
+  async restorePersonaBackup(backupName: string, userId?: string, confirm: boolean = false): Promise<any> {
+    return this.makeRequest('/admin/persona/restore', {
+      method: 'POST',
+      body: JSON.stringify({ backupName, userId, confirm }),
+    });
+  }
+
+  // List available backups
+  async listPersonaBackups(limit?: number): Promise<any> {
+    const params = limit ? `?limit=${limit}` : '';
+    return this.makeRequest(`/admin/persona/backups${params}`);
+  }
+
+  // Delete a backup
+  async deletePersonaBackup(backupName: string, confirm: boolean = false): Promise<any> {
+    return this.makeRequest(`/admin/persona/backup/${backupName}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ confirm }),
+    });
+  }
+
+  // Get persona system health status
+  async getPersonaSystemHealth(): Promise<any> {
+    return this.makeRequest('/admin/persona/health');
+  }
+
+  // Test persona loading without saving to database
+  async testPersonaLoading(personaName: string, options?: any): Promise<any> {
+    return this.makeRequest(`/admin/persona/test/${personaName}`, {
+      method: 'POST',
+      body: JSON.stringify({ options }),
+    });
+  }
+
+  // Get persona usage analytics
+  async getPersonaAnalytics(timeframe?: string, personaName?: string): Promise<any> {
+    const params = new URLSearchParams();
+    if (timeframe) params.append('timeframe', timeframe);
+    if (personaName) params.append('personaName', personaName);
+    
+    const queryString = params.toString();
+    return this.makeRequest(`/admin/persona/analytics${queryString ? `?${queryString}` : ''}`);
+  }
+
+  // Export persona data for a user
+  async exportPersonaData(userId: string, format: string = 'json', includeHistoricalData: boolean = true): Promise<any> {
+    return this.makeRequest(`/admin/persona/export/${userId}`, {
+      method: 'POST',
+      body: JSON.stringify({ format, includeHistoricalData }),
+    });
+  }
+
+  // Import persona data from file
+  async importPersonaData(userId: string, format: string, data: string, options?: any): Promise<any> {
+    return this.makeRequest('/admin/persona/import', {
+      method: 'POST',
+      body: JSON.stringify({ userId, format, data, options }),
+    });
+  }
+
+  // Get persona template information
+  async getPersonaTemplates(personaName?: string): Promise<any> {
+    const params = personaName ? `?personaName=${personaName}` : '';
+    return this.makeRequest(`/admin/persona/templates${params}`);
+  }
+
+  // Update persona template
+  async updatePersonaTemplate(personaName: string, template: any): Promise<any> {
+    return this.makeRequest(`/admin/persona/template/${personaName}`, {
+      method: 'PUT',
+      body: JSON.stringify({ template }),
+    });
+  }
+
+  // Create new persona template
+  async createPersonaTemplate(personaName: string, template: any): Promise<any> {
+    return this.makeRequest('/admin/persona/template', {
+      method: 'POST',
+      body: JSON.stringify({ personaName, template }),
+    });
+  }
+
+  // Delete persona template
+  async deletePersonaTemplate(personaName: string, confirm: boolean = false): Promise<any> {
+    return this.makeRequest(`/admin/persona/template/${personaName}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ confirm }),
+    });
+  }
+
+  // Snapshot Management Methods
+  
+  // Manually trigger snapshot creation
+  async createSnapshot(userId?: string, type: string = 'all'): Promise<any> {
+    return this.makeRequest('/admin/persona/snapshot/create', {
+      method: 'POST',
+      body: JSON.stringify({ userId, type }),
+    });
+  }
+
+  // Get snapshot system status
+  async getSnapshotStatus(): Promise<any> {
+    return this.makeRequest('/admin/persona/snapshot/status');
+  }
+
+  // Clean up old snapshots
+  async cleanupSnapshots(daysToKeep: number = 365): Promise<any> {
+    return this.makeRequest('/admin/persona/snapshot/cleanup', {
+      method: 'POST',
+      body: JSON.stringify({ daysToKeep }),
+    });
+  }
+
+  // Legacy Mock Data Methods (REMOVED - Use Persona System Instead)
+  // The old mock data system has been completely replaced by the persona-based system.
+  // Use the persona management methods above for all data generation needs.
 }
 
 export const apiService = new ApiService();

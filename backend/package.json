@@ -28,7 +28,14 @@
     "test:api-phase4-5": "node scripts/test-api-phase4-5.js",
     "test:portfolio-history": "ts-node src/scripts/testPortfolioHistory.ts",
     "test:portfolio-quick": "ts-node src/scripts/quickPortfolioTest.ts",
-    "test:portfolio-detailed": "ts-node src/scripts/detailedPortfolioTest.ts"
+    "optimize:indexes": "ts-node scripts/optimize-database-indexes.ts",
+    "fix-portfolio-data": "node scripts/fix-portfolio-data.js",
+    "fix-portfolio-data-v2": "node scripts/fix-portfolio-data-v2.js",
+    "test:persona-system": "ts-node scripts/test-persona-system.ts",
+    "optimize:database": "ts-node scripts/optimize-database-indexes.ts",
+    "create:collections": "ts-node scripts/create-missing-collections.ts",
+    "test:portfolio-detailed": "ts-node src/scripts/detailedPortfolioTest.ts",
+    "migrate-goals": "ts-node scripts/migrate-goal-account-relationships.ts"
   },
   "dependencies": {
     "@faker-js/faker": "^8.4.1",

@@ -1,0 +1,140 @@
+[
+  {
+    "_id": "68c6c2bcc15e1d8c421cd6cf",
+    "userId": "68c40c260f1312b22670f27f",
+    "type": "vehicle",
+    "name": "2019 Honda Civic",
+    "currentValue": 18000,
+    "purchasePrice": 22000,
+    "purchaseDate": "2019-08-15T00:00:00.000Z",
+    "description": "Reliable daily driver, low maintenance",
+    "loanInfo": {
+      "loanBalance": 0,
+      "monthlyPayment": 0,
+      "lender": "Honda Financial",
+      "interestRate": 3.9
+    },
+    "equity": 18000,
+    "depreciationRate": 0.15,
+    "lastValuationDate": "2025-09-14T13:27:24.766Z",
+    "isActive": true,
+    "createdAt": "2025-09-14T13:27:24.766Z",
+    "updatedAt": "2025-09-14T13:27:24.766Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c2bdc15e1d8c421cd6d1",
+    "userId": "68c40c260f1312b22670f27f",
+    "type": "vehicle",
+    "name": "2023 Tesla Model 3",
+    "currentValue": 42000,
+    "purchasePrice": 45000,
+    "purchaseDate": "2023-03-20T00:00:00.000Z",
+    "description": "Electric vehicle, tech professional choice",
+    "loanInfo": {
+      "loanBalance": 28000,
+      "monthlyPayment": 650,
+      "lender": "Tesla Financing",
+      "interestRate": 2.9
+    },
+    "equity": 14000,
+    "depreciationRate": 0.2,
+    "lastValuationDate": "2025-09-14T13:27:25.053Z",
+    "isActive": true,
+    "createdAt": "2025-09-14T13:27:25.053Z",
+    "updatedAt": "2025-09-14T13:27:25.053Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c4e57faa745b735721f8",
+    "userId": "68c6c4da7faa745b73572173",
+    "type": "vehicle",
+    "name": "2019 Honda Civic",
+    "currentValue": 18000,
+    "purchasePrice": 22000,
+    "purchaseDate": "2019-08-15T00:00:00.000Z",
+    "description": "Reliable daily driver, low maintenance",
+    "loanInfo": {
+      "loanBalance": 0,
+      "monthlyPayment": 0,
+      "lender": "Honda Financial",
+      "interestRate": 3.9
+    },
+    "equity": 18000,
+    "depreciationRate": 0.15,
+    "lastValuationDate": "2025-09-14T13:36:37.197Z",
+    "isActive": true,
+    "createdAt": "2025-09-14T13:36:37.197Z",
+    "updatedAt": "2025-09-14T13:36:37.197Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c4e57faa745b735721fa",
+    "userId": "68c6c4da7faa745b73572173",
+    "type": "vehicle",
+    "name": "2023 Tesla Model 3",
+    "currentValue": 42000,
+    "purchasePrice": 45000,
+    "purchaseDate": "2023-03-20T00:00:00.000Z",
+    "description": "Electric vehicle, tech professional choice",
+    "loanInfo": {
+      "loanBalance": 28000,
+      "monthlyPayment": 650,
+      "lender": "Tesla Financing",
+      "interestRate": 2.9
+    },
+    "equity": 14000,
+    "depreciationRate": 0.2,
+    "lastValuationDate": "2025-09-14T13:36:37.432Z",
+    "isActive": true,
+    "createdAt": "2025-09-14T13:36:37.432Z",
+    "updatedAt": "2025-09-14T13:36:37.432Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c549c1902ea89d4413a3",
+    "userId": "68c6c53ec1902ea89d44131e",
+    "type": "vehicle",
+    "name": "2019 Honda Civic",
+    "currentValue": 18000,
+    "purchasePrice": 22000,
+    "purchaseDate": "2019-08-15T00:00:00.000Z",
+    "description": "Reliable daily driver, low maintenance",
+    "loanInfo": {
+      "loanBalance": 0,
+      "monthlyPayment": 0,
+      "lender": "Honda Financial",
+      "interestRate": 3.9
+    },
+    "equity": 18000,
+    "depreciationRate": 0.15,
+    "lastValuationDate": "2025-09-14T13:38:17.514Z",
+    "isActive": true,
+    "createdAt": "2025-09-14T13:38:17.514Z",
+    "updatedAt": "2025-09-14T13:38:17.514Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c549c1902ea89d4413a5",
+    "userId": "68c6c53ec1902ea89d44131e",
+    "type": "vehicle",
+    "name": "2023 Tesla Model 3",
+    "currentValue": 42000,
+    "purchasePrice": 45000,
+    "purchaseDate": "2023-03-20T00:00:00.000Z",
+    "description": "Electric vehicle, tech professional choice",
+    "loanInfo": {
+      "loanBalance": 28000,
+      "monthlyPayment": 650,
+      "lender": "Tesla Financing",
+      "interestRate": 2.9
+    },
+    "equity": 14000,
+    "depreciationRate": 0.2,
+    "lastValuationDate": "2025-09-14T13:38:17.758Z",
+    "isActive": true,
+    "createdAt": "2025-09-14T13:38:17.758Z",
+    "updatedAt": "2025-09-14T13:38:17.758Z",
+    "__v": 0
+  }
+]

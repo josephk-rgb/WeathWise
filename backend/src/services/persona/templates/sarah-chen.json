@@ -1,0 +1,795 @@
+{
+  "personaInfo": {
+    "name": "Sarah Chen",
+    "description": "Tech Professional - 28 years old, San Francisco Software Engineer",
+    "financialStory": "Aggressive debt payoff, tech stock investments, high savings rate",
+    "netWorthJourney": "$50K → $180K over 2 years (260% growth)",
+    "timeframe": "24 months",
+    "keyEvents": [
+      "Student loan payoff (month 8)",
+      "Car purchase (month 15)", 
+      "Bonus investments (month 12, 18, 24)"
+    ]
+  },
+  "userProfile": {
+    "firstName": "Sarah",
+    "lastName": "Chen",
+    "email": "sarah.chen@techcorp.com",
+    "dateOfBirth": "1995-06-15",
+    "address": {
+      "street": "123 Mission Street",
+      "city": "San Francisco",
+      "state": "CA",
+      "zipCode": "94105",
+      "country": "US"
+    },
+    "preferences": {
+      "currency": "USD",
+      "timezone": "America/Los_Angeles",
+      "language": "en",
+      "theme": "dark",
+      "notifications": {
+        "email": true,
+        "push": true,
+        "sms": false,
+        "trading": true,
+        "news": true
+      }
+    },
+    "riskProfile": {
+      "level": "aggressive",
+      "questionnaire": {
+        "age": 28,
+        "experience": "intermediate",
+        "timeline": "long_term",
+        "riskTolerance": 8,
+        "completedAt": "2022-01-15T00:00:00.000Z"
+      }
+    },
+    "subscription": {
+      "plan": "premium",
+      "startDate": "2022-01-01T00:00:00.000Z",
+      "features": ["advanced_analytics", "priority_support", "custom_reports"]
+    }
+  },
+  "accounts": [
+    {
+      "_id": "checking_account_sarah",
+      "type": "checking",
+      "provider": {
+        "name": "Chase Bank",
+        "id": "chase_001",
+        "logo": "https://logos.com/chase.png"
+      },
+      "accountInfo": {
+        "name": "Chase Total Checking",
+        "accountNumber": "****1234",
+        "routingNumber": "322271627",
+        "balance": 5000,
+        "currency": "USD"
+      },
+      "institutionName": "JPMorgan Chase",
+      "connectionStatus": {
+        "isConnected": true,
+        "lastConnected": "2024-01-15T10:30:00.000Z",
+        "provider": "plaid"
+      },
+      "category": "primary_checking"
+    },
+    {
+      "_id": "savings_account_sarah",
+      "type": "savings", 
+      "provider": {
+        "name": "Ally Bank",
+        "id": "ally_001",
+        "logo": "https://logos.com/ally.png"
+      },
+      "accountInfo": {
+        "name": "Ally Online Savings",
+        "accountNumber": "****5678",
+        "routingNumber": "124003116",
+        "balance": 130000,
+        "currency": "USD"
+      },
+      "institutionName": "Ally Financial",
+      "connectionStatus": {
+        "isConnected": true,
+        "lastConnected": "2024-01-15T10:30:00.000Z",
+        "provider": "plaid"
+      },
+      "category": "emergency_savings"
+    },
+    {
+      "_id": "investment_account_sarah",
+      "type": "investment",
+      "provider": {
+        "name": "Fidelity",
+        "id": "fidelity_001", 
+        "logo": "https://logos.com/fidelity.png"
+      },
+      "accountInfo": {
+        "name": "Fidelity Investment Account",
+        "accountNumber": "****9012",
+        "routingNumber": "021000021",
+        "balance": 18000,
+        "currency": "USD"
+      },
+      "institutionName": "Fidelity Investments",
+      "connectionStatus": {
+        "isConnected": true,
+        "lastConnected": "2024-01-15T10:30:00.000Z",
+        "provider": "yodlee"
+      },
+      "category": "investment_cash"
+    },
+    {
+      "_id": "retirement_account_sarah",
+      "type": "retirement",
+      "provider": {
+        "name": "Vanguard",
+        "id": "vanguard_001",
+        "logo": "https://logos.com/vanguard.png"
+      },
+      "accountInfo": {
+        "name": "Vanguard 401(k)",
+        "accountNumber": "****3456",
+        "routingNumber": "021000021",
+        "balance": 18000,
+        "currency": "USD"
+      },
+      "institutionName": "Vanguard Group",
+      "connectionStatus": {
+        "isConnected": true,
+        "lastConnected": "2024-01-15T10:30:00.000Z",
+        "provider": "plaid"
+      },
+      "category": "investment_cash"
+    },
+    {
+      "type": "credit",
+      "provider": {
+        "name": "Chase",
+        "id": "chase_credit_001",
+        "logo": "https://logos.com/chase.png"
+      },
+      "accountInfo": {
+        "name": "Chase Sapphire Preferred",
+        "accountNumber": "****7890",
+        "routingNumber": "322271627",
+        "balance": 0,
+        "currency": "USD"
+      },
+      "institutionName": "JPMorgan Chase",
+      "connectionStatus": {
+        "isConnected": true,
+        "lastConnected": "2024-01-15T10:30:00.000Z",
+        "provider": "plaid"
+      },
+      "category": "primary_checking"
+    }
+  ],
+  "investments": [
+    {
+      "securityInfo": {
+        "symbol": "AAPL",
+        "name": "Apple Inc.",
+        "type": "stock",
+        "sector": "Technology",
+        "exchange": "NASDAQ"
+      },
+      "position": {
+        "shares": 50,
+        "averageCost": 130.00,
+        "totalCost": 6500.00,
+        "currentPrice": 150.00,
+        "marketValue": 7500.00,
+        "dayChange": 2.50,
+        "dayChangePercent": 1.69,
+        "gainLoss": 1000.00,
+        "gainLossPercent": 15.38
+      },
+      "acquisition": {
+        "purchaseDate": "2022-03-15T00:00:00.000Z",
+        "purchaseMethod": "buy",
+        "purchasePrice": 130.00,
+        "totalCost": 6500.00
+      },
+      "performance": {
+        "dayChange": 2.50,
+        "dayChangePercent": 1.69,
+        "ytdReturn": 12.5,
+        "totalReturn": 15.38
+      },
+      "isActive": true
+    },
+    {
+      "securityInfo": {
+        "symbol": "TSLA",
+        "name": "Tesla Inc.",
+        "type": "stock", 
+        "sector": "Automotive",
+        "exchange": "NASDAQ"
+      },
+      "position": {
+        "shares": 25,
+        "averageCost": 150.00,
+        "totalCost": 3750.00,
+        "currentPrice": 200.00,
+        "marketValue": 5000.00,
+        "dayChange": -5.00,
+        "dayChangePercent": -2.44,
+        "gainLoss": 1250.00,
+        "gainLossPercent": 33.33
+      },
+      "acquisition": {
+        "purchaseDate": "2022-06-20T00:00:00.000Z",
+        "purchaseMethod": "buy",
+        "purchasePrice": 150.00,
+        "totalCost": 3750.00
+      },
+      "performance": {
+        "dayChange": -5.00,
+        "dayChangePercent": -2.44,
+        "ytdReturn": 25.0,
+        "totalReturn": 33.33
+      },
+      "isActive": true
+    },
+    {
+      "securityInfo": {
+        "symbol": "NVDA",
+        "name": "NVIDIA Corporation",
+        "type": "stock",
+        "sector": "Technology", 
+        "exchange": "NASDAQ"
+      },
+      "position": {
+        "shares": 30,
+        "averageCost": 300.00,
+        "totalCost": 9000.00,
+        "currentPrice": 400.00,
+        "marketValue": 12000.00,
+        "dayChange": 12.00,
+        "dayChangePercent": 3.09,
+        "gainLoss": 3000.00,
+        "gainLossPercent": 33.33
+      },
+      "acquisition": {
+        "purchaseDate": "2022-09-10T00:00:00.000Z",
+        "purchaseMethod": "buy",
+        "purchasePrice": 300.00,
+        "totalCost": 9000.00
+      },
+      "performance": {
+        "dayChange": 12.00,
+        "dayChangePercent": 3.09,
+        "ytdReturn": 45.0,
+        "totalReturn": 33.33
+      },
+      "isActive": true
+    },
+    {
+      "securityInfo": {
+        "symbol": "VTI",
+        "name": "Vanguard Total Stock Market ETF",
+        "type": "etf",
+        "sector": "Diversified",
+        "exchange": "NYSE"
+      },
+      "position": {
+        "shares": 100,
+        "averageCost": 200.00,
+        "totalCost": 20000.00,
+        "currentPrice": 220.00,
+        "marketValue": 22000.00,
+        "dayChange": 1.50,
+        "dayChangePercent": 0.69,
+        "gainLoss": 2000.00,
+        "gainLossPercent": 10.00
+      },
+      "acquisition": {
+        "purchaseDate": "2022-01-15T00:00:00.000Z",
+        "purchaseMethod": "buy",
+        "purchasePrice": 200.00,
+        "totalCost": 20000.00
+      },
+      "performance": {
+        "dayChange": 1.50,
+        "dayChangePercent": 0.69,
+        "ytdReturn": 8.5,
+        "totalReturn": 10.00
+      },
+      "isActive": true
+    },
+    {
+      "securityInfo": {
+        "symbol": "QQQ",
+        "name": "Invesco QQQ Trust",
+        "type": "etf",
+        "sector": "Technology",
+        "exchange": "NASDAQ"
+      },
+      "position": {
+        "shares": 50,
+        "averageCost": 300.00,
+        "totalCost": 15000.00,
+        "currentPrice": 350.00,
+        "marketValue": 17500.00,
+        "dayChange": 3.00,
+        "dayChangePercent": 0.86,
+        "gainLoss": 2500.00,
+        "gainLossPercent": 16.67
+      },
+      "acquisition": {
+        "purchaseDate": "2022-04-05T00:00:00.000Z",
+        "purchaseMethod": "buy",
+        "purchasePrice": 300.00,
+        "totalCost": 15000.00
+      },
+      "performance": {
+        "dayChange": 3.00,
+        "dayChangePercent": 0.86,
+        "ytdReturn": 12.0,
+        "totalReturn": 16.67
+      },
+      "isActive": true
+    }
+  ],
+  "debts": [
+    {
+      "type": "student_loan",
+      "name": "Federal Student Loan",
+      "lender": "Navient",
+      "totalAmount": 35000,
+      "originalAmount": 35000,
+      "remainingBalance": 0,
+      "interestRate": 4.5,
+      "minimumPayment": 0,
+      "monthlyPayment": 0,
+      "dueDate": "2022-09-01T00:00:00.000Z",
+      "isActive": false,
+      "paidOffDate": "2022-09-01T00:00:00.000Z"
+    },
+    {
+      "type": "credit_card",
+      "name": "Chase Sapphire Preferred",
+      "lender": "Chase",
+      "totalAmount": 1200,
+      "originalAmount": 0,
+      "remainingBalance": 1200,
+      "interestRate": 22.99,
+      "minimumPayment": 150,
+      "monthlyPayment": 150,
+      "dueDate": "2024-02-15T00:00:00.000Z",
+      "isActive": true
+    }
+  ],
+  "budgets": [
+    {
+      "category": "Housing",
+      "allocated": 3000,
+      "spent": 2850,
+      "month": "2024-01",
+      "year": 2024,
+      "isActive": true
+    },
+    {
+      "category": "Food",
+      "allocated": 800,
+      "spent": 720,
+      "month": "2024-01", 
+      "year": 2024,
+      "isActive": true
+    },
+    {
+      "category": "Transportation",
+      "allocated": 600,
+      "spent": 550,
+      "month": "2024-01",
+      "year": 2024,
+      "isActive": true
+    },
+    {
+      "category": "Utilities",
+      "allocated": 400,
+      "spent": 380,
+      "month": "2024-01",
+      "year": 2024,
+      "isActive": true
+    },
+    {
+      "category": "Savings",
+      "allocated": 3000,
+      "spent": 3000,
+      "month": "2024-01",
+      "year": 2024,
+      "isActive": true
+    },
+    {
+      "category": "Business",
+      "allocated": 2000,
+      "spent": 2000,
+      "month": "2024-01",
+      "year": 2024,
+      "isActive": true
+    }
+  ],
+  "goals": [
+    {
+      "title": "Emergency Fund",
+      "description": "Build 6-month emergency fund",
+      "targetAmount": 30000,
+      "currentAmount": 45000,
+      "targetDate": "2023-06-01T00:00:00.000Z",
+      "category": "Emergency Fund",
+      "priority": "high",
+      "isActive": true,
+      "isCompleted": true,
+      "completedAt": "2023-06-01T00:00:00.000Z",
+      "isAccountBacked": true,
+      "linkedAccountId": "savings_account_sarah",
+      "allocatedAccounts": [
+        {
+          "accountId": "savings_account_sarah",
+          "allocatedAmount": 45000,
+          "lastUpdated": "2024-01-15T00:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "title": "House Down Payment",
+      "description": "Save for house down payment in SF Bay Area",
+      "targetAmount": 200000,
+      "currentAmount": 85000,
+      "targetDate": "2025-12-31T00:00:00.000Z",
+      "category": "Home Purchase",
+      "priority": "high",
+      "isActive": true,
+      "isCompleted": false,
+      "isAccountBacked": true,
+      "linkedAccountId": "savings_account_sarah",
+      "allocatedAccounts": [
+        {
+          "accountId": "savings_account_sarah",
+          "allocatedAmount": 85000,
+          "lastUpdated": "2024-01-15T00:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "title": "Retirement Fund",
+      "description": "Maximize 401(k) contributions",
+      "targetAmount": 20000,
+      "currentAmount": 18000,
+      "targetDate": "2024-12-31T00:00:00.000Z",
+      "category": "Retirement",
+      "priority": "medium",
+      "isActive": true,
+      "isCompleted": false,
+      "isAccountBacked": true,
+      "linkedAccountId": "retirement_account_sarah",
+      "allocatedAccounts": [
+        {
+          "accountId": "retirement_account_sarah",
+          "allocatedAmount": 18000,
+          "lastUpdated": "2024-01-15T00:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "title": "Travel Fund",
+      "description": "Save for international travel",
+      "targetAmount": 10000,
+      "currentAmount": 3500,
+      "targetDate": "2024-08-01T00:00:00.000Z",
+      "category": "Vacation",
+      "priority": "medium",
+      "isActive": true,
+      "isCompleted": false,
+      "isAccountBacked": true,
+      "linkedAccountId": "checking_account_sarah",
+      "allocatedAccounts": [
+        {
+          "accountId": "checking_account_sarah",
+          "allocatedAmount": 3500,
+          "lastUpdated": "2024-01-15T00:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "title": "Car Upgrade",
+      "description": "Save for Tesla Model 3",
+      "targetAmount": 50000,
+      "currentAmount": 15000,
+      "targetDate": "2024-12-31T00:00:00.000Z",
+      "category": "Car Purchase",
+      "priority": "low",
+      "isActive": true,
+      "isCompleted": false,
+      "isAccountBacked": true,
+      "linkedAccountId": "investment_account_sarah",
+      "allocatedAccounts": [
+        {
+          "accountId": "investment_account_sarah",
+          "allocatedAmount": 15000,
+          "lastUpdated": "2024-01-15T00:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "title": "Investment Portfolio Growth",
+      "description": "Grow investment portfolio to $100K",
+      "targetAmount": 100000,
+      "currentAmount": 64000,
+      "targetDate": "2025-06-30T00:00:00.000Z",
+      "category": "Investment",
+      "priority": "high",
+      "isActive": true,
+      "isCompleted": false
+    }
+  ],
+  "accountBalanceHistory": [
+    {
+      "accountId": "checking_account_sarah",
+      "date": "2022-01-01T00:00:00.000Z",
+      "balance": 3000,
+      "changeType": "initial",
+      "changeAmount": 3000,
+      "previousBalance": 0,
+      "description": "Initial account balance"
+    },
+    {
+      "accountId": "savings_account_sarah",
+      "date": "2022-01-01T00:00:00.000Z",
+      "balance": 25000,
+      "changeType": "initial",
+      "changeAmount": 25000,
+      "previousBalance": 0,
+      "description": "Initial account balance"
+    },
+    {
+      "accountId": "investment_account_sarah",
+      "date": "2022-01-01T00:00:00.000Z",
+      "balance": 10000,
+      "changeType": "initial",
+      "changeAmount": 10000,
+      "previousBalance": 0,
+      "description": "Initial investment account balance"
+    },
+    {
+      "accountId": "retirement_account_sarah",
+      "date": "2022-01-01T00:00:00.000Z",
+      "balance": 5000,
+      "changeType": "initial",
+      "changeAmount": 5000,
+      "previousBalance": 0,
+      "description": "Initial retirement account balance"
+    }
+  ],
+  "physicalAssets": [
+    {
+      "type": "vehicle",
+      "name": "2019 Honda Civic",
+      "currentValue": 18000,
+      "purchasePrice": 22000,
+      "purchaseDate": "2019-08-15T00:00:00.000Z",
+      "description": "Reliable daily driver, low maintenance",
+      "loanInfo": {
+        "loanBalance": 0,
+        "monthlyPayment": 0,
+        "lender": "Honda Financial",
+        "interestRate": 3.9
+      },
+      "equity": 18000,
+      "depreciationRate": 0.15,
+      "lastValuationDate": "2024-01-15T00:00:00.000Z",
+      "isActive": true
+    },
+    {
+      "type": "vehicle", 
+      "name": "2023 Tesla Model 3",
+      "currentValue": 42000,
+      "purchasePrice": 45000,
+      "purchaseDate": "2023-03-20T00:00:00.000Z",
+      "description": "Electric vehicle, tech professional choice",
+      "loanInfo": {
+        "loanBalance": 28000,
+        "monthlyPayment": 650,
+        "lender": "Tesla Financing",
+        "interestRate": 2.9
+      },
+      "equity": 14000,
+      "depreciationRate": 0.20,
+      "lastValuationDate": "2024-01-15T00:00:00.000Z",
+      "isActive": true
+    }
+  ],
+  "netWorthProgression": [
+    {
+      "date": "2022-01-01",
+      "netWorth": 50000,
+      "breakdown": {
+        "liquidAssets": 15000,
+        "portfolioValue": 20000,
+        "physicalAssets": 20000,
+        "totalLiabilities": 5000
+      }
+    },
+    {
+      "date": "2022-06-01", 
+      "netWorth": 75000,
+      "breakdown": {
+        "liquidAssets": 25000,
+        "portfolioValue": 35000,
+        "physicalAssets": 22000,
+        "totalLiabilities": 7000
+      }
+    },
+    {
+      "date": "2022-12-01",
+      "netWorth": 95000,
+      "breakdown": {
+        "liquidAssets": 35000,
+        "portfolioValue": 45000,
+        "physicalAssets": 25000,
+        "totalLiabilities": 10000
+      }
+    },
+    {
+      "date": "2023-06-01",
+      "netWorth": 125000,
+      "breakdown": {
+        "liquidAssets": 45000,
+        "portfolioValue": 55000,
+        "physicalAssets": 30000,
+        "totalLiabilities": 5000
+      }
+    },
+    {
+      "date": "2023-12-01",
+      "netWorth": 155000,
+      "breakdown": {
+        "liquidAssets": 50000,
+        "portfolioValue": 60000,
+        "physicalAssets": 55000,
+        "totalLiabilities": 10000
+      }
+    },
+    {
+      "date": "2024-01-01",
+      "netWorth": 180000,
+      "breakdown": {
+        "liquidAssets": 53500,
+        "portfolioValue": 64000,
+        "physicalAssets": 62000,
+        "totalLiabilities": 29200
+      }
+    }
+  ],
+  "accountBalanceProgression": {
+    "checking": [
+      {"date": "2022-01-01", "balance": 5000},
+      {"date": "2022-06-01", "balance": 8000},
+      {"date": "2022-12-01", "balance": 12000},
+      {"date": "2023-06-01", "balance": 15000},
+      {"date": "2023-12-01", "balance": 18000},
+      {"date": "2024-01-01", "balance": 8500}
+    ],
+    "savings": [
+      {"date": "2022-01-01", "balance": 10000},
+      {"date": "2022-06-01", "balance": 17000},
+      {"date": "2022-12-01", "balance": 23000},
+      {"date": "2023-06-01", "balance": 30000},
+      {"date": "2023-12-01", "balance": 32000},
+      {"date": "2024-01-01", "balance": 45000}
+    ],
+    "investment": [
+      {"date": "2022-01-01", "balance": 20000},
+      {"date": "2022-06-01", "balance": 35000},
+      {"date": "2022-12-01", "balance": 45000},
+      {"date": "2023-06-01", "balance": 55000},
+      {"date": "2023-12-01", "balance": 60000},
+      {"date": "2024-01-01", "balance": 64000}
+    ]
+  },
+  "investmentPriceProgression": {
+    "AAPL": [
+      {"date": "2022-01-01", "price": 130.00},
+      {"date": "2022-06-01", "price": 135.00},
+      {"date": "2022-12-01", "price": 140.00},
+      {"date": "2023-06-01", "price": 145.00},
+      {"date": "2023-12-01", "price": 148.00},
+      {"date": "2024-01-01", "price": 150.00}
+    ],
+    "TSLA": [
+      {"date": "2022-06-01", "price": 150.00},
+      {"date": "2022-12-01", "price": 175.00},
+      {"date": "2023-06-01", "price": 185.00},
+      {"date": "2023-12-01", "price": 195.00},
+      {"date": "2024-01-01", "price": 200.00}
+    ],
+    "NVDA": [
+      {"date": "2022-09-01", "price": 300.00},
+      {"date": "2023-06-01", "price": 350.00},
+      {"date": "2023-12-01", "price": 380.00},
+      {"date": "2024-01-01", "price": 400.00}
+    ],
+    "VTI": [
+      {"date": "2022-01-01", "price": 200.00},
+      {"date": "2022-06-01", "price": 205.00},
+      {"date": "2022-12-01", "price": 210.00},
+      {"date": "2023-06-01", "price": 215.00},
+      {"date": "2023-12-01", "price": 218.00},
+      {"date": "2024-01-01", "price": 220.00}
+    ],
+    "QQQ": [
+      {"date": "2022-04-01", "price": 300.00},
+      {"date": "2022-12-01", "price": 320.00},
+      {"date": "2023-06-01", "price": 335.00},
+      {"date": "2023-12-01", "price": 347.00},
+      {"date": "2024-01-01", "price": 350.00}
+    ]
+  },
+  "transactionPatterns": {
+    "income": [
+      {
+        "type": "salary",
+        "amount": 10000,
+        "frequency": "monthly",
+        "dayOfMonth": 1,
+        "merchant": "TechCorp Inc",
+        "description": "Monthly salary deposit"
+      },
+      {
+        "type": "bonus",
+        "amount": 15000,
+        "frequency": "quarterly",
+        "months": [3, 6, 9, 12],
+        "merchant": "TechCorp Inc",
+        "description": "Quarterly performance bonus"
+      }
+    ],
+    "expenses": [
+      {
+        "type": "rent",
+        "amount": 2800,
+        "frequency": "monthly",
+        "dayOfMonth": 1,
+        "merchant": "SF Property Management",
+        "description": "Monthly rent payment"
+      },
+      {
+        "type": "utilities",
+        "amount": 180,
+        "frequency": "monthly",
+        "dayOfMonth": 15,
+        "merchant": "PG&E",
+        "description": "Electric and gas bill"
+      },
+      {
+        "type": "groceries",
+        "amount": 600,
+        "frequency": "monthly",
+        "variation": 0.2,
+        "merchant": "Whole Foods",
+        "description": "Weekly grocery shopping"
+      },
+      {
+        "type": "transportation",
+        "amount": 400,
+        "frequency": "monthly",
+        "variation": 0.15,
+        "merchant": "Tesla Supercharger",
+        "description": "Electric vehicle charging"
+      },
+      {
+        "type": "dining",
+        "amount": 800,
+        "frequency": "monthly",
+        "variation": 0.3,
+        "merchant": "Various SF Restaurants",
+        "description": "Dining out and food delivery"
+      }
+    ]
+  }
+}

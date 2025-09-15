@@ -136,35 +136,259 @@ export interface User {
   profile?: UserProfile;
 }
 
-// Mock Data Types for Admin
-export interface MockDataConfig {
-  accounts?: number;
-  transactionsPerMonth?: number;
-  monthsOfHistory?: number;
-  includeInvestments?: boolean;
-  includeBudgets?: boolean;
-  includeGoals?: boolean;
-  includeDebts?: boolean;
+// Legacy Mock Data Types (DEPRECATED - Use Persona System Instead)
+// The old mock data system has been completely replaced by the persona-based system.
+// Use the PersonaManagement types below for all data generation needs.
+
+// Persona Management Types
+export interface PersonaInfo {
+  name: string;
+  description: string;
+  financialStory: string;
+  netWorthJourney: string;
+  timeframe: string;
+  keyEvents: string[];
 }
 
-export interface MockDataSummary {
-  accounts: number;
-  transactions: number;
-  investments: number;
-  budgets: number;
-  goals: number;
-  debts: number;
+export interface PersonaTemplate {
+  personaInfo: PersonaInfo;
+  userProfile: any;
+  accounts: any[];
+  investments: any[];
+  debts: any[];
+  budgets: any[];
+  goals: any[];
+  physicalAssets: any[];
+  netWorthProgression: any[];
+  accountBalanceProgression: any;
+  investmentPriceProgression: any;
+  transactionPatterns: any;
 }
 
-export interface MockDataResponse {
+export interface PersonaLoadOptions {
+  clearExistingData?: boolean;
+  generateHistoricalData?: boolean;
+  batchSize?: number;
+  validateData?: boolean;
+}
+
+export interface PersonaLoadResult {
   success: boolean;
+  personaName: string;
+  userId?: string;
+  recordsCreated: {
+    user: number;
+    accounts: number;
+    transactions: number;
+    investments: number;
+    debts: number;
+    budgets: number;
+    goals: number;
+    physicalAssets: number;
+    netWorthMilestones: number;
+    accountBalanceHistory: number;
+    dailyPrices: number;
+  };
+  processingTime: number;
+  errors: string[];
+}
+
+export interface PersonaValidationResult {
+  isValid: boolean;
+  score: number; // 0-100
+  issues: PersonaValidationIssue[];
+  warnings: PersonaValidationWarning[];
+  summary: {
+    totalRecords: number;
+    recordsValidated: number;
+    validationTime: number;
+  };
+}
+
+export interface PersonaValidationIssue {
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  category: string;
   message: string;
-  summary: MockDataSummary;
+  recordId?: string;
+  recordType?: string;
+  suggestedFix?: string;
+}
+
+export interface PersonaValidationWarning {
+  category: string;
+  message: string;
+  recordId?: string;
+  recordType?: string;
+}
+
+export interface PersonaStatus {
+  userId: string;
+  recordCounts: {
+    accounts: number;
+    transactions: number;
+    investments: number;
+    debts: number;
+    budgets: number;
+    goals: number;
+    physicalAssets: number;
+    netWorthMilestones: number;
+    accountBalanceHistory: number;
+  };
+  totalRecords: number;
+  hasData: boolean;
+}
+
+export interface PersonaSummary {
+  summary: Array<{
+    userId: string;
+    email: string;
+    recordCounts: {
+      accounts: number;
+      transactions: number;
+      investments: number;
+      debts: number;
+      budgets: number;
+      goals: number;
+      physicalAssets: number;
+      netWorthMilestones: number;
+    };
+    totalRecords: number;
+    hasData: boolean;
+  }>;
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface PersonaBackup {
+  backupName: string;
+  timestamp: string;
+  userId?: string;
+  personaName?: string;
+  includeHistoricalData: boolean;
+}
+
+export interface PersonaSystemHealth {
+  database: {
+    users: number;
+    accounts: number;
+    transactions: number;
+    investments: number;
+    netWorthMilestones: number;
+  };
+  snapshots: {
+    totalSnapshots: number;
+    snapshotsToday: number;
+    snapshotsThisWeek: number;
+    snapshotsThisMonth: number;
+    averageSnapshotsPerUser: number;
+    dataQualityMetrics: {
+      complete: number;
+      partial: number;
+      estimated: number;
+    };
+  };
+  system: {
+    uptime: number;
+    memoryUsage: NodeJS.MemoryUsage;
+    nodeVersion: string;
+  };
+}
+
+export interface PersonaAnalytics {
+  timeframe: string;
+  personaName?: string;
+  analytics: {
+    totalUsers: number;
+    activeUsers: number;
+    dataLoaded: number;
+    averageRecordsPerUser: number;
+    mostPopularPersona: string;
+    usageTrends: any[];
+  };
+}
+
+export interface HistoricalDataConfig {
+  startDate: Date;
+  endDate: Date;
+  accountBalanceGranularity: 'daily' | 'weekly' | 'monthly';
+  investmentPriceGranularity: 'daily' | 'weekly';
+  netWorthSnapshotFrequency: 'daily' | 'weekly' | 'monthly';
+  includeMarketVolatility: boolean;
+  includeSeasonalVariations: boolean;
+  generateTransactionHistory: boolean;
+}
+
+export interface HistoricalDataResult {
+  accountBalanceHistory: {
+    totalRecords: number;
+    accountsProcessed: number;
+    dateRange: { start: Date; end: Date };
+  };
+  investmentPriceHistory: {
+    totalRecords: number;
+    symbolsProcessed: string[];
+    dateRange: { start: Date; end: Date };
+  };
+  netWorthMilestones: {
+    totalRecords: number;
+    dateRange: { start: Date; end: Date };
+  };
+  processingTime: number;
+  errors: string[];
+}
+
+export interface SnapshotStatus {
+  statistics: {
+    totalSnapshots: number;
+    snapshotsToday: number;
+    snapshotsThisWeek: number;
+    snapshotsThisMonth: number;
+    averageSnapshotsPerUser: number;
+    dataQualityMetrics: {
+      complete: number;
+      partial: number;
+      estimated: number;
+    };
+  };
+  scheduler: {
+    isInitialized: boolean;
+    jobs: Array<{
+      name: string;
+      running: boolean;
+      schedule: string;
+      timezone: string;
+    }>;
+    configuration: {
+      enabled: boolean;
+      schedule: string;
+      timezone: string;
+      maxRetries: number;
+      retryDelay: number;
+      batchSize: number;
+      cleanupSchedule: string;
+    };
+  };
+}
+
+export interface PersonaExportResult {
+  userId: string;
+  format: string;
+  includeHistoricalData: boolean;
+  downloadUrl: string;
+}
+
+export interface PersonaImportResult {
+  userId: string;
+  format: string;
+  recordsImported: number;
+  errors: string[];
 }
 
 export interface Transaction {
   id: string;
   userId: string;
+  accountId?: string; // Link to specific account
   amount: number;
   description: string;
   category: string;

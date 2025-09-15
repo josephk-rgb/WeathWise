@@ -57,8 +57,7 @@ import analyticsRoutes from './routes/analytics';
 import authTestRoutes from './routes/auth-test';
 import testApisRoutes from './routes/test-apis';
 import mlProxyRoutes from './routes/ml-proxy';
-import mockDataRoutes from './routes/mockData';
-import debugRoutes from './routes/debug';
+import personaRoutes from './routes/persona';
 import accountRoutes from './routes/accounts';
 import physicalAssetRoutes from './routes/physicalAssets';
 import netWorthRoutes from './routes/netWorth';
@@ -174,8 +173,7 @@ app.use('/api/analytics', authMiddleware, analyticsRoutes);
 app.use('/api/market', marketRoutes);
 app.use('/api/ai', authMiddleware, aiRoutes);
 app.use('/api/enhanced-features', enhancedFeaturesRoutes); // Phase 4 & 5 features - no auth for testing
-app.use('/api/mock-data', mockDataRoutes); // Admin-only mock data routes
-app.use('/api/debug', authMiddleware, debugRoutes); // Debug routes for testing
+app.use('/api/admin/persona', personaRoutes); // Admin-only persona management routes
 
 // Admin routes for daily price management
 app.use('/api/admin', adminRoutes);
@@ -250,6 +248,11 @@ async function startServer() {
     cronService.start();
     logger.info('⏰ Cron service started for daily price updates');
 
+    // Initialize snapshot scheduler for daily net worth snapshots
+    const { SnapshotScheduler } = await import('./services/snapshot/SnapshotScheduler');
+    SnapshotScheduler.initialize();
+    logger.info('📸 Snapshot scheduler initialized for daily net worth snapshots');
+
     // ONLY start the server AFTER database is ready
     server.listen(PORT, () => {
       logger.info(`🚀 Server running on port ${PORT}`);
@@ -279,10 +282,15 @@ async function startServer() {
 process.on('SIGTERM', async () => {
   logger.info('🛑 SIGTERM received, shutting down gracefully...');
   try {
+    // Shutdown snapshot scheduler
+    const { SnapshotScheduler } = await import('./services/snapshot/SnapshotScheduler');
+    await SnapshotScheduler.shutdown();
+    logger.info('📸 Snapshot scheduler stopped');
+    
     await require('mongoose').connection.close();
     logger.info('📊 Database connection closed');
   } catch (error) {
-    logger.error('Error closing database connection:', error);
+    logger.error('Error during shutdown:', error);
   }
   server.close(() => {
     logger.info('🛑 Process terminated');
@@ -293,10 +301,15 @@ process.on('SIGTERM', async () => {
 process.on('SIGINT', async () => {
   logger.info('🛑 SIGINT received, shutting down gracefully...');
   try {
+    // Shutdown snapshot scheduler
+    const { SnapshotScheduler } = await import('./services/snapshot/SnapshotScheduler');
+    await SnapshotScheduler.shutdown();
+    logger.info('📸 Snapshot scheduler stopped');
+    
     await require('mongoose').connection.close();
     logger.info('📊 Database connection closed');
   } catch (error) {
-    logger.error('Error closing database connection:', error);
+    logger.error('Error during shutdown:', error);
   }
   server.close(() => {
     logger.info('🛑 Process terminated');

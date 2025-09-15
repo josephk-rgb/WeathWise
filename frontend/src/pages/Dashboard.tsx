@@ -36,150 +36,183 @@ const Dashboard: React.FC = () => {
 
   const loadDashboardData = useCallback(async () => {
     if (!userProfile) {
-      console.log('No userProfile available for loadDashboardData');
+      console.log('❌ No userProfile available for loadDashboardData');
       return;
     }
 
-    console.log('Starting to load dashboard data for user:', userProfile.id);
+    const userId = userProfile.id || (userProfile as any)._id;
+    console.log('🚀 Starting optimized dashboard data load for user:', userId);
+    console.log('🔍 [FRONTEND DEBUG] User profile:', userProfile);
+    console.log('🔍 [FRONTEND DEBUG] Auth status:', { isAuthenticated, authLoading });
 
-    console.log('Making parallel API calls...');
-    const [transactionsData, goalsData, investmentsData, recommendationsData, dashboardStatsData, spendingData, financialHealthData, accountsData, assetsData] = await Promise.all([
-      apiService.getTransactions(userProfile.id).then(response => {
-        // Handle the response format: {success: true, data: [...]}
-        const data = (response as any)?.data || response;
-        if (!Array.isArray(data)) {
-          console.warn('Transactions API returned non-array data:', response);
-          return [];
-        }
-        return data;
-      }).catch(err => {
-        console.error('Failed to load transactions:', err);
-        return []; // Return empty array on error
-      }),
-      apiService.getGoals(userProfile.id).then(response => {
-        // Handle the response format: {success: true, data: [...]}
-        const data = (response as any)?.data || response;
-        if (!Array.isArray(data)) {
-          console.warn('Goals API returned non-array data:', response);
-          return [];
-        }
-        return data;
-      }).catch(err => {
-        console.error('Failed to load goals:', err);
-        return []; // Return empty array on error
-      }),
-      apiService.getInvestments(userProfile.id).then(data => {
-        // Ensure we always get an array for investments
-        if (!Array.isArray(data)) {
-          console.warn('Investments API returned non-array data:', data);
-          return [];
-        }
-        return data;
-      }).catch(err => {
-        console.error('Failed to load investments:', err);
-        return []; // Return empty array on error
-      }),
-      apiService.getRecommendations(userProfile.id).then(data => {
-        // Ensure we always get an array for recommendations
-        if (!Array.isArray(data)) {
-          console.warn('Recommendations API returned non-array data:', data);
-          return [];
-        }
-        return data;
-      }).catch(err => {
-        console.error('Failed to load recommendations:', err);
-        return []; // Return empty array on error
-      }),
-      // Get dashboard statistics
-      apiService.getEnhancedDashboardStats().then(data => {
-        console.log('Enhanced dashboard stats loaded:', data);
-        return data.success ? data.data : null;
-      }).catch(err => {
-        console.error('Failed to load enhanced dashboard stats:', err);
-        return null;
-      }),
-      // Get spending analysis for expense breakdown
-      apiService.getSpendingAnalysis().then(data => {
-        console.log('Spending analysis loaded:', data);
-        if (data.success && data.data.categoryBreakdown) {
-          return data.data.categoryBreakdown.map((cat: any) => ({
-            name: cat._id || 'Other',
-            value: cat.totalAmount
-          }));
-        }
-        return [];
-      }).catch(err => {
-        console.error('Failed to load spending analysis:', err);
-        return [];
-      }),
-      // Get financial health data
-      apiService.getFinancialHealth().then(data => {
-        console.log('Financial health loaded:', data);
-        return data.success ? data.data : null;
-      }).catch(err => {
-        console.error('Failed to load financial health:', err);
-        return null;
-      }),
-      // Get accounts data
-      apiService.getAccounts().then(data => {
-        console.log('Accounts loaded:', data);
-        if (!Array.isArray(data)) {
-          console.warn('Accounts API returned non-array data:', data);
-          return [];
-        }
-        return data;
-      }).catch(err => {
-        console.error('Failed to load accounts:', err);
-        return [];
-      }),
-      // Get physical assets data
-      apiService.getAssets().then(data => {
-        console.log('Assets loaded:', data);
-        if (!Array.isArray(data)) {
-          console.warn('Assets API returned non-array data:', data);
-          return [];
-        }
-        return data;
-      }).catch(err => {
-        console.error('Failed to load assets:', err);
-        return [];
-      }),
-    ]);
+    try {
+      setLoadingStats(true);
+      
+      // 🚀 PERFORMANCE OPTIMIZATION: Single API call instead of 9 parallel calls
+      console.log('📡 Making single optimized API call...');
+      const startTime = Date.now();
+      
+      // Clear cache to ensure fresh data
+      apiService.clearCache();
+      
+      const response = await apiService.getCompleteDashboardData();
+      
+      const endTime = Date.now();
+      console.log(`⚡ Dashboard data loaded in ${endTime - startTime}ms`);
+      console.log('🔍 [FRONTEND DEBUG] API Response:', response);
+      
+      if (response.success && response.data) {
+        const data = response.data;
+        
+        console.log('✅ Complete dashboard data received:', {
+          transactions: data.dataCounts?.transactions || 0,
+          totalTransactions: data.dataCounts?.totalTransactions || 0,
+          goals: data.dataCounts?.goals || 0,
+          investments: data.dataCounts?.investments || 0,
+          accounts: data.dataCounts?.accounts || 0,
+          assets: data.dataCounts?.assets || 0,
+          loadedAt: data.loadedAt
+        });
 
-    console.log('Successfully loaded all dashboard data');
-    setTransactions(transactionsData);
-    setGoals(goalsData);
-    setInvestments(investmentsData);
-    setRecommendations(recommendationsData);
-    setAccounts(accountsData);
-    setAssets(assetsData);
-    
-    // Enhance dashboard stats with financial health data
-    const enhancedStats = dashboardStatsData ? {
-      ...dashboardStatsData,
-      financialHealth: financialHealthData
-    } : null;
-    
-    setDashboardStats(enhancedStats);
-    setExpenseData(spendingData);
-    setLoadingStats(false);
+        // Set all data from single response
+        setTransactions(data.transactions || []);
+        setGoals(data.goals || []);
+        setInvestments(data.investments || []);
+        setRecommendations(data.recommendations || []);
+        setAccounts(data.accounts || []);
+        setAssets(data.assets || []);
+        
+        // Set dashboard stats
+        setDashboardStats(data.dashboardStats);
+        
+        // Set expense data from backend spending analysis (already filtered by current month)
+        console.log('🔍 [FRONTEND DEBUG] Raw spending analysis data:', data.spendingAnalysis);
+        console.log('🔍 [FRONTEND DEBUG] Category breakdown:', data.spendingAnalysis?.categoryBreakdown);
+        console.log('🔍 [FRONTEND DEBUG] Filtered transactions count:', data.dataCounts?.totalTransactions);
+        console.log('🔍 [FRONTEND DEBUG] Recent transactions count:', data.dataCounts?.transactions);
+        
+        // Backend now handles current month filtering, so we can use the data directly
+        const expenseData = data.spendingAnalysis?.categoryBreakdown?.map((cat: any) => ({
+          name: cat._id || 'Other',
+          value: cat.totalAmount
+        })) || [];
+        
+        console.log('🔍 [FRONTEND DEBUG] Processed expense data from backend:', expenseData);
+        setExpenseData(expenseData);
+        
+        console.log('🎯 Dashboard data state updated successfully');
+      } else {
+        console.warn('⚠️ Dashboard response format unexpected:', response);
+        // Fallback to empty state
+        setTransactions([]);
+        setGoals([]);
+        setInvestments([]);
+        setRecommendations([]);
+        setAccounts([]);
+        setAssets([]);
+        setDashboardStats(null);
+        setExpenseData([]);
+      }
+    } catch (error) {
+      console.error('❌ Failed to load complete dashboard data:', error);
+      
+      // Fallback: try individual API calls if the optimized endpoint fails
+      console.log('🔄 Falling back to individual API calls...');
+      
+      try {
+        const [transactionsData, goalsData, investmentsData, recommendationsData, dashboardStatsData, spendingData, financialHealthData, accountsData, assetsData] = await Promise.all([
+          apiService.getTransactions(userProfile.id).then(response => {
+            const data = (response as any)?.data || response;
+            return Array.isArray(data) ? data : [];
+          }).catch(() => []),
+          apiService.getGoals(userProfile.id).then(response => {
+            const data = (response as any)?.data || response;
+            return Array.isArray(data) ? data : [];
+          }).catch(() => []),
+          apiService.getInvestments(userProfile.id).then(data => {
+            return Array.isArray(data) ? data : [];
+          }).catch(() => []),
+          apiService.getRecommendations(userProfile.id).then(data => {
+            return Array.isArray(data) ? data : [];
+          }).catch(() => []),
+          apiService.getEnhancedDashboardStats().then(data => {
+            return data.success ? data.data : null;
+          }).catch(() => null),
+          apiService.getSpendingAnalysis().then(data => {
+            if (data.success && data.data.categoryBreakdown) {
+              return data.data.categoryBreakdown.map((cat: any) => ({
+                name: cat._id || 'Other',
+                value: cat.totalAmount
+              }));
+            }
+            return [];
+          }).catch(() => []),
+          apiService.getFinancialHealth().then(data => {
+            return data.success ? data.data : null;
+          }).catch(() => null),
+          apiService.getAccounts().then(data => {
+            return Array.isArray(data) ? data : [];
+          }).catch(() => []),
+          apiService.getAssets().then(data => {
+            return Array.isArray(data) ? data : [];
+          }).catch(() => [])
+        ]);
+
+        console.log('✅ Fallback data loaded successfully');
+        setTransactions(transactionsData);
+        setGoals(goalsData);
+        setInvestments(investmentsData);
+        setRecommendations(recommendationsData);
+        setAccounts(accountsData);
+        setAssets(assetsData);
+        
+        const enhancedStats = dashboardStatsData ? {
+          ...dashboardStatsData,
+          financialHealth: financialHealthData
+        } : null;
+        
+        setDashboardStats(enhancedStats);
+        setExpenseData(spendingData);
+      } catch (fallbackError) {
+        console.error('❌ Fallback also failed:', fallbackError);
+        // Set empty state
+        setTransactions([]);
+        setGoals([]);
+        setInvestments([]);
+        setRecommendations([]);
+        setAccounts([]);
+        setAssets([]);
+        setDashboardStats(null);
+        setExpenseData([]);
+      }
+    } finally {
+      setLoadingStats(false);
+    }
   }, [userProfile, setTransactions, setGoals, setInvestments, setRecommendations]);
 
   useEffect(() => {
+    const userId = userProfile?.id || (userProfile as any)?._id;
     console.log('Dashboard useEffect triggered:', {
       hasUserProfile: !!userProfile,
       isAuthenticated,
       authLoading,
-      userId: userProfile?.id
+      userId: userId,
+      profileId: userProfile?.id,
+      profile_id: (userProfile as any)?._id
     });
 
-    if (isAuthenticated && !authLoading && userProfile?.id) {
+    if (isAuthenticated && !authLoading && userId) {
       console.log('Loading real dashboard data...');
       loadDashboardData();
     } else {
-      console.log('User not authenticated or profile not loaded...');
+      console.log('User not authenticated or profile not loaded...', {
+        isAuthenticated,
+        authLoading,
+        userId,
+        userProfile: !!userProfile
+      });
     }
-  }, [isAuthenticated, authLoading, userProfile?.id, loadDashboardData]);
+  }, [isAuthenticated, authLoading, userProfile?.id, (userProfile as any)?._id, loadDashboardData]);
 
   // Calculate metrics - ensure transactions is always an array
   const safeTransactions = Array.isArray(transactions) ? transactions : [];
@@ -344,24 +377,34 @@ const Dashboard: React.FC = () => {
         />
 
         <Card>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Expense Breakdown</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Expense Breakdown</h3>
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              Current Month ({new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })})
+            </div>
+          </div>
           <div className="h-[400px] overflow-y-auto">
             {loadingStats ? (
               <div className="flex items-center justify-center h-full">
                 <div className="text-gray-500 dark:text-gray-400">Loading expense data...</div>
               </div>
             ) : expenseData.length > 0 ? (
-              <ExpenseList data={expenseData} />
+              <>
+                <div className="mb-2 text-sm text-gray-500 dark:text-gray-400">
+                  Showing {expenseData.length} categories for {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </div>
+                <ExpenseList data={expenseData} />
+              </>
             ) : (
               <div className="flex flex-col items-center justify-center h-full">
                 <div className="text-gray-400 mb-4">
                   <PieChart className="w-12 h-12 mx-auto" />
                 </div>
                 <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-                  No Expense Data
+                  No Expense Data This Month
                 </h4>
                 <p className="text-gray-500 dark:text-gray-400 mb-2">
-                  You haven't added any transactions yet
+                  No expenses recorded for {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                 </p>
                 <p className="text-sm text-gray-400 dark:text-gray-500">
                   Add some transactions to see your expense breakdown

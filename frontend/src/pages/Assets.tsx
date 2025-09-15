@@ -20,10 +20,11 @@ const AssetsPage: React.FC = () => {
   const [editingAsset, setEditingAsset] = useState<PhysicalAsset | null>(null);
 
   useEffect(() => {
-    if (isAuthenticated && !isLoading && userProfile?.id) {
+    const userId = userProfile?.id || (userProfile as any)?._id;
+    if (isAuthenticated && !isLoading && userId) {
       loadAssetsData();
     }
-  }, [isAuthenticated, isLoading, userProfile?.id]);
+  }, [isAuthenticated, isLoading, userProfile?.id, (userProfile as any)?._id]);
 
   const loadAssetsData = async () => {
     try {
@@ -35,6 +36,8 @@ const AssetsPage: React.FC = () => {
         apiService.getAssets()
       ]);
       
+      console.log('🔍 Accounts data received:', accountsData);
+      console.log('🔍 Assets data received:', assetsData);
       setAccounts(accountsData);
       setPhysicalAssets(assetsData);
     } catch (error) {
@@ -257,9 +260,9 @@ const AssetsPage: React.FC = () => {
                       <IconComponent className={`w-6 h-6 ${typeColor}`} />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                        {account.name}
-                      </h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    {account.name || account.accountInfo?.name || 'Unnamed Account'}
+                  </h3>
                       <p className="text-sm text-gray-600 dark:text-gray-400 capitalize">
                         {account.type.replace('_', ' ')}
                       </p>
@@ -288,17 +291,17 @@ const AssetsPage: React.FC = () => {
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600 dark:text-gray-400">Balance:</span>
                     <span className={`text-lg font-semibold ${
-                      account.balance >= 0 ? 'text-green-600' : 'text-red-600'
+                      (account.balance || account.accountInfo?.balance || 0) >= 0 ? 'text-green-600' : 'text-red-600'
                     }`}>
-                      {formatCurrency(account.balance, account.currency)}
+                      {formatCurrency(account.balance || account.accountInfo?.balance || 0, account.currency || account.accountInfo?.currency || 'USD')}
                     </span>
                   </div>
                   
-                  {account.institution && (
+                  {(account.institution || account.provider?.name) && (
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600 dark:text-gray-400">Institution:</span>
                       <span className="text-sm text-gray-900 dark:text-gray-100">
-                        {account.institution}
+                        {account.institution || account.provider?.name}
                       </span>
                     </div>
                   )}

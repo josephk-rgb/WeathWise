@@ -8,10 +8,15 @@ const ExpenseList = ({
   const format = new Intl.NumberFormat();
   const total = data.reduce((sum, item) => sum + item.value, 0);
 
+  console.log('🔍 [ExpenseList DEBUG] Data received:', data);
+  console.log('🔍 [ExpenseList DEBUG] Total amount:', total);
+  console.log('🔍 [ExpenseList DEBUG] Number of categories:', data.length);
+
   return (
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 h-full">
+  <div className="space-y-3">
       {data.map((item, index) => {
         const percentage = (item.value / total) * 100;
+        console.log(`🔍 [ExpenseList DEBUG] Rendering category ${index + 1}:`, item.name, item.value, `${percentage.toFixed(1)}%`);
         return (
           <div key={index} className="p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200">
             <div className="flex items-center justify-between mb-1.5">

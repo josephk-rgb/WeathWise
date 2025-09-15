@@ -1,0 +1,1263 @@
+[
+  {
+    "_id": "68b1822929f6132dc8bef89d",
+    "userId": "68b1822129f6132dc8bef861",
+    "type": "checking",
+    "provider": {
+      "name": "European Bank"
+    },
+    "accountInfo": {
+      "name": "Euro Account",
+      "accountNumber": "EUR123456789",
+      "balance": 1000,
+      "currency": "EUR"
+    },
+    "connectionStatus": {
+      "isConnected": false,
+      "provider": "manual"
+    },
+    "isActive": true,
+    "createdAt": "2025-08-29T10:34:17.928Z",
+    "updatedAt": "2025-08-29T10:34:17.928Z",
+    "__v": 0
+  },
+  {
+    "_id": "68bc080f3a9422f780a93a2e",
+    "userId": "68b350bb9776631cdcd12356",
+    "type": "investment",
+    "provider": {
+      "name": "Chase Bank",
+      "id": "pdYVpkzdRK",
+      "logo": "https://loremflickr.com/640/480?lock=4612805867077632"
+    },
+    "accountInfo": {
+      "name": "Brokerage Account",
+      "accountNumber": "501829109078",
+      "routingNumber": "200965929",
+      "balance": 33798.46,
+      "currency": "USD",
+      "lastSyncedAt": "2025-09-05T11:29:14.430Z"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2025-08-20T09:54:55.625Z",
+      "provider": "yodlee"
+    },
+    "isActive": true,
+    "createdAt": "2025-09-06T10:08:15.825Z",
+    "updatedAt": "2025-09-06T10:08:15.825Z",
+    "__v": 0
+  },
+  {
+    "_id": "68bc08103a9422f780a93a30",
+    "userId": "68b350bb9776631cdcd12356",
+    "type": "credit",
+    "provider": {
+      "name": "Fidelity",
+      "id": "nD0JFKs4UE",
+      "logo": "https://loremflickr.com/640/480?lock=669312700383232"
+    },
+    "accountInfo": {
+      "name": "Travel Rewards Card",
+      "accountNumber": "874416500349",
+      "routingNumber": "084208271",
+      "balance": -2735.63,
+      "currency": "USD",
+      "lastSyncedAt": "2025-09-03T05:00:53.890Z"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2025-08-16T14:26:47.192Z",
+      "provider": "yodlee"
+    },
+    "isActive": true,
+    "createdAt": "2025-09-06T10:08:16.070Z",
+    "updatedAt": "2025-09-06T10:08:16.070Z",
+    "__v": 0
+  },
+  {
+    "_id": "68bc08103a9422f780a93a32",
+    "userId": "68b350bb9776631cdcd12356",
+    "type": "checking",
+    "provider": {
+      "name": "TD Bank",
+      "id": "j8pWQP7Nt5",
+      "logo": "https://picsum.photos/seed/ZYFTIxKUFo/640/480"
+    },
+    "accountInfo": {
+      "name": "Main Checking Account",
+      "accountNumber": "620575443568",
+      "routingNumber": "409204520",
+      "balance": 5378.77,
+      "currency": "USD",
+      "lastSyncedAt": "2025-08-30T20:10:08.383Z"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2025-08-13T22:48:18.367Z",
+      "provider": "yodlee"
+    },
+    "isActive": true,
+    "createdAt": "2025-09-06T10:08:16.346Z",
+    "updatedAt": "2025-09-06T10:08:16.346Z",
+    "__v": 0
+  },
+  {
+    "_id": "68bc08103a9422f780a93a34",
+    "userId": "68b350bb9776631cdcd12356",
+    "type": "investment",
+    "provider": {
+      "name": "TD Bank",
+      "id": "41ZJDvM1Za",
+      "logo": "https://loremflickr.com/640/480?lock=8296647725416448"
+    },
+    "accountInfo": {
+      "name": "Trading Account",
+      "accountNumber": "940441592695",
+      "routingNumber": "507490896",
+      "balance": 76032.81,
+      "currency": "USD",
+      "lastSyncedAt": "2025-08-30T14:26:29.334Z"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2025-08-17T01:30:06.372Z",
+      "provider": "yodlee"
+    },
+    "isActive": true,
+    "createdAt": "2025-09-06T10:08:16.605Z",
+    "updatedAt": "2025-09-06T10:08:16.605Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c68b91f51eedd4ea096369",
+    "userId": "68c68b8af51eedd4ea09630b",
+    "type": "checking",
+    "provider": {
+      "name": "Chase Bank",
+      "id": "chase_001",
+      "logo": "https://logos.com/chase.png"
+    },
+    "accountInfo": {
+      "name": "Chase Total Checking",
+      "accountNumber": "****1234",
+      "routingNumber": "322271627",
+      "balance": 8500,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "plaid"
+    },
+    "institutionName": "JPMorgan Chase",
+    "balanceSource": "manual",
+    "category": "primary_checking",
+    "isActive": true,
+    "createdAt": "2025-09-14T09:32:01.021Z",
+    "updatedAt": "2025-09-14T09:32:01.021Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c68c99c7ebd555d56d058b",
+    "userId": "68c68c94c7ebd555d56d0536",
+    "type": "checking",
+    "provider": {
+      "name": "Chase Bank",
+      "id": "chase_001",
+      "logo": "https://logos.com/chase.png"
+    },
+    "accountInfo": {
+      "name": "Chase Total Checking",
+      "accountNumber": "****1234",
+      "routingNumber": "322271627",
+      "balance": 8500,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "plaid"
+    },
+    "institutionName": "JPMorgan Chase",
+    "balanceSource": "manual",
+    "category": "primary_checking",
+    "isActive": true,
+    "createdAt": "2025-09-14T09:36:25.863Z",
+    "updatedAt": "2025-09-14T09:36:25.863Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c68c9ac7ebd555d56d058d",
+    "userId": "68c68c94c7ebd555d56d0536",
+    "type": "savings",
+    "provider": {
+      "name": "Ally Bank",
+      "id": "ally_001",
+      "logo": "https://logos.com/ally.png"
+    },
+    "accountInfo": {
+      "name": "Ally Online Savings",
+      "accountNumber": "****5678",
+      "routingNumber": "124003116",
+      "balance": 45000,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "plaid"
+    },
+    "institutionName": "Ally Financial",
+    "balanceSource": "manual",
+    "category": "emergency_savings",
+    "isActive": true,
+    "createdAt": "2025-09-14T09:36:26.081Z",
+    "updatedAt": "2025-09-14T09:36:26.081Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c68d620901d2456d523fc4",
+    "userId": "68c68d5a0901d2456d523f6f",
+    "type": "checking",
+    "provider": {
+      "name": "Chase Bank",
+      "id": "chase_001",
+      "logo": "https://logos.com/chase.png"
+    },
+    "accountInfo": {
+      "name": "Chase Total Checking",
+      "accountNumber": "****1234",
+      "routingNumber": "322271627",
+      "balance": 8500,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "plaid"
+    },
+    "institutionName": "JPMorgan Chase",
+    "balanceSource": "manual",
+    "category": "primary_checking",
+    "isActive": true,
+    "createdAt": "2025-09-14T09:39:46.550Z",
+    "updatedAt": "2025-09-14T09:39:46.550Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c68d620901d2456d523fc6",
+    "userId": "68c68d5a0901d2456d523f6f",
+    "type": "savings",
+    "provider": {
+      "name": "Ally Bank",
+      "id": "ally_001",
+      "logo": "https://logos.com/ally.png"
+    },
+    "accountInfo": {
+      "name": "Ally Online Savings",
+      "accountNumber": "****5678",
+      "routingNumber": "124003116",
+      "balance": 45000,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "plaid"
+    },
+    "institutionName": "Ally Financial",
+    "balanceSource": "manual",
+    "category": "emergency_savings",
+    "isActive": true,
+    "createdAt": "2025-09-14T09:39:46.787Z",
+    "updatedAt": "2025-09-14T09:39:46.787Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c68d630901d2456d523fc8",
+    "userId": "68c68d5a0901d2456d523f6f",
+    "type": "investment",
+    "provider": {
+      "name": "Fidelity",
+      "id": "fidelity_001",
+      "logo": "https://logos.com/fidelity.png"
+    },
+    "accountInfo": {
+      "name": "Fidelity Investment Account",
+      "accountNumber": "****9012",
+      "routingNumber": "021000021",
+      "balance": 0,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "yodlee"
+    },
+    "institutionName": "Fidelity Investments",
+    "balanceSource": "manual",
+    "category": "investment_cash",
+    "isActive": true,
+    "createdAt": "2025-09-14T09:39:47.021Z",
+    "updatedAt": "2025-09-14T09:39:47.021Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c68d630901d2456d523fca",
+    "userId": "68c68d5a0901d2456d523f6f",
+    "type": "retirement",
+    "provider": {
+      "name": "Vanguard",
+      "id": "vanguard_001",
+      "logo": "https://logos.com/vanguard.png"
+    },
+    "accountInfo": {
+      "name": "Vanguard 401(k)",
+      "accountNumber": "****3456",
+      "routingNumber": "021000021",
+      "balance": 0,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "plaid"
+    },
+    "institutionName": "Vanguard Group",
+    "balanceSource": "manual",
+    "category": "investment_cash",
+    "isActive": true,
+    "createdAt": "2025-09-14T09:39:47.257Z",
+    "updatedAt": "2025-09-14T09:39:47.257Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c68d630901d2456d523fcc",
+    "userId": "68c68d5a0901d2456d523f6f",
+    "type": "credit",
+    "provider": {
+      "name": "Chase",
+      "id": "chase_credit_001",
+      "logo": "https://logos.com/chase.png"
+    },
+    "accountInfo": {
+      "name": "Chase Sapphire Preferred",
+      "accountNumber": "****7890",
+      "routingNumber": "322271627",
+      "balance": 0,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "plaid"
+    },
+    "institutionName": "JPMorgan Chase",
+    "balanceSource": "manual",
+    "category": "primary_checking",
+    "isActive": true,
+    "createdAt": "2025-09-14T09:39:47.594Z",
+    "updatedAt": "2025-09-14T09:39:47.594Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c68f217d82a7a740c55e2b",
+    "userId": "68c68f1c7d82a7a740c55dd7",
+    "type": "checking",
+    "provider": {
+      "name": "Chase Bank",
+      "id": "chase_001",
+      "logo": "https://logos.com/chase.png"
+    },
+    "accountInfo": {
+      "name": "Chase Total Checking",
+      "accountNumber": "****1234",
+      "routingNumber": "322271627",
+      "balance": 8500,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "plaid"
+    },
+    "institutionName": "JPMorgan Chase",
+    "balanceSource": "manual",
+    "category": "primary_checking",
+    "isActive": true,
+    "createdAt": "2025-09-14T09:47:13.983Z",
+    "updatedAt": "2025-09-14T09:47:13.983Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c68f227d82a7a740c55e2e",
+    "userId": "68c68f1c7d82a7a740c55dd7",
+    "type": "savings",
+    "provider": {
+      "name": "Ally Bank",
+      "id": "ally_001",
+      "logo": "https://logos.com/ally.png"
+    },
+    "accountInfo": {
+      "name": "Ally Online Savings",
+      "accountNumber": "****5678",
+      "routingNumber": "124003116",
+      "balance": 45000,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "plaid"
+    },
+    "institutionName": "Ally Financial",
+    "balanceSource": "manual",
+    "category": "emergency_savings",
+    "isActive": true,
+    "createdAt": "2025-09-14T09:47:14.257Z",
+    "updatedAt": "2025-09-14T09:47:14.257Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c68f227d82a7a740c55e30",
+    "userId": "68c68f1c7d82a7a740c55dd7",
+    "type": "investment",
+    "provider": {
+      "name": "Fidelity",
+      "id": "fidelity_001",
+      "logo": "https://logos.com/fidelity.png"
+    },
+    "accountInfo": {
+      "name": "Fidelity Investment Account",
+      "accountNumber": "****9012",
+      "routingNumber": "021000021",
+      "balance": 0,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "yodlee"
+    },
+    "institutionName": "Fidelity Investments",
+    "balanceSource": "manual",
+    "category": "investment_cash",
+    "isActive": true,
+    "createdAt": "2025-09-14T09:47:14.496Z",
+    "updatedAt": "2025-09-14T09:47:14.496Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c68f227d82a7a740c55e32",
+    "userId": "68c68f1c7d82a7a740c55dd7",
+    "type": "retirement",
+    "provider": {
+      "name": "Vanguard",
+      "id": "vanguard_001",
+      "logo": "https://logos.com/vanguard.png"
+    },
+    "accountInfo": {
+      "name": "Vanguard 401(k)",
+      "accountNumber": "****3456",
+      "routingNumber": "021000021",
+      "balance": 0,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "plaid"
+    },
+    "institutionName": "Vanguard Group",
+    "balanceSource": "manual",
+    "category": "investment_cash",
+    "isActive": true,
+    "createdAt": "2025-09-14T09:47:14.736Z",
+    "updatedAt": "2025-09-14T09:47:14.736Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c68f237d82a7a740c55e34",
+    "userId": "68c68f1c7d82a7a740c55dd7",
+    "type": "credit",
+    "provider": {
+      "name": "Chase",
+      "id": "chase_credit_001",
+      "logo": "https://logos.com/chase.png"
+    },
+    "accountInfo": {
+      "name": "Chase Sapphire Preferred",
+      "accountNumber": "****7890",
+      "routingNumber": "322271627",
+      "balance": 0,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "plaid"
+    },
+    "institutionName": "JPMorgan Chase",
+    "balanceSource": "manual",
+    "category": "primary_checking",
+    "isActive": true,
+    "createdAt": "2025-09-14T09:47:15.088Z",
+    "updatedAt": "2025-09-14T09:47:15.088Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c68faf871e4a449754a094",
+    "userId": "68c68faa871e4a449754a040",
+    "type": "checking",
+    "provider": {
+      "name": "Chase Bank",
+      "id": "chase_001",
+      "logo": "https://logos.com/chase.png"
+    },
+    "accountInfo": {
+      "name": "Chase Total Checking",
+      "accountNumber": "****1234",
+      "routingNumber": "322271627",
+      "balance": 8500,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "plaid"
+    },
+    "institutionName": "JPMorgan Chase",
+    "balanceSource": "manual",
+    "category": "primary_checking",
+    "isActive": true,
+    "createdAt": "2025-09-14T09:49:35.319Z",
+    "updatedAt": "2025-09-14T09:49:35.319Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c68faf871e4a449754a097",
+    "userId": "68c68faa871e4a449754a040",
+    "type": "savings",
+    "provider": {
+      "name": "Ally Bank",
+      "id": "ally_001",
+      "logo": "https://logos.com/ally.png"
+    },
+    "accountInfo": {
+      "name": "Ally Online Savings",
+      "accountNumber": "****5678",
+      "routingNumber": "124003116",
+      "balance": 45000,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "plaid"
+    },
+    "institutionName": "Ally Financial",
+    "balanceSource": "manual",
+    "category": "emergency_savings",
+    "isActive": true,
+    "createdAt": "2025-09-14T09:49:35.558Z",
+    "updatedAt": "2025-09-14T09:49:35.558Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c68faf871e4a449754a099",
+    "userId": "68c68faa871e4a449754a040",
+    "type": "investment",
+    "provider": {
+      "name": "Fidelity",
+      "id": "fidelity_001",
+      "logo": "https://logos.com/fidelity.png"
+    },
+    "accountInfo": {
+      "name": "Fidelity Investment Account",
+      "accountNumber": "****9012",
+      "routingNumber": "021000021",
+      "balance": 0,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "yodlee"
+    },
+    "institutionName": "Fidelity Investments",
+    "balanceSource": "manual",
+    "category": "investment_cash",
+    "isActive": true,
+    "createdAt": "2025-09-14T09:49:35.796Z",
+    "updatedAt": "2025-09-14T09:49:35.796Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c68fb0871e4a449754a09b",
+    "userId": "68c68faa871e4a449754a040",
+    "type": "retirement",
+    "provider": {
+      "name": "Vanguard",
+      "id": "vanguard_001",
+      "logo": "https://logos.com/vanguard.png"
+    },
+    "accountInfo": {
+      "name": "Vanguard 401(k)",
+      "accountNumber": "****3456",
+      "routingNumber": "021000021",
+      "balance": 0,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "plaid"
+    },
+    "institutionName": "Vanguard Group",
+    "balanceSource": "manual",
+    "category": "investment_cash",
+    "isActive": true,
+    "createdAt": "2025-09-14T09:49:36.031Z",
+    "updatedAt": "2025-09-14T09:49:36.031Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c68fb0871e4a449754a09d",
+    "userId": "68c68faa871e4a449754a040",
+    "type": "credit",
+    "provider": {
+      "name": "Chase",
+      "id": "chase_credit_001",
+      "logo": "https://logos.com/chase.png"
+    },
+    "accountInfo": {
+      "name": "Chase Sapphire Preferred",
+      "accountNumber": "****7890",
+      "routingNumber": "322271627",
+      "balance": 0,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "plaid"
+    },
+    "institutionName": "JPMorgan Chase",
+    "balanceSource": "manual",
+    "category": "primary_checking",
+    "isActive": true,
+    "createdAt": "2025-09-14T09:49:36.271Z",
+    "updatedAt": "2025-09-14T09:49:36.271Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c691841c037e7bc6ea7761",
+    "userId": "68c690e51c037e7bc6ea6491",
+    "type": "checking",
+    "provider": {
+      "name": "Bank of America",
+      "id": "bofa_001",
+      "logo": "https://logos.com/bank-of-america.png"
+    },
+    "accountInfo": {
+      "name": "Bank of America Advantage Plus",
+      "accountNumber": "****3691",
+      "routingNumber": "111000025",
+      "balance": 2800,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "plaid"
+    },
+    "institutionName": "Bank of America",
+    "balanceSource": "manual",
+    "category": "primary_checking",
+    "isActive": true,
+    "createdAt": "2025-09-14T09:57:24.812Z",
+    "updatedAt": "2025-09-14T09:57:24.812Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c691851c037e7bc6ea7763",
+    "userId": "68c690e51c037e7bc6ea6491",
+    "type": "savings",
+    "provider": {
+      "name": "Bank of America",
+      "id": "bofa_002",
+      "logo": "https://logos.com/bank-of-america.png"
+    },
+    "accountInfo": {
+      "name": "Bank of America Advantage Savings",
+      "accountNumber": "****7412",
+      "routingNumber": "111000025",
+      "balance": 8500,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "plaid"
+    },
+    "institutionName": "Bank of America",
+    "balanceSource": "manual",
+    "category": "emergency_savings",
+    "isActive": true,
+    "createdAt": "2025-09-14T09:57:25.051Z",
+    "updatedAt": "2025-09-14T09:57:25.051Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c691851c037e7bc6ea7765",
+    "userId": "68c690e51c037e7bc6ea6491",
+    "type": "credit",
+    "provider": {
+      "name": "Discover",
+      "id": "discover_001",
+      "logo": "https://logos.com/discover.png"
+    },
+    "accountInfo": {
+      "name": "Discover it Cash Back",
+      "accountNumber": "****5820",
+      "routingNumber": "111000025",
+      "balance": 0,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "yodlee"
+    },
+    "institutionName": "Discover Bank",
+    "balanceSource": "manual",
+    "category": "primary_checking",
+    "isActive": true,
+    "createdAt": "2025-09-14T09:57:25.291Z",
+    "updatedAt": "2025-09-14T09:57:25.291Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c2b6c15e1d8c421cd69f",
+    "userId": "68c40c260f1312b22670f27f",
+    "type": "checking",
+    "provider": {
+      "name": "Chase Bank",
+      "id": "chase_001",
+      "logo": "https://logos.com/chase.png"
+    },
+    "accountInfo": {
+      "name": "Chase Total Checking",
+      "accountNumber": "****1234",
+      "routingNumber": "322271627",
+      "balance": 8500,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "plaid"
+    },
+    "institutionName": "JPMorgan Chase",
+    "balanceSource": "manual",
+    "category": "primary_checking",
+    "isActive": true,
+    "createdAt": "2025-09-14T13:27:18.622Z",
+    "updatedAt": "2025-09-14T13:27:18.622Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c2b6c15e1d8c421cd6a1",
+    "userId": "68c40c260f1312b22670f27f",
+    "type": "savings",
+    "provider": {
+      "name": "Ally Bank",
+      "id": "ally_001",
+      "logo": "https://logos.com/ally.png"
+    },
+    "accountInfo": {
+      "name": "Ally Online Savings",
+      "accountNumber": "****5678",
+      "routingNumber": "124003116",
+      "balance": 45000,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "plaid"
+    },
+    "institutionName": "Ally Financial",
+    "balanceSource": "manual",
+    "category": "emergency_savings",
+    "isActive": true,
+    "createdAt": "2025-09-14T13:27:18.863Z",
+    "updatedAt": "2025-09-14T13:27:18.863Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c2b7c15e1d8c421cd6a3",
+    "userId": "68c40c260f1312b22670f27f",
+    "type": "investment",
+    "provider": {
+      "name": "Fidelity",
+      "id": "fidelity_001",
+      "logo": "https://logos.com/fidelity.png"
+    },
+    "accountInfo": {
+      "name": "Fidelity Investment Account",
+      "accountNumber": "****9012",
+      "routingNumber": "021000021",
+      "balance": 0,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "yodlee"
+    },
+    "institutionName": "Fidelity Investments",
+    "balanceSource": "manual",
+    "category": "investment_cash",
+    "isActive": true,
+    "createdAt": "2025-09-14T13:27:19.219Z",
+    "updatedAt": "2025-09-14T13:27:19.219Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c2b7c15e1d8c421cd6a5",
+    "userId": "68c40c260f1312b22670f27f",
+    "type": "retirement",
+    "provider": {
+      "name": "Vanguard",
+      "id": "vanguard_001",
+      "logo": "https://logos.com/vanguard.png"
+    },
+    "accountInfo": {
+      "name": "Vanguard 401(k)",
+      "accountNumber": "****3456",
+      "routingNumber": "021000021",
+      "balance": 0,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "plaid"
+    },
+    "institutionName": "Vanguard Group",
+    "balanceSource": "manual",
+    "category": "investment_cash",
+    "isActive": true,
+    "createdAt": "2025-09-14T13:27:19.530Z",
+    "updatedAt": "2025-09-14T13:27:19.530Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c2b7c15e1d8c421cd6a7",
+    "userId": "68c40c260f1312b22670f27f",
+    "type": "credit",
+    "provider": {
+      "name": "Chase",
+      "id": "chase_credit_001",
+      "logo": "https://logos.com/chase.png"
+    },
+    "accountInfo": {
+      "name": "Chase Sapphire Preferred",
+      "accountNumber": "****7890",
+      "routingNumber": "322271627",
+      "balance": 0,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "plaid"
+    },
+    "institutionName": "JPMorgan Chase",
+    "balanceSource": "manual",
+    "category": "primary_checking",
+    "isActive": true,
+    "createdAt": "2025-09-14T13:27:19.773Z",
+    "updatedAt": "2025-09-14T13:27:19.773Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c4df7faa745b735721c7",
+    "userId": "68c6c4da7faa745b73572173",
+    "type": "checking",
+    "provider": {
+      "name": "Chase Bank",
+      "id": "chase_001",
+      "logo": "https://logos.com/chase.png"
+    },
+    "accountInfo": {
+      "name": "Chase Total Checking",
+      "accountNumber": "****1234",
+      "routingNumber": "322271627",
+      "balance": 8500,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "plaid"
+    },
+    "institutionName": "JPMorgan Chase",
+    "balanceSource": "manual",
+    "category": "primary_checking",
+    "isActive": true,
+    "createdAt": "2025-09-14T13:36:31.454Z",
+    "updatedAt": "2025-09-14T13:36:31.454Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c4df7faa745b735721ca",
+    "userId": "68c6c4da7faa745b73572173",
+    "type": "savings",
+    "provider": {
+      "name": "Ally Bank",
+      "id": "ally_001",
+      "logo": "https://logos.com/ally.png"
+    },
+    "accountInfo": {
+      "name": "Ally Online Savings",
+      "accountNumber": "****5678",
+      "routingNumber": "124003116",
+      "balance": 45000,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "plaid"
+    },
+    "institutionName": "Ally Financial",
+    "balanceSource": "manual",
+    "category": "emergency_savings",
+    "isActive": true,
+    "createdAt": "2025-09-14T13:36:31.688Z",
+    "updatedAt": "2025-09-14T13:36:31.688Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c4df7faa745b735721cc",
+    "userId": "68c6c4da7faa745b73572173",
+    "type": "investment",
+    "provider": {
+      "name": "Fidelity",
+      "id": "fidelity_001",
+      "logo": "https://logos.com/fidelity.png"
+    },
+    "accountInfo": {
+      "name": "Fidelity Investment Account",
+      "accountNumber": "****9012",
+      "routingNumber": "021000021",
+      "balance": 0,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "yodlee"
+    },
+    "institutionName": "Fidelity Investments",
+    "balanceSource": "manual",
+    "category": "investment_cash",
+    "isActive": true,
+    "createdAt": "2025-09-14T13:36:31.919Z",
+    "updatedAt": "2025-09-14T13:36:31.919Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c4e07faa745b735721ce",
+    "userId": "68c6c4da7faa745b73572173",
+    "type": "retirement",
+    "provider": {
+      "name": "Vanguard",
+      "id": "vanguard_001",
+      "logo": "https://logos.com/vanguard.png"
+    },
+    "accountInfo": {
+      "name": "Vanguard 401(k)",
+      "accountNumber": "****3456",
+      "routingNumber": "021000021",
+      "balance": 0,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "plaid"
+    },
+    "institutionName": "Vanguard Group",
+    "balanceSource": "manual",
+    "category": "investment_cash",
+    "isActive": true,
+    "createdAt": "2025-09-14T13:36:32.155Z",
+    "updatedAt": "2025-09-14T13:36:32.155Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c4e07faa745b735721d0",
+    "userId": "68c6c4da7faa745b73572173",
+    "type": "credit",
+    "provider": {
+      "name": "Chase",
+      "id": "chase_credit_001",
+      "logo": "https://logos.com/chase.png"
+    },
+    "accountInfo": {
+      "name": "Chase Sapphire Preferred",
+      "accountNumber": "****7890",
+      "routingNumber": "322271627",
+      "balance": 0,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "plaid"
+    },
+    "institutionName": "JPMorgan Chase",
+    "balanceSource": "manual",
+    "category": "primary_checking",
+    "isActive": true,
+    "createdAt": "2025-09-14T13:36:32.394Z",
+    "updatedAt": "2025-09-14T13:36:32.394Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c543c1902ea89d441371",
+    "userId": "68c6c53ec1902ea89d44131e",
+    "type": "checking",
+    "provider": {
+      "name": "Chase Bank",
+      "id": "chase_001",
+      "logo": "https://logos.com/chase.png"
+    },
+    "accountInfo": {
+      "name": "Chase Total Checking",
+      "accountNumber": "****1234",
+      "routingNumber": "322271627",
+      "balance": 8500,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "plaid"
+    },
+    "institutionName": "JPMorgan Chase",
+    "balanceSource": "manual",
+    "category": "primary_checking",
+    "isActive": true,
+    "createdAt": "2025-09-14T13:38:11.413Z",
+    "updatedAt": "2025-09-14T13:38:11.413Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c543c1902ea89d441375",
+    "userId": "68c6c53ec1902ea89d44131e",
+    "type": "savings",
+    "provider": {
+      "name": "Ally Bank",
+      "id": "ally_001",
+      "logo": "https://logos.com/ally.png"
+    },
+    "accountInfo": {
+      "name": "Ally Online Savings",
+      "accountNumber": "****5678",
+      "routingNumber": "124003116",
+      "balance": 45000,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "plaid"
+    },
+    "institutionName": "Ally Financial",
+    "balanceSource": "manual",
+    "category": "emergency_savings",
+    "isActive": true,
+    "createdAt": "2025-09-14T13:38:11.650Z",
+    "updatedAt": "2025-09-14T13:38:11.650Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c543c1902ea89d441377",
+    "userId": "68c6c53ec1902ea89d44131e",
+    "type": "investment",
+    "provider": {
+      "name": "Fidelity",
+      "id": "fidelity_001",
+      "logo": "https://logos.com/fidelity.png"
+    },
+    "accountInfo": {
+      "name": "Fidelity Investment Account",
+      "accountNumber": "****9012",
+      "routingNumber": "021000021",
+      "balance": 0,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "yodlee"
+    },
+    "institutionName": "Fidelity Investments",
+    "balanceSource": "manual",
+    "category": "investment_cash",
+    "isActive": true,
+    "createdAt": "2025-09-14T13:38:11.885Z",
+    "updatedAt": "2025-09-14T13:38:11.885Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c544c1902ea89d441379",
+    "userId": "68c6c53ec1902ea89d44131e",
+    "type": "retirement",
+    "provider": {
+      "name": "Vanguard",
+      "id": "vanguard_001",
+      "logo": "https://logos.com/vanguard.png"
+    },
+    "accountInfo": {
+      "name": "Vanguard 401(k)",
+      "accountNumber": "****3456",
+      "routingNumber": "021000021",
+      "balance": 0,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "plaid"
+    },
+    "institutionName": "Vanguard Group",
+    "balanceSource": "manual",
+    "category": "investment_cash",
+    "isActive": true,
+    "createdAt": "2025-09-14T13:38:12.120Z",
+    "updatedAt": "2025-09-14T13:38:12.120Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c544c1902ea89d44137b",
+    "userId": "68c6c53ec1902ea89d44131e",
+    "type": "credit",
+    "provider": {
+      "name": "Chase",
+      "id": "chase_credit_001",
+      "logo": "https://logos.com/chase.png"
+    },
+    "accountInfo": {
+      "name": "Chase Sapphire Preferred",
+      "accountNumber": "****7890",
+      "routingNumber": "322271627",
+      "balance": 0,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "plaid"
+    },
+    "institutionName": "JPMorgan Chase",
+    "balanceSource": "manual",
+    "category": "primary_checking",
+    "isActive": true,
+    "createdAt": "2025-09-14T13:38:12.359Z",
+    "updatedAt": "2025-09-14T13:38:12.359Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c6c9c6f13b0d03f75315",
+    "userId": "68c6c61ec6f13b0d03f73f61",
+    "type": "checking",
+    "provider": {
+      "name": "Bank of America",
+      "id": "bofa_001",
+      "logo": "https://logos.com/bank-of-america.png"
+    },
+    "accountInfo": {
+      "name": "Bank of America Advantage Plus",
+      "accountNumber": "****3691",
+      "routingNumber": "111000025",
+      "balance": 2800,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "plaid"
+    },
+    "institutionName": "Bank of America",
+    "balanceSource": "manual",
+    "category": "primary_checking",
+    "isActive": true,
+    "createdAt": "2025-09-14T13:44:41.420Z",
+    "updatedAt": "2025-09-14T13:44:41.420Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c6c9c6f13b0d03f75317",
+    "userId": "68c6c61ec6f13b0d03f73f61",
+    "type": "savings",
+    "provider": {
+      "name": "Bank of America",
+      "id": "bofa_002",
+      "logo": "https://logos.com/bank-of-america.png"
+    },
+    "accountInfo": {
+      "name": "Bank of America Advantage Savings",
+      "accountNumber": "****7412",
+      "routingNumber": "111000025",
+      "balance": 8500,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "plaid"
+    },
+    "institutionName": "Bank of America",
+    "balanceSource": "manual",
+    "category": "emergency_savings",
+    "isActive": true,
+    "createdAt": "2025-09-14T13:44:41.654Z",
+    "updatedAt": "2025-09-14T13:44:41.654Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c6c9c6f13b0d03f75319",
+    "userId": "68c6c61ec6f13b0d03f73f61",
+    "type": "credit",
+    "provider": {
+      "name": "Discover",
+      "id": "discover_001",
+      "logo": "https://logos.com/discover.png"
+    },
+    "accountInfo": {
+      "name": "Discover it Cash Back",
+      "accountNumber": "****5820",
+      "routingNumber": "111000025",
+      "balance": 0,
+      "currency": "USD"
+    },
+    "connectionStatus": {
+      "isConnected": true,
+      "lastConnected": "2024-01-15T10:30:00.000Z",
+      "provider": "yodlee"
+    },
+    "institutionName": "Discover Bank",
+    "balanceSource": "manual",
+    "category": "primary_checking",
+    "isActive": true,
+    "createdAt": "2025-09-14T13:44:41.886Z",
+    "updatedAt": "2025-09-14T13:44:41.886Z",
+    "__v": 0
+  }
+]

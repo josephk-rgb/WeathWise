@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
-import { X, Upload, Camera, Calendar, DollarSign, Tag, Repeat } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Upload, Camera, Calendar, DollarSign, Tag, Repeat, CreditCard } from 'lucide-react';
 import { useStore } from '../../store/useStore';
+import { apiService } from '../../services/api';
 import Button from '../UI/Button';
 import Card from '../UI/Card';
 import { CURRENCIES, convertCurrency } from '../../utils/currency';
-import { apiService } from '../../services/api';
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -13,6 +13,8 @@ interface TransactionModalProps {
 
 const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose }) => {
   const { user, addTransaction, currency: baseCurrency } = useStore();
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [loadingAccounts, setLoadingAccounts] = useState(false);
   const [formData, setFormData] = useState({
     amount: '',
     description: '',
@@ -20,6 +22,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose }) 
     type: 'expense' as 'income' | 'expense',
     date: new Date().toISOString().split('T')[0],
     currency: baseCurrency,
+    accountId: '', // Add account selection
     isRecurring: false,
     recurringFrequency: 'monthly' as 'weekly' | 'monthly' | 'yearly',
     receiptFile: null as File | null,
@@ -30,6 +33,30 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose }) 
     'Bills & Utilities', 'Healthcare', 'Travel', 'Education',
     'Business', 'Personal Care', 'Gifts & Donations', 'Other'
   ];
+
+  // Load accounts when modal opens
+  useEffect(() => {
+    if (isOpen && user) {
+      loadAccounts();
+    }
+  }, [isOpen, user]);
+
+  const loadAccounts = async () => {
+    if (!user) return;
+    setLoadingAccounts(true);
+    try {
+      const accountsData = await apiService.getAccounts();
+      setAccounts(accountsData);
+      // Set default account if none selected
+      if (!formData.accountId && accountsData.length > 0) {
+        setFormData(prev => ({ ...prev, accountId: accountsData[0].id }));
+      }
+    } catch (error) {
+      console.error('Error loading accounts:', error);
+    } finally {
+      setLoadingAccounts(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,6 +70,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose }) 
       // Prepare transaction data for API (without id, as backend will generate it)
       const transactionData = {
         userId: user.id,
+        accountId: formData.accountId, // Include account selection
         amount: finalAmount,
         description: formData.description,
         category: formData.category,
@@ -73,6 +101,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose }) 
         type: 'expense',
         date: new Date().toISOString().split('T')[0],
         currency: baseCurrency,
+        accountId: accounts.length > 0 ? accounts[0].id : '', // Reset to first account
         isRecurring: false,
         recurringFrequency: 'monthly',
         receiptFile: null,
@@ -183,6 +212,32 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose }) 
                 </p>
               </div>
             )}
+
+            {/* Account Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Account
+              </label>
+              <div className="relative">
+                <CreditCard className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <select
+                  value={formData.accountId}
+                  onChange={(e) => setFormData({ ...formData, accountId: e.target.value })}
+                  className="input-field pl-10"
+                  required
+                  disabled={loadingAccounts}
+                >
+                  <option value="">
+                    {loadingAccounts ? 'Loading accounts...' : 'Select account'}
+                  </option>
+                  {accounts.map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.accountInfo?.name || account.name} - {account.type} ({account.accountInfo?.balance || account.balance ? `$${(account.accountInfo?.balance || account.balance).toLocaleString()}` : 'No balance'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
             {/* Description */}
             <div>

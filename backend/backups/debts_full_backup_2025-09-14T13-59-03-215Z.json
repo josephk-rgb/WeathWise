@@ -1,0 +1,516 @@
+[
+  {
+    "_id": "68bc08ed3a9422f780a94065",
+    "userId": "68b350bb9776631cdcd12356",
+    "name": "Federal Student Loan",
+    "totalAmount": 68876,
+    "remainingBalance": 51415.55,
+    "interestRate": 6.87,
+    "minimumPayment": 795.1,
+    "dueDate": "2025-10-24T10:11:57.595Z",
+    "type": "student_loan",
+    "currency": "USD",
+    "paymentHistory": [
+      {
+        "amount": 332.67,
+        "paymentDate": "2024-04-06T10:11:57.595Z",
+        "currency": "USD",
+        "_id": "68bc08ed3a9422f780a94066"
+      },
+      {
+        "amount": 1586.19,
+        "paymentDate": "2024-05-06T10:11:57.595Z",
+        "currency": "USD",
+        "_id": "68bc08ed3a9422f780a94067"
+      },
+      {
+        "amount": 795.1,
+        "paymentDate": "2024-06-06T10:11:57.595Z",
+        "currency": "USD",
+        "_id": "68bc08ed3a9422f780a94068"
+      },
+      {
+        "amount": 795.1,
+        "paymentDate": "2024-07-06T10:11:57.595Z",
+        "currency": "USD",
+        "_id": "68bc08ed3a9422f780a94069"
+      },
+      {
+        "amount": 795.1,
+        "paymentDate": "2024-08-06T10:11:57.595Z",
+        "currency": "USD",
+        "_id": "68bc08ed3a9422f780a9406a"
+      },
+      {
+        "amount": 795.1,
+        "paymentDate": "2024-09-06T10:11:57.595Z",
+        "currency": "USD",
+        "_id": "68bc08ed3a9422f780a9406b"
+      },
+      {
+        "amount": 795.1,
+        "paymentDate": "2024-10-06T10:11:57.595Z",
+        "currency": "USD",
+        "_id": "68bc08ed3a9422f780a9406c"
+      },
+      {
+        "amount": 1047.22,
+        "paymentDate": "2024-11-06T10:11:57.595Z",
+        "currency": "USD",
+        "_id": "68bc08ed3a9422f780a9406d"
+      },
+      {
+        "amount": 2369.13,
+        "paymentDate": "2024-12-06T10:11:57.595Z",
+        "currency": "USD",
+        "_id": "68bc08ed3a9422f780a9406e"
+      },
+      {
+        "amount": 795.1,
+        "paymentDate": "2025-01-06T10:11:57.595Z",
+        "currency": "USD",
+        "_id": "68bc08ed3a9422f780a9406f"
+      },
+      {
+        "amount": 2383.87,
+        "paymentDate": "2025-02-06T10:11:57.595Z",
+        "currency": "USD",
+        "_id": "68bc08ed3a9422f780a94070"
+      },
+      {
+        "amount": 201.71,
+        "paymentDate": "2025-03-06T10:11:57.595Z",
+        "currency": "USD",
+        "_id": "68bc08ed3a9422f780a94071"
+      },
+      {
+        "amount": 1749.66,
+        "paymentDate": "2025-04-06T10:11:57.595Z",
+        "currency": "USD",
+        "_id": "68bc08ed3a9422f780a94072"
+      },
+      {
+        "amount": 1257.68,
+        "paymentDate": "2025-05-06T10:11:57.595Z",
+        "currency": "USD",
+        "_id": "68bc08ed3a9422f780a94073"
+      },
+      {
+        "amount": 135.06,
+        "paymentDate": "2025-06-06T10:11:57.595Z",
+        "currency": "USD",
+        "_id": "68bc08ed3a9422f780a94074"
+      },
+      {
+        "amount": 795.1,
+        "paymentDate": "2025-07-06T10:11:57.595Z",
+        "currency": "USD",
+        "_id": "68bc08ed3a9422f780a94075"
+      },
+      {
+        "amount": 140.91,
+        "paymentDate": "2025-08-06T10:11:57.595Z",
+        "currency": "USD",
+        "_id": "68bc08ed3a9422f780a94076"
+      },
+      {
+        "amount": 690.65,
+        "paymentDate": "2025-09-06T10:11:57.595Z",
+        "currency": "USD",
+        "_id": "68bc08ed3a9422f780a94077"
+      }
+    ],
+    "isActive": true,
+    "isPaidOff": false,
+    "createdAt": "2025-09-06T10:11:57.599Z",
+    "updatedAt": "2025-09-06T10:11:57.599Z",
+    "__v": 0
+  },
+  {
+    "_id": "68bc08ed3a9422f780a94079",
+    "userId": "68b350bb9776631cdcd12356",
+    "name": "American Express Gold Card",
+    "totalAmount": 12196,
+    "remainingBalance": 10533.52,
+    "interestRate": 15.24,
+    "minimumPayment": 261.12,
+    "dueDate": "2025-10-14T10:11:57.849Z",
+    "type": "credit_card",
+    "currency": "USD",
+    "paymentHistory": [
+      {
+        "amount": 261.12,
+        "paymentDate": "2025-06-06T10:11:57.849Z",
+        "currency": "USD",
+        "_id": "68bc08ed3a9422f780a9407a"
+      },
+      {
+        "amount": 261.12,
+        "paymentDate": "2025-07-06T10:11:57.849Z",
+        "currency": "USD",
+        "_id": "68bc08ed3a9422f780a9407b"
+      },
+      {
+        "amount": 779.52,
+        "paymentDate": "2025-08-06T10:11:57.849Z",
+        "currency": "USD",
+        "_id": "68bc08ed3a9422f780a9407c"
+      },
+      {
+        "amount": 360.72,
+        "paymentDate": "2025-09-06T10:11:57.848Z",
+        "currency": "USD",
+        "_id": "68bc08ed3a9422f780a9407d"
+      }
+    ],
+    "isActive": true,
+    "isPaidOff": false,
+    "createdAt": "2025-09-06T10:11:57.850Z",
+    "updatedAt": "2025-09-06T10:11:57.850Z",
+    "__v": 0
+  },
+  {
+    "_id": "68bc08ee3a9422f780a9407f",
+    "userId": "68b350bb9776631cdcd12356",
+    "name": "Home Mortgage",
+    "totalAmount": 498477,
+    "remainingBalance": 446014.07999999996,
+    "interestRate": 3.1,
+    "minimumPayment": 2128.58,
+    "dueDate": "2025-10-10T10:11:58.107Z",
+    "type": "mortgage",
+    "currency": "USD",
+    "paymentHistory": [
+      {
+        "amount": 2128.58,
+        "paymentDate": "2023-12-06T10:11:58.107Z",
+        "currency": "USD",
+        "_id": "68bc08ee3a9422f780a94080"
+      },
+      {
+        "amount": 2128.58,
+        "paymentDate": "2024-01-06T10:11:58.107Z",
+        "currency": "USD",
+        "_id": "68bc08ee3a9422f780a94081"
+      },
+      {
+        "amount": 3828.38,
+        "paymentDate": "2024-02-06T10:11:58.107Z",
+        "currency": "USD",
+        "_id": "68bc08ee3a9422f780a94082"
+      },
+      {
+        "amount": 5015.05,
+        "paymentDate": "2024-03-06T10:11:58.107Z",
+        "currency": "USD",
+        "_id": "68bc08ee3a9422f780a94083"
+      },
+      {
+        "amount": 2128.58,
+        "paymentDate": "2024-04-06T10:11:58.107Z",
+        "currency": "USD",
+        "_id": "68bc08ee3a9422f780a94084"
+      },
+      {
+        "amount": 3060.91,
+        "paymentDate": "2024-05-06T10:11:58.107Z",
+        "currency": "USD",
+        "_id": "68bc08ee3a9422f780a94085"
+      },
+      {
+        "amount": 2484.16,
+        "paymentDate": "2024-06-06T10:11:58.107Z",
+        "currency": "USD",
+        "_id": "68bc08ee3a9422f780a94086"
+      },
+      {
+        "amount": 2128.58,
+        "paymentDate": "2024-07-06T10:11:58.107Z",
+        "currency": "USD",
+        "_id": "68bc08ee3a9422f780a94087"
+      },
+      {
+        "amount": 2128.58,
+        "paymentDate": "2024-08-06T10:11:58.107Z",
+        "currency": "USD",
+        "_id": "68bc08ee3a9422f780a94088"
+      },
+      {
+        "amount": 2128.58,
+        "paymentDate": "2024-09-06T10:11:58.107Z",
+        "currency": "USD",
+        "_id": "68bc08ee3a9422f780a94089"
+      },
+      {
+        "amount": 1133.54,
+        "paymentDate": "2024-10-06T10:11:58.107Z",
+        "currency": "USD",
+        "_id": "68bc08ee3a9422f780a9408a"
+      },
+      {
+        "amount": 2128.58,
+        "paymentDate": "2024-11-06T10:11:58.107Z",
+        "currency": "USD",
+        "_id": "68bc08ee3a9422f780a9408b"
+      },
+      {
+        "amount": 263.47,
+        "paymentDate": "2024-12-06T10:11:58.107Z",
+        "currency": "USD",
+        "_id": "68bc08ee3a9422f780a9408c"
+      },
+      {
+        "amount": 2128.58,
+        "paymentDate": "2025-01-06T10:11:58.107Z",
+        "currency": "USD",
+        "_id": "68bc08ee3a9422f780a9408d"
+      },
+      {
+        "amount": 2128.58,
+        "paymentDate": "2025-02-06T10:11:58.107Z",
+        "currency": "USD",
+        "_id": "68bc08ee3a9422f780a9408e"
+      },
+      {
+        "amount": 2128.58,
+        "paymentDate": "2025-03-06T10:11:58.107Z",
+        "currency": "USD",
+        "_id": "68bc08ee3a9422f780a9408f"
+      },
+      {
+        "amount": 3737.99,
+        "paymentDate": "2025-04-06T10:11:58.107Z",
+        "currency": "USD",
+        "_id": "68bc08ee3a9422f780a94090"
+      },
+      {
+        "amount": 2128.58,
+        "paymentDate": "2025-05-06T10:11:58.107Z",
+        "currency": "USD",
+        "_id": "68bc08ee3a9422f780a94091"
+      },
+      {
+        "amount": 2128.58,
+        "paymentDate": "2025-06-06T10:11:58.107Z",
+        "currency": "USD",
+        "_id": "68bc08ee3a9422f780a94092"
+      },
+      {
+        "amount": 2128.58,
+        "paymentDate": "2025-07-06T10:11:58.107Z",
+        "currency": "USD",
+        "_id": "68bc08ee3a9422f780a94093"
+      },
+      {
+        "amount": 2128.58,
+        "paymentDate": "2025-08-06T10:11:58.107Z",
+        "currency": "USD",
+        "_id": "68bc08ee3a9422f780a94094"
+      },
+      {
+        "amount": 3139.3,
+        "paymentDate": "2025-09-06T10:11:58.107Z",
+        "currency": "USD",
+        "_id": "68bc08ee3a9422f780a94095"
+      }
+    ],
+    "isActive": true,
+    "isPaidOff": false,
+    "createdAt": "2025-09-06T10:11:58.113Z",
+    "updatedAt": "2025-09-06T10:11:58.113Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c691861c037e7bc6ea776d",
+    "userId": "68c690e51c037e7bc6ea6491",
+    "name": "Federal Direct Student Loan",
+    "totalAmount": 35000,
+    "remainingBalance": 28500,
+    "interestRate": 4.99,
+    "minimumPayment": 280,
+    "dueDate": "2024-02-01T00:00:00.000Z",
+    "type": "student_loan",
+    "currency": "USD",
+    "originalAmount": 35000,
+    "isActive": true,
+    "isPaidOff": false,
+    "paymentHistory": [],
+    "createdAt": "2025-09-14T09:57:26.255Z",
+    "updatedAt": "2025-09-14T09:57:26.255Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c691861c037e7bc6ea776f",
+    "userId": "68c690e51c037e7bc6ea6491",
+    "name": "Discover it Cash Back",
+    "totalAmount": 800,
+    "remainingBalance": 800,
+    "interestRate": 22.99,
+    "minimumPayment": 120,
+    "dueDate": "2024-02-15T00:00:00.000Z",
+    "type": "credit_card",
+    "currency": "USD",
+    "originalAmount": 0,
+    "isActive": true,
+    "isPaidOff": false,
+    "paymentHistory": [],
+    "createdAt": "2025-09-14T09:57:26.490Z",
+    "updatedAt": "2025-09-14T09:57:26.490Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c2b9c15e1d8c421cd6b3",
+    "userId": "68c40c260f1312b22670f27f",
+    "name": "Federal Student Loan",
+    "totalAmount": 35000,
+    "remainingBalance": 0,
+    "interestRate": 4.5,
+    "minimumPayment": 0,
+    "dueDate": "2022-09-01T00:00:00.000Z",
+    "type": "student_loan",
+    "currency": "USD",
+    "originalAmount": 35000,
+    "isActive": false,
+    "isPaidOff": true,
+    "paymentHistory": [],
+    "createdAt": "2025-09-14T13:27:21.186Z",
+    "updatedAt": "2025-09-14T13:27:21.186Z",
+    "paidOffAt": "2025-09-14T13:27:21.186Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c2b9c15e1d8c421cd6b5",
+    "userId": "68c40c260f1312b22670f27f",
+    "name": "Chase Sapphire Preferred",
+    "totalAmount": 1200,
+    "remainingBalance": 1200,
+    "interestRate": 22.99,
+    "minimumPayment": 150,
+    "dueDate": "2024-02-15T00:00:00.000Z",
+    "type": "credit_card",
+    "currency": "USD",
+    "originalAmount": 0,
+    "isActive": true,
+    "isPaidOff": false,
+    "paymentHistory": [],
+    "createdAt": "2025-09-14T13:27:21.471Z",
+    "updatedAt": "2025-09-14T13:27:21.471Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c4e17faa745b735721dc",
+    "userId": "68c6c4da7faa745b73572173",
+    "name": "Federal Student Loan",
+    "totalAmount": 35000,
+    "remainingBalance": 0,
+    "interestRate": 4.5,
+    "minimumPayment": 0,
+    "dueDate": "2022-09-01T00:00:00.000Z",
+    "type": "student_loan",
+    "currency": "USD",
+    "originalAmount": 35000,
+    "isActive": false,
+    "isPaidOff": true,
+    "paymentHistory": [],
+    "createdAt": "2025-09-14T13:36:33.802Z",
+    "updatedAt": "2025-09-14T13:36:33.802Z",
+    "paidOffAt": "2025-09-14T13:36:33.802Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c4e27faa745b735721de",
+    "userId": "68c6c4da7faa745b73572173",
+    "name": "Chase Sapphire Preferred",
+    "totalAmount": 1200,
+    "remainingBalance": 1200,
+    "interestRate": 22.99,
+    "minimumPayment": 150,
+    "dueDate": "2024-02-15T00:00:00.000Z",
+    "type": "credit_card",
+    "currency": "USD",
+    "originalAmount": 0,
+    "isActive": true,
+    "isPaidOff": false,
+    "paymentHistory": [],
+    "createdAt": "2025-09-14T13:36:34.034Z",
+    "updatedAt": "2025-09-14T13:36:34.034Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c545c1902ea89d441387",
+    "userId": "68c6c53ec1902ea89d44131e",
+    "name": "Federal Student Loan",
+    "totalAmount": 35000,
+    "remainingBalance": 0,
+    "interestRate": 4.5,
+    "minimumPayment": 0,
+    "dueDate": "2022-09-01T00:00:00.000Z",
+    "type": "student_loan",
+    "currency": "USD",
+    "originalAmount": 35000,
+    "isActive": false,
+    "isPaidOff": true,
+    "paymentHistory": [],
+    "createdAt": "2025-09-14T13:38:13.831Z",
+    "updatedAt": "2025-09-14T13:38:13.831Z",
+    "paidOffAt": "2025-09-14T13:38:13.831Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c546c1902ea89d441389",
+    "userId": "68c6c53ec1902ea89d44131e",
+    "name": "Chase Sapphire Preferred",
+    "totalAmount": 1200,
+    "remainingBalance": 1200,
+    "interestRate": 22.99,
+    "minimumPayment": 150,
+    "dueDate": "2024-02-15T00:00:00.000Z",
+    "type": "credit_card",
+    "currency": "USD",
+    "originalAmount": 0,
+    "isActive": true,
+    "isPaidOff": false,
+    "paymentHistory": [],
+    "createdAt": "2025-09-14T13:38:14.065Z",
+    "updatedAt": "2025-09-14T13:38:14.065Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c6cac6f13b0d03f75321",
+    "userId": "68c6c61ec6f13b0d03f73f61",
+    "name": "Federal Direct Student Loan",
+    "totalAmount": 35000,
+    "remainingBalance": 28500,
+    "interestRate": 4.99,
+    "minimumPayment": 280,
+    "dueDate": "2024-02-01T00:00:00.000Z",
+    "type": "student_loan",
+    "currency": "USD",
+    "originalAmount": 35000,
+    "isActive": true,
+    "isPaidOff": false,
+    "paymentHistory": [],
+    "createdAt": "2025-09-14T13:44:42.832Z",
+    "updatedAt": "2025-09-14T13:44:42.832Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c6cbc6f13b0d03f75323",
+    "userId": "68c6c61ec6f13b0d03f73f61",
+    "name": "Discover it Cash Back",
+    "totalAmount": 800,
+    "remainingBalance": 800,
+    "interestRate": 22.99,
+    "minimumPayment": 120,
+    "dueDate": "2024-02-15T00:00:00.000Z",
+    "type": "credit_card",
+    "currency": "USD",
+    "originalAmount": 0,
+    "isActive": true,
+    "isPaidOff": false,
+    "paymentHistory": [],
+    "createdAt": "2025-09-14T13:44:43.066Z",
+    "updatedAt": "2025-09-14T13:44:43.066Z",
+    "__v": 0
+  }
+]

@@ -3,7 +3,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface INetWorthMilestone extends Document {
   userId: mongoose.Types.ObjectId;
   date: Date;
-  trigger: 'transaction' | 'investment_update' | 'manual_update' | 'monthly_snapshot' | 'account_balance_change' | 'trend_calculation';
+  trigger: 'transaction' | 'investment_update' | 'manual_update' | 'monthly_snapshot' | 'daily_snapshot' | 'account_balance_change' | 'trend_calculation';
   netWorth: number;
   breakdown: {
     liquidAssets: number;
@@ -33,7 +33,7 @@ const NetWorthMilestoneSchema = new Schema<INetWorthMilestone>({
   },
   trigger: {
     type: String,
-    enum: ['transaction', 'investment_update', 'manual_update', 'monthly_snapshot', 'account_balance_change', 'trend_calculation'],
+    enum: ['transaction', 'investment_update', 'manual_update', 'monthly_snapshot', 'daily_snapshot', 'account_balance_change', 'trend_calculation'],
     required: true
   },
   netWorth: {

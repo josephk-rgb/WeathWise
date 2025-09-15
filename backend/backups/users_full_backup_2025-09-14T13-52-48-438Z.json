@@ -1,0 +1,302 @@
+[
+  {
+    "_id": "68b350bb9776631cdcd12356",
+    "auth0Id": "auth0|68b2fe4e582fbcc3b2e32ffe",
+    "email": "user-68b2fe4e582fbcc3b2e32ffe@temp.placeholder.com",
+    "profile": {
+      "firstName": "Joseph",
+      "lastName": "K",
+      "address": {
+        "street": "",
+        "city": "",
+        "state": "",
+        "zipCode": "",
+        "country": "US"
+      },
+      "dateOfBirth": "1985-06-14T21:00:00.000Z",
+      "phone": "+1-555-0123"
+    },
+    "preferences": {
+      "notifications": {
+        "email": true,
+        "push": true,
+        "sms": false,
+        "trading": true,
+        "news": true
+      },
+      "currency": "USD",
+      "timezone": "America/New_York",
+      "language": "en",
+      "theme": "auto"
+    },
+    "riskProfile": {
+      "level": "moderate",
+      "questionnaire": {
+        "age": 38,
+        "experience": "intermediate",
+        "timeline": "long_term",
+        "riskTolerance": 6,
+        "completedAt": "2025-09-06T10:08:15.196Z"
+      }
+    },
+    "subscription": {
+      "plan": "premium",
+      "features": [
+        "advanced_analytics",
+        "investment_tracking",
+        "budget_analysis",
+        "goal_management",
+        "debt_optimization",
+        "ai_recommendations"
+      ],
+      "startDate": "2025-08-30T19:27:55.308Z"
+    },
+    "encryption": {
+      "algorithm": "AES-256-GCM",
+      "version": 1,
+      "keyId": "c0b96bcc-8c47-4559-8b25-5a9e23845278"
+    },
+    "metadata": {
+      "onboardingCompleted": true,
+      "ipAddress": "::1",
+      "lastLogin": "2025-09-12T12:03:15.264Z",
+      "loginCount": 2019,
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+    },
+    "createdAt": "2025-08-30T19:27:55.314Z",
+    "updatedAt": "2025-09-12T12:03:15.264Z",
+    "__v": 0,
+    "role": "admin"
+  },
+  {
+    "_id": "68bbf980b1791cdd41f41795",
+    "auth0Id": "auth0|1757149568637",
+    "email": "josephkkangles@gmail.com",
+    "role": "admin",
+    "profile": {
+      "firstName": "Admin",
+      "lastName": "User",
+      "address": {
+        "country": "US"
+      },
+      "dateOfBirth": "1985-06-14T21:00:00.000Z",
+      "phone": "+1-555-0123"
+    },
+    "preferences": {
+      "notifications": {
+        "email": true,
+        "push": true,
+        "sms": false,
+        "trading": true,
+        "news": true
+      },
+      "currency": "USD",
+      "timezone": "America/New_York",
+      "language": "en",
+      "theme": "auto"
+    },
+    "riskProfile": {
+      "level": "moderate",
+      "questionnaire": {
+        "age": 38,
+        "experience": "intermediate",
+        "timeline": "long_term",
+        "riskTolerance": 6,
+        "completedAt": "2025-09-06T09:06:10.648Z"
+      }
+    },
+    "subscription": {
+      "plan": "premium",
+      "features": [
+        "advanced_analytics",
+        "investment_tracking",
+        "budget_analysis",
+        "goal_management",
+        "debt_optimization",
+        "ai_recommendations"
+      ],
+      "startDate": "2025-09-06T09:06:08.641Z"
+    },
+    "encryption": {
+      "algorithm": "AES-256-GCM",
+      "version": 1,
+      "keyId": "cdeb0e96-b501-42e2-89fe-91dc2062694b"
+    },
+    "metadata": {
+      "loginCount": 0,
+      "onboardingCompleted": false,
+      "lastLogin": "2025-09-06T09:06:08.641Z"
+    },
+    "createdAt": "2025-09-06T09:06:08.645Z",
+    "updatedAt": "2025-09-06T09:06:10.649Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c3f0bae6e6c813fe9b592e",
+    "auth0Id": "auth0|68c3efffd51545799c76a237",
+    "email": "temp-68c3efffd51545799c76a237@temp.wealthwise.com",
+    "role": "user",
+    "profile": {
+      "firstName": "FirstName",
+      "lastName": "LastName",
+      "address": {
+        "country": "US"
+      }
+    },
+    "preferences": {
+      "notifications": {
+        "email": true,
+        "push": true,
+        "sms": false,
+        "trading": true,
+        "news": true
+      },
+      "currency": "USD",
+      "timezone": "America/New_York",
+      "language": "en",
+      "theme": "auto"
+    },
+    "riskProfile": {
+      "level": "moderate"
+    },
+    "subscription": {
+      "plan": "free",
+      "features": [],
+      "startDate": "2025-09-12T10:06:50.196Z"
+    },
+    "encryption": {
+      "algorithm": "AES-256-GCM",
+      "version": 1,
+      "keyId": "ab978916-bb4b-4ede-a2f1-31f9a91a590c"
+    },
+    "metadata": {
+      "lastLogin": "2025-09-12T10:43:26.746Z",
+      "loginCount": 86,
+      "ipAddress": "::1",
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+      "onboardingCompleted": false,
+      "profileNeedsCompletion": true
+    },
+    "createdAt": "2025-09-12T10:06:50.203Z",
+    "updatedAt": "2025-09-12T10:43:26.746Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c3f133e6e6c813fe9b59cb",
+    "auth0Id": "auth0|68c3f12ccbfc8e635b33ef47",
+    "email": "testemail@test.com",
+    "role": "user",
+    "profile": {
+      "firstName": "Joseph",
+      "lastName": "K",
+      "address": {
+        "street": "",
+        "city": "",
+        "state": "",
+        "zipCode": "",
+        "country": "US"
+      }
+    },
+    "preferences": {
+      "notifications": {
+        "email": true,
+        "push": true,
+        "sms": false,
+        "trading": true,
+        "news": true
+      },
+      "currency": "USD",
+      "timezone": "America/New_York",
+      "language": "en",
+      "theme": "auto"
+    },
+    "riskProfile": {
+      "level": "moderate"
+    },
+    "subscription": {
+      "plan": "free",
+      "features": [],
+      "startDate": "2025-09-12T10:08:51.930Z"
+    },
+    "encryption": {
+      "algorithm": "AES-256-GCM",
+      "version": 1,
+      "keyId": "d782d6ad-c08d-458d-93e8-cf3ee763f0fa"
+    },
+    "metadata": {
+      "onboardingCompleted": true,
+      "ipAddress": "::1",
+      "lastLogin": "2025-09-12T12:02:15.250Z",
+      "loginCount": 10,
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+    },
+    "createdAt": "2025-09-12T10:08:51.940Z",
+    "updatedAt": "2025-09-12T12:02:15.251Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c40c260f1312b22670f27f",
+    "auth0Id": "auth0|68c40c21d51545799c76ad71",
+    "email": "test@tpp1235.com",
+    "role": "admin",
+    "profile": {
+      "firstName": "Jane",
+      "lastName": "K",
+      "address": {
+        "street": "",
+        "city": "",
+        "state": "",
+        "zipCode": "",
+        "country": "US"
+      }
+    },
+    "preferences": {
+      "currency": "USD",
+      "timezone": "America/Los_Angeles",
+      "language": "en",
+      "theme": "dark",
+      "notifications": {
+        "email": true,
+        "push": true,
+        "sms": false,
+        "trading": true,
+        "news": true
+      }
+    },
+    "riskProfile": {
+      "level": "aggressive",
+      "questionnaire": {
+        "age": 28,
+        "experience": "intermediate",
+        "timeline": "long_term",
+        "riskTolerance": 8,
+        "completedAt": "2022-01-15T00:00:00.000Z"
+      }
+    },
+    "subscription": {
+      "plan": "premium",
+      "startDate": "2022-01-01T00:00:00.000Z",
+      "features": [
+        "advanced_analytics",
+        "priority_support",
+        "custom_reports"
+      ]
+    },
+    "encryption": {
+      "algorithm": "AES-256-GCM",
+      "version": 1,
+      "keyId": "84f208da-8482-495c-a06a-cbf87bfcb2cb"
+    },
+    "metadata": {
+      "lastLogin": "2025-09-14T13:52:47.968Z",
+      "loginCount": 648,
+      "ipAddress": "::1",
+      "userAgent": "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36",
+      "onboardingCompleted": true,
+      "profileNeedsCompletion": true
+    },
+    "createdAt": "2025-09-12T12:03:51.192Z",
+    "updatedAt": "2025-09-14T13:52:47.968Z",
+    "__v": 0
+  }
+]
