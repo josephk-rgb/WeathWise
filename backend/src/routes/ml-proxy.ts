@@ -4,6 +4,33 @@ import axios from 'axios';
 
 const router = Router();
 
+// In-memory chat store (temporary until DB-backed)
+// Structure: userId -> sessionId -> { title, createdAt, updatedAt, messages: [] }
+const chatStore: Map<string, Map<string, {
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  messages: Array<{ id: string; message_type: 'user' | 'ai'; content: string; timestamp: string; metadata?: any }>;
+}>> = new Map();
+
+function getUserSessions(userId: string) {
+  if (!chatStore.has(userId)) chatStore.set(userId, new Map());
+  return chatStore.get(userId)!;
+}
+
+function ensureSession(userId: string, sessionId: string, title?: string) {
+  const sessions = getUserSessions(userId);
+  if (!sessions.has(sessionId)) {
+    sessions.set(sessionId, {
+      title: title || 'New Chat',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      messages: []
+    });
+  }
+  return sessions.get(sessionId)!;
+}
+
 // Type guard to check if user is authenticated
 function isAuthenticatedUser(user: any): user is { id: string; email: string; auth0Id: string } {
   return user && typeof user.id === 'string' && typeof user.email === 'string' && typeof user.auth0Id === 'string';
@@ -17,7 +44,7 @@ router.post('/chat', authMiddleware, async (req: Request, res: Response): Promis
       return;
     }
 
-    const { message, model = "llama3.1:8b", include_financial_data = true } = req.body;
+    const { message, model = "llama3.1:8b", include_financial_data = true, session_id, title } = req.body;
     
     if (!message) {
       res.status(400).json({ error: 'Message is required' });
@@ -45,7 +72,33 @@ router.post('/chat', authMiddleware, async (req: Request, res: Response): Promis
       timeout: 60000
     });
 
-    res.json(mlResponse.data);
+    const responseData = mlResponse.data;
+
+    // Persist to in-memory store
+    const sid = session_id || `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const session = ensureSession(req.user.id, sid, title);
+
+    // Append user message
+    session.messages.push({
+      id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      message_type: 'user',
+      content: message,
+      timestamp: new Date().toISOString()
+    });
+
+    // Append AI message
+    const aiContent = responseData?.response || responseData?.data?.response || '';
+    if (aiContent) {
+      session.messages.push({
+        id: `msg_${Date.now()+1}_${Math.random().toString(36).substr(2, 5)}`,
+        message_type: 'ai',
+        content: aiContent,
+        timestamp: new Date().toISOString()
+      });
+    }
+    session.updatedAt = new Date().toISOString();
+
+    res.json({ ...responseData, session_id: sid });
 
   } catch (error: any) {
     console.error('ML proxy error:', error.message);
@@ -79,17 +132,23 @@ router.get('/chat/history/:sessionId', authMiddleware, async (req: Request, res:
 
     const { sessionId } = req.params;
     const { limit = 50 } = req.query;
-    
+
+    // First, serve from in-memory store if present
+    const sessions = getUserSessions(req.user.id);
+    const session = sessions.get(sessionId);
+    if (session) {
+      const messages = session.messages.slice(-(parseInt(limit as string) || 50));
+      res.json({ success: true, session_id: sessionId, messages });
+      return;
+    }
+
+    // Otherwise, try ML service history
     const mlServiceUrl = process.env.ML_SERVICES_URL || 'http://localhost:8000';
     const authHeader = req.headers.authorization;
-    
     const mlResponse = await axios.get(`${mlServiceUrl}/ai/chat/history/${sessionId}?user_id=${req.user.id}&limit=${limit}`, {
-      headers: {
-        'Authorization': authHeader,
-      },
+      headers: { 'Authorization': authHeader },
       timeout: 10000
     });
-
     res.json(mlResponse.data);
   } catch (error: any) {
     console.error('Error fetching conversation history:', error);
@@ -110,16 +169,20 @@ router.get('/chat/sessions', authMiddleware, async (req: Request, res: Response)
     }
 
     const { limit = 20, offset = 0 } = req.query;
-    
-    // For now, we'll return a mock response since the ML services don't have a sessions endpoint
-    // In a real implementation, this would query the database for all sessions for the user
-    res.json({
-      success: true,
-      sessions: [],
-      total: 0,
-      limit: parseInt(limit as string),
-      offset: parseInt(offset as string)
-    });
+    const sessions = Array.from(getUserSessions(req.user.id).entries()).map(([id, s]) => ({
+      id,
+      title: s.title,
+      lastMessage: s.messages.length ? s.messages[s.messages.length - 1].content : '',
+      messageCount: s.messages.length,
+      createdAt: s.createdAt,
+      updatedAt: s.updatedAt
+    }));
+    const start = parseInt(offset as string) || 0;
+    const end = start + (parseInt(limit as string) || 20);
+    const page = sessions
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .slice(start, end);
+    res.json({ success: true, sessions: page, total: sessions.length, limit: end - start, offset: start });
   } catch (error: any) {
     console.error('Error fetching chat sessions:', error);
     res.status(500).json({ error: 'Failed to fetch chat sessions' });
@@ -138,7 +201,11 @@ router.post('/chat/sessions', authMiddleware, async (req: Request, res: Response
     
     // Generate a new session ID
     const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+    // Create in-memory session so it shows up in listings
+    const session = ensureSession(req.user.id, sessionId, title);
+    session.title = title || session.title;
+    session.updatedAt = new Date().toISOString();
+
     res.json({
       success: true,
       session_id: sessionId,
@@ -274,14 +341,21 @@ router.get('/chat/sessions/:sessionId/export', authMiddleware, async (req: Reque
     const mlServiceUrl = process.env.ML_SERVICES_URL || 'http://localhost:8000';
     const authHeader = req.headers.authorization;
     
-    const historyResponse = await axios.get(`${mlServiceUrl}/ai/chat/history/${sessionId}?user_id=${req.user.id}&limit=1000`, {
-      headers: {
-        'Authorization': authHeader,
-      },
-      timeout: 10000
-    });
-
-    const history = historyResponse.data;
+    let history: any = { success: true, messages: [] };
+    try {
+      const historyResponse = await axios.get(`${mlServiceUrl}/ai/chat/history/${sessionId}?user_id=${req.user.id}&limit=1000`, {
+        headers: {
+          'Authorization': authHeader,
+        },
+        timeout: 10000
+      });
+      history = historyResponse.data;
+    } catch (err: any) {
+      if (err?.response?.status !== 404) {
+        throw err;
+      }
+      // 404 -> keep empty history fallback
+    }
     
     if (format === 'json') {
       res.setHeader('Content-Type', 'application/json');

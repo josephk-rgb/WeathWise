@@ -3,8 +3,6 @@ import {
   History, 
   Search, 
   Calendar, 
-  SortAsc, 
-  SortDesc, 
   MessageSquare, 
   Clock, 
   Trash2, 
@@ -13,7 +11,7 @@ import {
   Filter,
   X
 } from 'lucide-react';
-import { useStore, ChatSession, ChatHistoryFilters } from '../../store/useStore';
+import { useStore, ChatSession } from '../../store/useStore';
 import { apiService } from '../../services/api';
 import { ChatSessionManager } from '../../utils/chatSessionManager';
 import Button from '../UI/Button';
@@ -56,14 +54,16 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
   const loadChatSessions = async () => {
     setIsLoading(true);
     try {
-      const sessions = ChatSessionManager.getSessions();
-      const chatSessions: ChatSession[] = sessions.map(session => ({
+      const server = await apiService.getChatSessions(100, 0);
+      const sessions = Array.isArray(server.sessions) ? server.sessions : [];
+      console.log('[ChatHistory] Loaded server sessions:', sessions.length);
+      const chatSessions: ChatSession[] = sessions.map((session: any) => ({
         id: session.id,
         title: session.title,
-        lastMessage: session.lastMessage,
-        messageCount: session.messageCount,
-        createdAt: new Date(session.createdAt),
-        updatedAt: new Date(session.updatedAt),
+        lastMessage: session.lastMessage || '',
+        messageCount: session.messageCount || 0,
+        createdAt: new Date(session.createdAt || session.created_at || Date.now()),
+        updatedAt: new Date(session.updatedAt || session.updated_at || Date.now()),
         isActive: session.id === currentSessionId
       }));
       setChatSessions(chatSessions);
@@ -271,14 +271,16 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
         ) : (
           <div className="p-2 space-y-2">
             {filteredSessions.map((session) => (
+              <div key={session.id} onClick={() => {
+                console.log('[ChatHistory] Clicked session:', session.id);
+                onSelectSession(session.id);
+              }}>
               <Card
-                key={session.id}
                 className={`p-3 cursor-pointer transition-all duration-200 hover:shadow-md ${
                   session.isActive 
                     ? 'ring-2 ring-violet-500 bg-violet-50 dark:bg-violet-900/20' 
                     : 'hover:bg-gray-50 dark:hover:bg-gray-800'
                 }`}
-                onClick={() => onSelectSession(session.id)}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
@@ -337,6 +339,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
                   </div>
                 </div>
               </Card>
+              </div>
             ))}
           </div>
         )}

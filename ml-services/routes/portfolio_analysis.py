@@ -32,32 +32,8 @@ async def optimize_portfolio(req: OptimizeRequest, authorization: Optional[str] 
         symbols = [s.strip().upper() for s in req.symbols if isinstance(s, str) and s.strip()]
         if not symbols:
             raise HTTPException(status_code=400, detail="symbols required")
-        # Validate symbols via backend market data to filter out bad tickers
-        backend_url = os.getenv("BACKEND_API_URL", "http://localhost:3001/api")
-        headers = {}
-        if authorization:
-            headers["Authorization"] = authorization
-        try:
-            async with httpx.AsyncClient(timeout=10) as client:
-                # POST /market/yahoo-data expects body: { symbols: string[] }
-                resp = await client.post(f"{backend_url}/market/yahoo-data", json={"symbols": symbols}, headers=headers)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    valid = []
-                    # Accept both {data:[{symbol:...}]} and direct array
-                    rows = data.get("data") if isinstance(data, dict) else data
-                    if isinstance(rows, list):
-                        seen = set()
-                        for r in rows:
-                            sym = (r.get("symbol") if isinstance(r, dict) else None)
-                            if sym and sym not in seen:
-                                seen.add(sym)
-                                valid.append(sym)
-                    if valid:
-                        symbols = [s for s in symbols if s in valid]
-        except Exception:
-            # If backend validation fails, proceed with original symbols
-            pass
+        # Temporarily bypass backend validation (/market/yahoo-data) to avoid 404s
+        # Keep original symbols list as-is.
 
         if len(symbols) < 2:
             raise HTTPException(status_code=400, detail="need at least two valid symbols for optimization")

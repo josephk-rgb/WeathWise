@@ -788,16 +788,27 @@ class ApiService {
 
   // Enhanced Yahoo Finance Market Data Methods
   async getYahooMarketData(symbols: string[]): Promise<MarketData[]> {
-    const response = await this.makeRequest('/market/yahoo-data', {
-      method: 'POST',
-      body: JSON.stringify({ symbols }),
-    });
-    return response.data || response;
+    // Temporarily disabled: backend endpoint /market/yahoo-data not available
+    console.warn('getYahooMarketData is disabled. Returning empty array.');
+    return [];
   }
 
   async getYahooQuote(symbol: string): Promise<MarketData> {
-  const response = await this.makeRequest(`/market/data/${symbol}`);
-    return response.data || response;
+    // Temporarily disabled: rely on standard market data or return minimal stub
+    console.warn('getYahooQuote is disabled. Returning stub.');
+    return {
+      symbol,
+      name: symbol,
+      currentPrice: 0,
+      change: 0,
+      changePercent: 0,
+      volume: 0,
+      high: 0,
+      low: 0,
+      open: 0,
+      previousClose: 0,
+      lastUpdated: new Date()
+    } as unknown as MarketData;
   }
 
   async getMarketSummary(): Promise<MarketData[]> {
@@ -931,7 +942,7 @@ class ApiService {
   }
 
   // NEW: ML-powered chat with personalized financial context via backend proxy
-  async sendMLChatMessage(message: string, model: string = "llama3.1:8b", includeFinancialData: boolean = true): Promise<any> {
+  async sendMLChatMessage(message: string, model: string = "llama3.1:8b", includeFinancialData: boolean = true, sessionId?: string, title?: string): Promise<any> {
     console.log('🔧 [DEBUG] sendMLChatMessage called');
     console.log('🔧 [DEBUG] Base URL:', this.baseUrl);
     console.log('🔧 [DEBUG] Full URL will be:', `${this.baseUrl}/ml/chat`);
@@ -942,7 +953,9 @@ class ApiService {
       body: JSON.stringify({ 
         message, 
         model,
-        include_financial_data: includeFinancialData
+        include_financial_data: includeFinancialData,
+        session_id: sessionId,
+        title
       }),
     });
     

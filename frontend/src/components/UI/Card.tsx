@@ -6,13 +6,15 @@ interface CardProps {
   className?: string;
   padding?: 'sm' | 'md' | 'lg';
   hover?: boolean;
+  onClick?: () => void;
 }
 
 const Card: React.FC<CardProps> = ({ 
   children, 
   className, 
   padding = 'md',
-  hover = false 
+  hover = false,
+  onClick
 }) => {
   const paddingClasses = {
     sm: 'p-4',
@@ -28,6 +30,7 @@ const Card: React.FC<CardProps> = ({
         hover && 'hover:shadow-md transition-shadow duration-200',
         className
       )}
+      onClick={onClick}
     >
       {children}
     </div>

@@ -12,6 +12,22 @@ export interface ChatSessionData {
 
 export class ChatSessionManager {
   private static readonly STORAGE_KEY = 'chatSessions';
+  private static readonly MESSAGES_STORAGE_KEY = 'chatSessionMessages';
+  private static readonly DEFAULT_TITLE = 'New Chat';
+
+  // Create a human-friendly title from the first user message
+  private static generateTitleFromMessage(message: string): string {
+    if (!message) return this.DEFAULT_TITLE;
+    // Remove line breaks and excessive whitespace
+    const singleLine = message.replace(/\s+/g, ' ').trim();
+    // Strip leading punctuation and markdown symbols
+    const cleaned = singleLine.replace(/^[#>*\-\s]+/, '');
+    // Limit to 48 chars and add ellipsis if truncated
+    const maxLen = 48;
+    const base = cleaned.length > maxLen ? cleaned.slice(0, maxLen).trim() + '…' : cleaned;
+    // Capitalize first character
+    return base.charAt(0).toUpperCase() + base.slice(1);
+  }
 
   // Get all sessions from localStorage
   static getSessions(): ChatSessionData[] {
@@ -34,13 +50,13 @@ export class ChatSessionManager {
   }
 
   // Create a new session
-  static createSession(title?: string): ChatSessionData {
-    const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  static createSession(title?: string, providedId?: string): ChatSessionData {
+    const sessionId = providedId || `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const now = new Date().toISOString();
     
     const newSession: ChatSessionData = {
       id: sessionId,
-      title: title || 'New Chat',
+      title: title || this.DEFAULT_TITLE,
       lastMessage: '',
       messageCount: 0,
       createdAt: now,
@@ -69,6 +85,38 @@ export class ChatSessionManager {
     }
   }
 
+  // ===== Message persistence per session =====
+  private static getAllSessionMessages(): Record<string, any[]> {
+    try {
+      const stored = localStorage.getItem(this.MESSAGES_STORAGE_KEY);
+      return stored ? JSON.parse(stored) : {};
+    } catch (error) {
+      console.error('Failed to get session messages from localStorage:', error);
+      return {};
+    }
+  }
+
+  private static saveAllSessionMessages(allMessages: Record<string, any[]>): void {
+    try {
+      localStorage.setItem(this.MESSAGES_STORAGE_KEY, JSON.stringify(allMessages));
+    } catch (error) {
+      console.error('Failed to save session messages to localStorage:', error);
+    }
+  }
+
+  static appendMessage(sessionId: string, message: any): void {
+    const all = this.getAllSessionMessages();
+    const list = Array.isArray(all[sessionId]) ? all[sessionId] : [];
+    list.push(message);
+    all[sessionId] = list;
+    this.saveAllSessionMessages(all);
+  }
+
+  static getMessages(sessionId: string): any[] {
+    const all = this.getAllSessionMessages();
+    return Array.isArray(all[sessionId]) ? all[sessionId] : [];
+  }
+
   // Delete a session
   static deleteSession(sessionId: string): void {
     const sessions = this.getSessions();
@@ -82,10 +130,16 @@ export class ChatSessionManager {
     const sessionIndex = sessions.findIndex(s => s.id === sessionId);
     
     if (sessionIndex !== -1) {
+      const existing = sessions[sessionIndex];
+      const wasEmpty = existing.messageCount === 0;
+      const shouldNameFromFirstUserMsg = wasEmpty && isUser && (!existing.title || existing.title === this.DEFAULT_TITLE);
+      const newTitle = shouldNameFromFirstUserMsg ? this.generateTitleFromMessage(message) : existing.title;
+
       sessions[sessionIndex] = {
-        ...sessions[sessionIndex],
+        ...existing,
+        title: newTitle,
         lastMessage: message,
-        messageCount: sessions[sessionIndex].messageCount + 1,
+        messageCount: existing.messageCount + 1,
         updatedAt: new Date().toISOString()
       };
       this.saveSessions(sessions);

@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 from typing import Dict, List, Tuple, Optional
+import pathlib
+import joblib
 from datetime import datetime, timedelta
 import httpx
 import os
@@ -120,6 +122,17 @@ class MarketSentimentAnalyzer:
         self.model = RandomForestClassifier(n_estimators=150, random_state=42)
         self.is_trained = False
         self.last_metrics: Dict = {}
+        # Persistence paths
+        base_dir = pathlib.Path(__file__).resolve().parent.parent / "models"
+        self.models_dir = base_dir
+        self.model_file = base_dir / "sentiment_model.joblib"
+        self.scaler_file = base_dir / "sentiment_scaler.joblib"
+        self.meta_file = base_dir / "sentiment_meta.joblib"
+        try:
+            self._load_if_available()
+        except Exception:
+            # Ignore load errors; will require train
+            pass
 
     def train_model(self, symbols: List[str], authorization: Optional[str] = None) -> Dict:
         X_parts: List[pd.DataFrame] = []
@@ -180,6 +193,11 @@ class MarketSentimentAnalyzer:
             'test_samples': int(len(X_test)),
             'trained_at': datetime.utcnow().isoformat()
         }
+        # Persist trained artifacts
+        try:
+            self._persist_artifacts()
+        except Exception:
+            pass
         return self.last_metrics
 
     def predict_sentiment(self, symbol: str, authorization: Optional[str] = None) -> Dict:
@@ -219,6 +237,24 @@ class MarketSentimentAnalyzer:
             'timestamp': datetime.utcnow().isoformat(),
             'modelVersion': 'rf-tech-1'
         }
+
+    def _persist_artifacts(self) -> None:
+        self.models_dir.mkdir(parents=True, exist_ok=True)
+        joblib.dump(self.model, self.model_file)
+        joblib.dump(self.scaler, self.scaler_file)
+        joblib.dump(self.last_metrics, self.meta_file)
+
+    def _load_if_available(self) -> None:
+        if self.model_file.exists() and self.scaler_file.exists():
+            model = joblib.load(self.model_file)
+            scaler = joblib.load(self.scaler_file)
+            meta = joblib.load(self.meta_file) if self.meta_file.exists() else {}
+            # Basic sanity checks
+            if hasattr(model, 'predict') and hasattr(scaler, 'transform'):
+                self.model = model
+                self.scaler = scaler
+                self.last_metrics = meta or {}
+                self.is_trained = True
 
 
 # Global singleton

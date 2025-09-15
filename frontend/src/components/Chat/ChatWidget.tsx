@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Bot, User, Image, History } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { apiService } from '../../services/api';
-import { ChatSessionManager } from '../../utils/chatSessionManager';
+// Server-backed sessions only
 import Button from '../UI/Button';
 import ChatHistory from './ChatHistory';
 
@@ -14,7 +14,8 @@ const ChatWidget: React.FC = () => {
     addChatMessage,
     setChatMessages,
     currentSessionId,
-    setCurrentSessionId
+    setCurrentSessionId,
+    setChatSessions
   } = useStore();
   const [message, setMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -35,14 +36,8 @@ const ChatWidget: React.FC = () => {
   const handleSendMessage = async () => {
     if (!message.trim()) return;
 
-    // Generate session ID if none exists
+    // Use existing session id or let server create on first send
     let sessionId = currentSession;
-    if (!sessionId) {
-      const newSession = ChatSessionManager.createSession();
-      sessionId = newSession.id;
-      setCurrentSession(sessionId);
-      setCurrentSessionId(sessionId);
-    }
 
     const userMessage = {
       id: Date.now().toString(),
@@ -53,9 +48,7 @@ const ChatWidget: React.FC = () => {
     };
 
     addChatMessage(userMessage);
-    
-    // Update session with user message
-    ChatSessionManager.updateSessionWithMessage(sessionId, message, true);
+    // Server-backed: no local persistence
     
     setMessage('');
     setSelectedImage(null);
@@ -63,7 +56,28 @@ const ChatWidget: React.FC = () => {
 
     try {
       // Use the new ML proxy endpoint for personalized responses
-      const response = await apiService.sendMLChatMessage(message, "llama3.1:8b", true);
+      const response = await apiService.sendMLChatMessage(message, "llama3.1:8b", true, sessionId || undefined, undefined);
+      if (!sessionId && response?.session_id) {
+        sessionId = response.session_id;
+        setCurrentSession(sessionId);
+        setCurrentSessionId(sessionId);
+        // Refresh sessions list
+        try {
+          const server = await apiService.getChatSessions(100, 0);
+          const sessions = Array.isArray(server.sessions) ? server.sessions : [];
+          setChatSessions(sessions.map((s: any) => ({
+            id: s.id,
+            title: s.title,
+            lastMessage: s.lastMessage || '',
+            messageCount: s.messageCount || 0,
+            createdAt: new Date(s.createdAt || s.created_at || Date.now()),
+            updatedAt: new Date(s.updatedAt || s.updated_at || Date.now()),
+            isActive: s.id === sessionId
+          })));
+        } catch (e) {
+          console.error('Failed to refresh sessions after first send:', e);
+        }
+      }
       
       const aiMessage = {
         id: (Date.now() + 1).toString(),
@@ -72,9 +86,7 @@ const ChatWidget: React.FC = () => {
         timestamp: new Date(),
       };
       addChatMessage(aiMessage);
-      
-      // Update session with AI response
-      ChatSessionManager.updateSessionWithMessage(sessionId, aiMessage.content, false);
+      // Server persists messages
     } catch (error) {
       console.error('Error sending message:', error);
     } finally {
@@ -84,33 +96,72 @@ const ChatWidget: React.FC = () => {
 
   const handleSelectSession = async (sessionId: string) => {
     try {
+      console.log('[ChatWidget] Selecting session:', sessionId);
       setCurrentSession(sessionId);
       setCurrentSessionId(sessionId);
       setShowHistory(false);
       
-      // Load messages for this session
-      const history = await apiService.getMLChatHistory(sessionId);
-      if (history && history.messages) {
-        const messages = history.messages.map((msg: any) => ({
-          id: msg.id,
-          content: msg.content,
-          sender: msg.message_type === 'user' ? 'user' : 'ai',
-          timestamp: new Date(msg.timestamp),
-          imageUrl: msg.metadata?.imageUrl
-        }));
-        setChatMessages(messages);
+      // Load messages from backend only
+      setChatMessages([]);
+      try {
+        console.log('[ChatWidget] Fetching backend history for session:', sessionId);
+        const history = await apiService.getMLChatHistory(sessionId);
+        console.log('[ChatWidget] Backend history response:', history);
+        if (history && Array.isArray(history.messages) && history.messages.length > 0) {
+          const messages = history.messages.map((msg: any) => ({
+            id: msg.id,
+            content: msg.content,
+            sender: msg.message_type === 'user' ? 'user' : 'ai',
+            timestamp: new Date(msg.timestamp),
+            imageUrl: msg.metadata?.imageUrl
+          }));
+          setChatMessages(messages);
+        }
+      } catch (_) {
+        // ignore and fall back to local
       }
+      // If no backend data, keep empty
     } catch (error) {
       console.error('Failed to load session:', error);
+      setChatMessages([]);
     }
   };
 
-  const handleCreateNewSession = () => {
-    const newSession = ChatSessionManager.createSession();
-    setCurrentSession(newSession.id);
-    setCurrentSessionId(newSession.id);
-    setChatMessages([]);
-    setShowHistory(false);
+  const handleCreateNewSession = async () => {
+    try {
+      const resp = await apiService.createChatSession('New Chat');
+      const sid = resp?.session_id || resp?.id;
+      if (sid) {
+        setCurrentSession(sid);
+        setCurrentSessionId(sid);
+        // Refresh sessions list so it appears immediately
+        try {
+          const server = await apiService.getChatSessions(100, 0);
+          const sessions = Array.isArray(server.sessions) ? server.sessions : [];
+          setChatSessions(sessions.map((s: any) => ({
+            id: s.id,
+            title: s.title,
+            lastMessage: s.lastMessage || '',
+            messageCount: s.messageCount || 0,
+            createdAt: new Date(s.createdAt || s.created_at || Date.now()),
+            updatedAt: new Date(s.updatedAt || s.updated_at || Date.now()),
+            isActive: s.id === sid
+          })));
+        } catch (e) {
+          console.error('Failed to refresh sessions after create:', e);
+        }
+      } else {
+        setCurrentSession(null);
+        setCurrentSessionId(null);
+      }
+    } catch (e) {
+      console.error('Failed to create server session:', e);
+      setCurrentSession(null);
+      setCurrentSessionId(null);
+    } finally {
+      setChatMessages([]);
+      setShowHistory(false);
+    }
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

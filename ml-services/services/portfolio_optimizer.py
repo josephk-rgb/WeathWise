@@ -4,8 +4,9 @@ from scipy.optimize import minimize
 from typing import Dict, List, Tuple, Optional
 from datetime import datetime
 
+# Temporarily disable yfinance to avoid external calls while backend route is unavailable
 try:
-    import yfinance as yf
+    yf = None  # type: ignore
 except Exception:  # pragma: no cover
     yf = None  # type: ignore
 
@@ -23,31 +24,7 @@ class PortfolioOptimizer:
         self.risk_free_rate = risk_free_rate
 
     def get_historical_data(self, symbols: List[str], period: str = "2y") -> pd.DataFrame:
-        if yf is None or not symbols:
-            return pd.DataFrame()
-        # Try multiple periods with a simple retry to improve robustness
-        periods = [period, "1y", "6mo"]
-        for p in periods:
-            try:
-                data = yf.download(symbols, period=p, progress=False)
-                if data is None or len(data) == 0:
-                    continue
-                try:
-                    adj = data.get("Adj Close", None)
-                    if adj is None:
-                        # Some versions return already the price frame at top-level
-                        adj = data
-                    if len(symbols) == 1:
-                        df = adj.to_frame(symbols[0]) if isinstance(adj, pd.Series) else adj.to_frame(symbols[0])
-                        df = df.dropna()
-                    else:
-                        df = adj.dropna()
-                    if not df.empty:
-                        return df
-                except Exception:
-                    continue
-            except Exception:
-                continue
+        # Disabled: external fetch via yfinance. Return empty to signal no data.
         return pd.DataFrame()
 
     def calculate_returns(self, prices: pd.DataFrame) -> pd.DataFrame:
