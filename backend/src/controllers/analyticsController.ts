@@ -952,8 +952,15 @@ export class AnalyticsController {
         investments
       );
 
-      // Get recommendations (simplified for now)
-      const recommendations = [];
+      // Get recommendations (dashboard scope, limit 5)
+      let recommendations = [] as any[];
+      try {
+        const { Recommendation } = await import('../models');
+        recommendations = await Recommendation.find({
+          userId: userObjectId,
+          'metadata.category': 'dashboard'
+        }).sort({ createdAt: -1 }).limit(5).lean();
+      } catch {}
 
       logger.info(`✅ Complete dashboard data prepared successfully for user ${userId}`);
 

@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { DollarSign, TrendingUp, Target, CreditCard, ArrowUpRight, ArrowDownRight, Lightbulb, PieChart } from 'lucide-react';
+import { DollarSign, TrendingUp, Target, CreditCard, ArrowUpRight, ArrowDownRight, Lightbulb, PieChart, RefreshCw } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { apiService } from '../services/api';
+import Button from '../components/UI/Button';
 import Card from '../components/UI/Card';
 import StatCard from '../components/UI/StatCard';
 import NetWorthTrend from '../components/Dashboard/NetWorthTrend';
@@ -33,6 +34,8 @@ const Dashboard: React.FC = () => {
   const [accounts, setAccounts] = useState<any[]>([]);
   const [assets, setAssets] = useState<any[]>([]);
   const [loadingStats, setLoadingStats] = useState(true);
+  const [recsLoading, setRecsLoading] = useState(false);
+  const [recsStatus, setRecsStatus] = useState<string>('');
 
   const loadDashboardData = useCallback(async () => {
     if (!userProfile) {
@@ -78,7 +81,9 @@ const Dashboard: React.FC = () => {
         setTransactions(data.transactions || []);
         setGoals(data.goals || []);
         setInvestments(data.investments || []);
-        setRecommendations(data.recommendations || []);
+        if (Array.isArray(data.recommendations) && data.recommendations.length > 0) {
+          setRecommendations(data.recommendations);
+        }
         setAccounts(data.accounts || []);
         setAssets(data.assets || []);
         
@@ -213,6 +218,42 @@ const Dashboard: React.FC = () => {
       });
     }
   }, [isAuthenticated, authLoading, userProfile?.id, (userProfile as any)?._id, loadDashboardData]);
+
+  const pollRecommendations = useCallback(async () => {
+    let attempt = 0;
+    const maxAttempts = 20; // up to ~5 minutes with backoff
+    while (attempt < maxAttempts) {
+      try {
+        const items = await apiService.getRecommendationsByScope('dashboard', 5);
+        if (Array.isArray(items) && items.length > 0) {
+          setRecommendations(items);
+          setRecsStatus('');
+          break;
+        }
+      } catch (e) {
+        // ignore and continue polling
+      }
+      attempt++;
+      const delay = Math.min(15000 * Math.pow(1.2, attempt), 60000); // start at 15s, backoff to max 60s
+      setRecsStatus(`Generating recommendations… (retry ${attempt}/${maxAttempts})`);
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise(r => setTimeout(r, delay));
+    }
+    setRecsLoading(false);
+  }, [setRecommendations]);
+
+  const handleRefreshRecommendations = useCallback(async () => {
+    if (!userProfile) return;
+    try {
+      setRecsLoading(true);
+      setRecsStatus('Starting…');
+      await apiService.refreshRecommendations('dashboard', 5);
+      pollRecommendations();
+    } catch (e) {
+      setRecsLoading(false);
+      setRecsStatus('Failed to start generation');
+    }
+  }, [userProfile, pollRecommendations]);
 
   // Calculate metrics - ensure transactions is always an array
   const safeTransactions = Array.isArray(transactions) ? transactions : [];
@@ -421,21 +462,36 @@ const Dashboard: React.FC = () => {
         
         {/* AI Recommendations */}
         <Card>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">AI Recommendations</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">AI Recommendations</h3>
+            <Button size="sm" variant="outline" onClick={handleRefreshRecommendations} disabled={recsLoading}>
+              <RefreshCw className={`w-4 h-4 mr-2 ${recsLoading ? 'animate-spin' : ''}`} />
+              {recsLoading ? 'Refreshing…' : 'Refresh'}
+            </Button>
+          </div>
           <div className="space-y-4">
+            {recsStatus && (
+              <div className="text-sm text-gray-500 dark:text-gray-400">{recsStatus}</div>
+            )}
             {safeRecommendations.length > 0 ? (
-              safeRecommendations.slice(0, 2).map((rec) => (
-                <div key={rec.id} className="p-4 bg-violet-50 dark:bg-violet-900/20 rounded-lg">
+              safeRecommendations.slice(0, 2).map((rec, idx) => (
+                <div key={(rec as any).id || (rec as any)._id || `${rec.title || 'rec'}-${(rec as any).createdAt || ''}-${idx}`}
+                     className="p-4 bg-violet-50 dark:bg-violet-900/20 rounded-lg">
                   <div className="flex items-start justify-between mb-2">
                     <h4 className="font-medium text-gray-900 dark:text-gray-100">{rec.title}</h4>
-                    <span className="text-xs bg-violet-100 dark:bg-violet-800 text-violet-700 dark:text-violet-300 px-2 py-1 rounded-full">
-                      {Math.round(rec.confidence * 100)}% confidence
-                    </span>
+                    {(() => {
+                      const pct = typeof rec.confidence === 'number' ? (rec.confidence > 1 ? Math.round(rec.confidence) : Math.round(rec.confidence * 100)) : 80;
+                      return (
+                        <span className="text-xs bg-violet-100 dark:bg-violet-800 text-violet-700 dark:text-violet-300 px-2 py-1 rounded-full">
+                          {pct}% confidence
+                        </span>
+                      );
+                    })()}
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{rec.description}</p>
                   <div className="space-y-1">
                     {rec.actionItems.slice(0, 2).map((item, index) => (
-                      <div key={index} className="flex items-center text-xs text-gray-500 dark:text-gray-400">
+                      <div key={`${(rec as any).id || rec.title || 'rec'}-ai-${index}`} className="flex items-center text-xs text-gray-500 dark:text-gray-400">
                         <ArrowUpRight className="w-3 h-3 mr-1" />
                         {item}
                       </div>

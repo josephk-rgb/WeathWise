@@ -139,6 +139,12 @@ async def chat_with_ai(request: ChatRequest, authorization: Optional[str] = Head
                 )
                 
                 if user_financial_data and any(user_financial_data.values()):
+                    # Ensure tolerant shape: map legacy keys if present
+                    if not user_financial_data.get("profile") and user_financial_data.get("user_profile"):
+                        user_financial_data["profile"] = user_financial_data.get("user_profile")
+                    if not user_financial_data.get("transactions") and user_financial_data.get("recent_transactions"):
+                        user_financial_data["transactions"] = user_financial_data.get("recent_transactions")
+
                     # Format financial context for LLM using backend proxy
                     financial_context = backend_proxy.format_financial_context_for_llm(user_financial_data)
                     

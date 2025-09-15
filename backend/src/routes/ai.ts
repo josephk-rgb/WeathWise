@@ -1,8 +1,11 @@
 import { Router } from 'express';
+import { authMiddleware } from '../middleware/auth';
 import { AIServiceManager } from '../services/aiServiceManager';
+import { RecommendationService } from '../services/recommendationService';
 
 const router = Router();
 const aiService = new AIServiceManager();
+const recommendationService = new RecommendationService();
 
 // Test endpoint for ML service connectivity (no auth required)
 router.post('/test-chat', async (req, res) => {
@@ -79,38 +82,71 @@ router.post('/chat', async (req, res) => {
   }
 });
 
-// Get AI recommendations
-router.get('/recommendations', async (req, res) => {
+// Trigger recommendation generation (no websockets; UI will poll DB)
+router.post('/recommendations/refresh', authMiddleware, async (req, res) => {
   try {
-    const { userId } = req.query;
-    const portfolioData = req.body.portfolio; // Optional portfolio data
-    
-    try {
-      const response = await aiService.getRecommendations(userId as string, portfolioData);
-      
-      res.json({
-        success: true,
-        recommendations: response.response || response,
-        confidence: response.confidence || 0.8,
-        userId: req.user?.id,
-        source: 'ai'
-      });
-    } catch (error: any) {
-      console.log('AI service unavailable, returning fallback recommendations');
-      
-      const fallbackResponse = aiService.generateFallbackResponse('recommendations', { portfolio: portfolioData });
-      
-      res.json({
-        success: true,
-        recommendations: fallbackResponse.recommendations,
-        confidence: fallbackResponse.confidence,
-        userId: req.user?.id,
-        source: 'fallback',
-        note: 'AI service temporarily unavailable, showing default recommendations'
-      });
+    const userId = (req.user?.id as string) || (req.body.userId as string) || (req.query.userId as string);
+    const scope = (req.query.scope as 'dashboard' | 'portfolio') || (req.body.scope as 'dashboard' | 'portfolio') || 'dashboard';
+    const max = req.query.max ? parseInt(req.query.max as string, 10) : (req.body.max || 5);
+    const portfolioData = req.body.portfolio || undefined;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'userId required' });
     }
+
+    // Simple idempotency: if the same user+scope was requested in last 30s, accept but do nothing
+    const cache: any = (global as any).__recRefreshCache || ((global as any).__recRefreshCache = new Map());
+    const key = `${userId}:${scope}`;
+    const now = Date.now();
+    const last = cache.get(key);
+    if (last && now - last < 30_000) {
+      return res.status(202).json({ success: true, accepted: true, scope, max, message: 'Already refreshing recently' });
+    }
+    cache.set(key, now);
+
+    // Fire-and-return quickly; actual persistence happens inside service
+    recommendationService
+      .refreshRecommendations({ userId, scope, max, portfolioData, authToken: req.headers.authorization?.replace('Bearer ', '') })
+      .catch(() => {})
+      .finally(() => {
+        // clear idempotency window sooner if desired
+        setTimeout(() => cache.delete(key), 30_000);
+      });
+
+    return res.status(202).json({
+      success: true,
+      accepted: true,
+      scope,
+      max,
+      message: 'Recommendation generation started'
+    });
   } catch (error: any) {
-    console.error('AI Recommendations Error:', error.message);
+    console.error('Recommendations Refresh Error:', error.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get recommendations from DB by scope (for polling)
+router.get('/recommendations', authMiddleware, async (req, res) => {
+  try {
+    const userId = (req.user?.id as string) || (req.query.userId as string);
+    const scope = (req.query.scope as 'dashboard' | 'portfolio') || 'dashboard';
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 5;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'userId required' });
+    }
+
+    const items = await recommendationService.getRecommendations(userId, scope, limit);
+
+    return res.json({
+      success: true,
+      scope,
+      count: items.length,
+      recommendations: items
+    });
+  } catch (error: any) {
+    console.error('Recommendations Get Error:', error.message);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

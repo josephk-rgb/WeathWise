@@ -881,7 +881,38 @@ class ApiService {
 
   // AI/Recommendation methods
   async getRecommendations(_userId: string): Promise<Recommendation[]> {
-    return this.makeRequest('/ai/recommendations');
+    const response = await this.makeRequest('/ai/recommendations');
+    if (response && response.success && Array.isArray(response.recommendations)) {
+      return response.recommendations;
+    }
+    return Array.isArray(response) ? response : [];
+  }
+
+  // New: Trigger recommendation generation for a scope (dashboard | portfolio)
+  async refreshRecommendations(scope: 'dashboard' | 'portfolio', max: number = 5, portfolio?: any): Promise<{ success: boolean; accepted: boolean; scope: string; max: number }> {
+    const params = new URLSearchParams();
+    params.append('scope', scope);
+    if (max) params.append('max', String(max));
+
+    const response = await this.makeRequest(`/ai/recommendations/refresh?${params.toString()}`, {
+      method: 'POST',
+      body: JSON.stringify({ max, portfolio })
+    });
+
+    return response;
+  }
+
+  // New: Poll recommendations by scope (dashboard | portfolio)
+  async getRecommendationsByScope(scope: 'dashboard' | 'portfolio', limit: number = 5): Promise<Recommendation[]> {
+    const params = new URLSearchParams();
+    params.append('scope', scope);
+    params.append('limit', String(limit));
+
+    const response = await this.makeRequest(`/ai/recommendations?${params.toString()}`);
+    if (response && response.success && Array.isArray(response.recommendations)) {
+      return response.recommendations;
+    }
+    return Array.isArray(response) ? response : [];
   }
 
   async sendChatMessage(message: string, context?: any): Promise<string> {

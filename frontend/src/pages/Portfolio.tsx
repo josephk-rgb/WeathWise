@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, TrendingUp, PieChart, Search, SortAsc, SortDesc } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Plus, TrendingUp, PieChart, Search, SortAsc, SortDesc, RefreshCw } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { useAuth } from '../hooks/useAuth';
 import { apiService } from '../services/api';
@@ -26,6 +26,9 @@ const PortfolioPage: React.FC = () => {
   const [portfolioHistory, setPortfolioHistory] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [dataQuality, setDataQuality] = useState<any>(null);
+  const [recs, setRecs] = useState<any[]>([]);
+  const [recsLoading, setRecsLoading] = useState(false);
+  const [recsStatus, setRecsStatus] = useState('');
   
   const [formData, setFormData] = useState({
     symbol: '',
@@ -291,6 +294,60 @@ const PortfolioPage: React.FC = () => {
   });
 
 
+  const pollPortfolioRecommendations = useCallback(async () => {
+    let attempt = 0;
+    const maxAttempts = 20;
+    while (attempt < maxAttempts) {
+      try {
+        const items = await apiService.getRecommendationsByScope('portfolio', 5);
+        if (Array.isArray(items) && items.length > 0) {
+          setRecs(items);
+          setRecsStatus('');
+          break;
+        }
+      } catch {}
+      attempt++;
+      const delay = Math.min(15000 * Math.pow(1.2, attempt), 60000);
+      setRecsStatus(`Generating portfolio recommendations… (retry ${attempt}/${maxAttempts})`);
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise(r => setTimeout(r, delay));
+    }
+    setRecsLoading(false);
+  }, []);
+
+  const handleRefreshPortfolioRecs = useCallback(async () => {
+    try {
+      setRecsLoading(true);
+      setRecsStatus('Starting…');
+      // You can pass a compact portfolio summary if desired
+      await apiService.refreshRecommendations('portfolio', 5);
+      pollPortfolioRecommendations();
+    } catch (e) {
+      setRecsLoading(false);
+      setRecsStatus('Failed to start generation');
+    }
+  }, [pollPortfolioRecommendations]);
+
+  // Auto-load portfolio recommendations on page load (mirrors dashboard behavior)
+  useEffect(() => {
+    const loadPortfolioRecs = async () => {
+      if (!isAuthenticated || authLoading || !tokenReady) return;
+      try {
+        const existing = await apiService.getRecommendationsByScope('portfolio', 5);
+        if (Array.isArray(existing) && existing.length > 0) {
+          setRecs(existing);
+          setRecsStatus('');
+          return;
+        }
+        setRecsLoading(true);
+        setRecsStatus('Starting…');
+        await apiService.refreshRecommendations('portfolio', 5);
+        pollPortfolioRecommendations();
+      } catch {}
+    };
+    loadPortfolioRecs();
+  }, [isAuthenticated, authLoading, tokenReady, pollPortfolioRecommendations]);
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
@@ -430,7 +487,52 @@ const PortfolioPage: React.FC = () => {
         </div>
 
         {/* Sidebar */}
-        <div>
+        <div className="flex flex-col gap-6 lg:sticky lg:top-4">
+          {/* Portfolio AI Recommendations */}
+          <Card>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Portfolio Recommendations</h3>
+              <button className="btn btn-outline px-2 py-0.5 text-xs rounded-sm border border-gray-300 dark:border-gray-600" onClick={handleRefreshPortfolioRecs} disabled={recsLoading}>
+                <span className="inline-flex items-center">
+                  <RefreshCw className={`w-3 h-3 mr-1 ${recsLoading ? 'animate-spin' : ''}`} />
+                  {recsLoading ? 'Refreshing…' : 'Refresh'}
+                </span>
+              </button>
+            </div>
+            {recsStatus && (
+              <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">{recsStatus}</div>
+            )}
+            <div className="space-y-3">
+              {recs.length > 0 ? (
+                recs.map((rec, idx) => (
+                  <div key={(rec as any).id || (rec as any)._id || `${rec.title || 'rec'}-${idx}`} className="p-3 bg-violet-50 dark:bg-violet-900/20 rounded-lg">
+                    <div className="flex items-start justify-between mb-1">
+                      <h4 className="font-medium text-gray-900 dark:text-gray-100 text-sm">{rec.title}</h4>
+                      {(() => {
+                        const pct = typeof rec.confidence === 'number' ? (rec.confidence > 1 ? Math.round(rec.confidence) : Math.round(rec.confidence * 100)) : 80;
+                        return (
+                          <span className="text-[10px] bg-violet-100 dark:bg-violet-800 text-violet-700 dark:text-violet-300 px-2 py-0.5 rounded-full">
+                            {pct}%
+                          </span>
+                        );
+                      })()}
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{rec.description}</p>
+                    {Array.isArray(rec.actionItems) && rec.actionItems.length > 0 && (
+                      <ul className="list-disc ml-4 text-xs text-gray-500 dark:text-gray-400">
+                        {rec.actionItems.slice(0, 3).map((a: string, i: number) => (
+                          <li key={i}>{a}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-6 text-sm text-gray-500 dark:text-gray-400">No portfolio recommendations yet</div>
+              )}
+            </div>
+          </Card>
+
           {/* Asset Allocation */}
           <Card>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Asset Allocation</h3>
@@ -442,7 +544,7 @@ const PortfolioPage: React.FC = () => {
                 </p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="flex flex-col gap-3">
                 {assetAllocation.map((allocation, index) => {
                   const colors = [
                     'bg-violet-500', 'bg-blue-500', 'bg-green-500', 
@@ -451,7 +553,7 @@ const PortfolioPage: React.FC = () => {
                   const color = colors[index % colors.length];
                   
                   return (
-                    <div key={allocation.name} className="flex items-center justify-between">
+                    <div key={allocation.name} className="flex items-center justify-between py-3 px-3 rounded-md bg-gray-50 dark:bg-gray-800/40">
                       <div className="flex items-center space-x-3">
                         <div className={`w-4 h-4 rounded-full ${color}`} />
                         <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
@@ -459,10 +561,10 @@ const PortfolioPage: React.FC = () => {
                         </span>
                       </div>
                       <div className="text-right">
-                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                           {allocation.percentage.toFixed(1)}%
                         </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                           {formatCurrency(allocation.value, currency)}
                         </div>
                       </div>
