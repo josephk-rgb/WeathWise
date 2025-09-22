@@ -29,6 +29,17 @@ export interface IAccount extends Document {
   provider: IAccountProvider;
   accountInfo: IAccountInfo;
   connectionStatus: IConnectionStatus;
+  
+  // Additional fields for asset tracking
+  institutionName?: string;      // "Chase Bank", "Wells Fargo"
+  accountPattern?: string;       // Last 4 digits for transaction matching
+  balanceSource: 'manual' | 'transaction_derived';
+  lastManualUpdate?: Date;
+  
+  // Account linking and categorization
+  category?: 'primary_checking' | 'emergency_savings' | 'investment_cash';
+  linkedGoalId?: mongoose.Types.ObjectId; // Link to savings goals
+  
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -128,6 +139,38 @@ const AccountSchema = new Schema<IAccount>({
       default: 'manual'
     }
   },
+  
+  // Additional fields for asset tracking
+  institutionName: {
+    type: String,
+    trim: true,
+    maxlength: 100
+  },
+  accountPattern: {
+    type: String,
+    trim: true,
+    maxlength: 10
+  },
+  balanceSource: {
+    type: String,
+    enum: ['manual', 'transaction_derived'],
+    default: 'manual'
+  },
+  lastManualUpdate: {
+    type: Date
+  },
+  
+  // Account linking and categorization
+  category: {
+    type: String,
+    enum: ['primary_checking', 'emergency_savings', 'investment_cash'],
+    trim: true
+  },
+  linkedGoalId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Goal'
+  },
+  
   isActive: {
     type: Boolean,
     default: true,

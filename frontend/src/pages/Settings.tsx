@@ -14,6 +14,8 @@ const Settings: React.FC = () => {
   // Debug: Log admin check
   console.log('🔍 DEBUG - Settings page userProfile:', userProfile);
   console.log('🔍 DEBUG - Settings page role:', userProfile?.role);
+  console.log('🔍 DEBUG - Settings page userProfile.id:', userProfile?.id);
+  console.log('🔍 DEBUG - Settings page userProfile._id:', userProfile?._id);
   console.log('🔍 DEBUG - Is admin check:', userProfile?.role === 'admin');
 
   return (
@@ -212,7 +214,10 @@ const Settings: React.FC = () => {
         </Card>
 
         {/* Admin Mock Data Section */}
-        <AdminMockData isAdmin={userProfile?.role === 'admin'} />
+        <AdminMockData 
+          isAdmin={userProfile?.role === 'admin'} 
+          currentUserId={userProfile?.id || userProfile?._id} 
+        />
 
         {/* Danger Zone */}
         <Card>

@@ -1,0 +1,1212 @@
+[
+  {
+    "_id": "68b1822becee75f1b820bf02",
+    "userId": "68b18221ecee75f1b820beaa",
+    "securityInfo": {
+      "symbol": "EUR",
+      "name": "Euro Investment",
+      "type": "stock",
+      "currency": "EUR"
+    },
+    "position": {
+      "shares": 100,
+      "averageCost": 10,
+      "totalCost": 1000,
+      "currentPrice": 12,
+      "marketValue": 1200,
+      "gainLoss": 200,
+      "gainLossPercent": 20,
+      "dayChange": 0.5,
+      "dayChangePercent": 4.17
+    },
+    "acquisition": {
+      "purchaseDate": "2025-08-29T10:34:19.182Z",
+      "purchaseMethod": "buy",
+      "purchasePrice": 10
+    },
+    "alerts": {
+      "priceTargets": [],
+      "percentageTargets": []
+    },
+    "isActive": true,
+    "createdAt": "2025-08-29T10:34:19.183Z",
+    "updatedAt": "2025-08-29T10:34:19.183Z",
+    "__v": 0
+  },
+  {
+    "_id": "68bc08a53a9422f780a93e74",
+    "userId": "68b350bb9776631cdcd12356",
+    "accountId": "68bc080f3a9422f780a93a2e",
+    "securityInfo": {
+      "symbol": "PFE",
+      "name": "Gleason LLC Inc.",
+      "type": "bond",
+      "exchange": "AMEX",
+      "currency": "USD",
+      "isin": "QXBSMQQX",
+      "cusip": "EXZWCTQK3"
+    },
+    "position": {
+      "shares": 35.022,
+      "averageCost": 152.86,
+      "totalCost": 5353.34,
+      "currentPrice": 185.63,
+      "marketValue": 6501.13,
+      "gainLoss": 1147.8,
+      "gainLossPercent": 21.44,
+      "dayChange": 8.43,
+      "dayChangePercent": 0.18
+    },
+    "acquisition": {
+      "purchaseDate": "2025-03-08T07:01:00.246Z",
+      "purchaseMethod": "transfer",
+      "purchasePrice": 152.86,
+      "fees": 1.84,
+      "brokerage": "Robinhood"
+    },
+    "analytics": {
+      "dividend_yield": 4.52,
+      "sector": "Fixed Income",
+      "industry": "Government Bonds"
+    },
+    "alerts": {
+      "priceTargets": [
+        {
+          "type": "above",
+          "price": 204.19,
+          "isActive": false,
+          "createdAt": "2024-12-18T22:02:56.763Z",
+          "_id": "68bc08a53a9422f780a93e75"
+        },
+        {
+          "type": "below",
+          "price": 167.07,
+          "isActive": true,
+          "createdAt": "2025-05-21T13:09:45.181Z",
+          "_id": "68bc08a53a9422f780a93e76"
+        }
+      ],
+      "percentageTargets": []
+    },
+    "isActive": true,
+    "createdAt": "2025-09-06T10:10:45.902Z",
+    "updatedAt": "2025-09-06T10:10:45.902Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c68f237d82a7a740c55e36",
+    "userId": "68c68f1c7d82a7a740c55dd7",
+    "accountId": "68c68f217d82a7a740c55e2b",
+    "securityInfo": {
+      "symbol": "AAPL",
+      "name": "Apple Inc.",
+      "type": "stock",
+      "exchange": "NASDAQ",
+      "currency": "USD"
+    },
+    "position": {
+      "shares": 50,
+      "averageCost": 130,
+      "totalCost": 6500,
+      "currentPrice": 150,
+      "marketValue": 7500,
+      "gainLoss": 1000,
+      "gainLossPercent": 15.38,
+      "dayChange": 2.5,
+      "dayChangePercent": 1.69
+    },
+    "acquisition": {
+      "purchaseDate": "2022-03-15T00:00:00.000Z",
+      "purchaseMethod": "buy",
+      "purchasePrice": 130
+    },
+    "alerts": {
+      "priceTargets": [],
+      "percentageTargets": []
+    },
+    "isActive": true,
+    "createdAt": "2025-09-14T09:47:15.328Z",
+    "updatedAt": "2025-09-14T09:47:15.328Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c68f237d82a7a740c55e38",
+    "userId": "68c68f1c7d82a7a740c55dd7",
+    "accountId": "68c68f217d82a7a740c55e2b",
+    "securityInfo": {
+      "symbol": "TSLA",
+      "name": "Tesla Inc.",
+      "type": "stock",
+      "exchange": "NASDAQ",
+      "currency": "USD"
+    },
+    "position": {
+      "shares": 25,
+      "averageCost": 150,
+      "totalCost": 3750,
+      "currentPrice": 200,
+      "marketValue": 5000,
+      "gainLoss": 1250,
+      "gainLossPercent": 33.33,
+      "dayChange": -5,
+      "dayChangePercent": -2.44
+    },
+    "acquisition": {
+      "purchaseDate": "2022-06-20T00:00:00.000Z",
+      "purchaseMethod": "buy",
+      "purchasePrice": 150
+    },
+    "alerts": {
+      "priceTargets": [],
+      "percentageTargets": []
+    },
+    "isActive": true,
+    "createdAt": "2025-09-14T09:47:15.587Z",
+    "updatedAt": "2025-09-14T09:47:15.587Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c68f237d82a7a740c55e3a",
+    "userId": "68c68f1c7d82a7a740c55dd7",
+    "accountId": "68c68f217d82a7a740c55e2b",
+    "securityInfo": {
+      "symbol": "NVDA",
+      "name": "NVIDIA Corporation",
+      "type": "stock",
+      "exchange": "NASDAQ",
+      "currency": "USD"
+    },
+    "position": {
+      "shares": 30,
+      "averageCost": 300,
+      "totalCost": 9000,
+      "currentPrice": 400,
+      "marketValue": 12000,
+      "gainLoss": 3000,
+      "gainLossPercent": 33.33,
+      "dayChange": 12,
+      "dayChangePercent": 3.09
+    },
+    "acquisition": {
+      "purchaseDate": "2022-09-10T00:00:00.000Z",
+      "purchaseMethod": "buy",
+      "purchasePrice": 300
+    },
+    "alerts": {
+      "priceTargets": [],
+      "percentageTargets": []
+    },
+    "isActive": true,
+    "createdAt": "2025-09-14T09:47:15.821Z",
+    "updatedAt": "2025-09-14T09:47:15.821Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c68f247d82a7a740c55e3c",
+    "userId": "68c68f1c7d82a7a740c55dd7",
+    "accountId": "68c68f217d82a7a740c55e2b",
+    "securityInfo": {
+      "symbol": "VTI",
+      "name": "Vanguard Total Stock Market ETF",
+      "type": "etf",
+      "exchange": "NYSE",
+      "currency": "USD"
+    },
+    "position": {
+      "shares": 100,
+      "averageCost": 200,
+      "totalCost": 20000,
+      "currentPrice": 220,
+      "marketValue": 22000,
+      "gainLoss": 2000,
+      "gainLossPercent": 10,
+      "dayChange": 1.5,
+      "dayChangePercent": 0.69
+    },
+    "acquisition": {
+      "purchaseDate": "2022-01-15T00:00:00.000Z",
+      "purchaseMethod": "buy",
+      "purchasePrice": 200
+    },
+    "alerts": {
+      "priceTargets": [],
+      "percentageTargets": []
+    },
+    "isActive": true,
+    "createdAt": "2025-09-14T09:47:16.055Z",
+    "updatedAt": "2025-09-14T09:47:16.055Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c68f247d82a7a740c55e3e",
+    "userId": "68c68f1c7d82a7a740c55dd7",
+    "accountId": "68c68f217d82a7a740c55e2b",
+    "securityInfo": {
+      "symbol": "QQQ",
+      "name": "Invesco QQQ Trust",
+      "type": "etf",
+      "exchange": "NASDAQ",
+      "currency": "USD"
+    },
+    "position": {
+      "shares": 50,
+      "averageCost": 300,
+      "totalCost": 15000,
+      "currentPrice": 350,
+      "marketValue": 17500,
+      "gainLoss": 2500,
+      "gainLossPercent": 16.67,
+      "dayChange": 3,
+      "dayChangePercent": 0.86
+    },
+    "acquisition": {
+      "purchaseDate": "2022-04-05T00:00:00.000Z",
+      "purchaseMethod": "buy",
+      "purchasePrice": 300
+    },
+    "alerts": {
+      "priceTargets": [],
+      "percentageTargets": []
+    },
+    "isActive": true,
+    "createdAt": "2025-09-14T09:47:16.367Z",
+    "updatedAt": "2025-09-14T09:47:16.367Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c68fb0871e4a449754a09f",
+    "userId": "68c68faa871e4a449754a040",
+    "accountId": "68c68faf871e4a449754a094",
+    "securityInfo": {
+      "symbol": "AAPL",
+      "name": "Apple Inc.",
+      "type": "stock",
+      "exchange": "NASDAQ",
+      "currency": "USD"
+    },
+    "position": {
+      "shares": 50,
+      "averageCost": 130,
+      "totalCost": 6500,
+      "currentPrice": 150,
+      "marketValue": 7500,
+      "gainLoss": 1000,
+      "gainLossPercent": 15.38,
+      "dayChange": 2.5,
+      "dayChangePercent": 1.69
+    },
+    "acquisition": {
+      "purchaseDate": "2022-03-15T00:00:00.000Z",
+      "purchaseMethod": "buy",
+      "purchasePrice": 130
+    },
+    "alerts": {
+      "priceTargets": [],
+      "percentageTargets": []
+    },
+    "isActive": true,
+    "createdAt": "2025-09-14T09:49:36.513Z",
+    "updatedAt": "2025-09-14T09:49:36.513Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c68fb0871e4a449754a0a1",
+    "userId": "68c68faa871e4a449754a040",
+    "accountId": "68c68faf871e4a449754a094",
+    "securityInfo": {
+      "symbol": "TSLA",
+      "name": "Tesla Inc.",
+      "type": "stock",
+      "exchange": "NASDAQ",
+      "currency": "USD"
+    },
+    "position": {
+      "shares": 25,
+      "averageCost": 150,
+      "totalCost": 3750,
+      "currentPrice": 200,
+      "marketValue": 5000,
+      "gainLoss": 1250,
+      "gainLossPercent": 33.33,
+      "dayChange": -5,
+      "dayChangePercent": -2.44
+    },
+    "acquisition": {
+      "purchaseDate": "2022-06-20T00:00:00.000Z",
+      "purchaseMethod": "buy",
+      "purchasePrice": 150
+    },
+    "alerts": {
+      "priceTargets": [],
+      "percentageTargets": []
+    },
+    "isActive": true,
+    "createdAt": "2025-09-14T09:49:36.752Z",
+    "updatedAt": "2025-09-14T09:49:36.752Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c68fb0871e4a449754a0a3",
+    "userId": "68c68faa871e4a449754a040",
+    "accountId": "68c68faf871e4a449754a094",
+    "securityInfo": {
+      "symbol": "NVDA",
+      "name": "NVIDIA Corporation",
+      "type": "stock",
+      "exchange": "NASDAQ",
+      "currency": "USD"
+    },
+    "position": {
+      "shares": 30,
+      "averageCost": 300,
+      "totalCost": 9000,
+      "currentPrice": 400,
+      "marketValue": 12000,
+      "gainLoss": 3000,
+      "gainLossPercent": 33.33,
+      "dayChange": 12,
+      "dayChangePercent": 3.09
+    },
+    "acquisition": {
+      "purchaseDate": "2022-09-10T00:00:00.000Z",
+      "purchaseMethod": "buy",
+      "purchasePrice": 300
+    },
+    "alerts": {
+      "priceTargets": [],
+      "percentageTargets": []
+    },
+    "isActive": true,
+    "createdAt": "2025-09-14T09:49:36.990Z",
+    "updatedAt": "2025-09-14T09:49:36.990Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c68fb1871e4a449754a0a5",
+    "userId": "68c68faa871e4a449754a040",
+    "accountId": "68c68faf871e4a449754a094",
+    "securityInfo": {
+      "symbol": "VTI",
+      "name": "Vanguard Total Stock Market ETF",
+      "type": "etf",
+      "exchange": "NYSE",
+      "currency": "USD"
+    },
+    "position": {
+      "shares": 100,
+      "averageCost": 200,
+      "totalCost": 20000,
+      "currentPrice": 220,
+      "marketValue": 22000,
+      "gainLoss": 2000,
+      "gainLossPercent": 10,
+      "dayChange": 1.5,
+      "dayChangePercent": 0.69
+    },
+    "acquisition": {
+      "purchaseDate": "2022-01-15T00:00:00.000Z",
+      "purchaseMethod": "buy",
+      "purchasePrice": 200
+    },
+    "alerts": {
+      "priceTargets": [],
+      "percentageTargets": []
+    },
+    "isActive": true,
+    "createdAt": "2025-09-14T09:49:37.232Z",
+    "updatedAt": "2025-09-14T09:49:37.232Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c68fb1871e4a449754a0a7",
+    "userId": "68c68faa871e4a449754a040",
+    "accountId": "68c68faf871e4a449754a094",
+    "securityInfo": {
+      "symbol": "QQQ",
+      "name": "Invesco QQQ Trust",
+      "type": "etf",
+      "exchange": "NASDAQ",
+      "currency": "USD"
+    },
+    "position": {
+      "shares": 50,
+      "averageCost": 300,
+      "totalCost": 15000,
+      "currentPrice": 350,
+      "marketValue": 17500,
+      "gainLoss": 2500,
+      "gainLossPercent": 16.67,
+      "dayChange": 3,
+      "dayChangePercent": 0.86
+    },
+    "acquisition": {
+      "purchaseDate": "2022-04-05T00:00:00.000Z",
+      "purchaseMethod": "buy",
+      "purchasePrice": 300
+    },
+    "alerts": {
+      "priceTargets": [],
+      "percentageTargets": []
+    },
+    "isActive": true,
+    "createdAt": "2025-09-14T09:49:37.465Z",
+    "updatedAt": "2025-09-14T09:49:37.465Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c691851c037e7bc6ea7767",
+    "userId": "68c690e51c037e7bc6ea6491",
+    "accountId": "68c691841c037e7bc6ea7761",
+    "securityInfo": {
+      "symbol": "SWTSX",
+      "name": "Schwab Total Stock Market Index Fund",
+      "type": "mutual_fund",
+      "exchange": "SCHWAB",
+      "currency": "USD"
+    },
+    "position": {
+      "shares": 40,
+      "averageCost": 60,
+      "totalCost": 2400,
+      "currentPrice": 68.5,
+      "marketValue": 2740,
+      "gainLoss": 340,
+      "gainLossPercent": 14.17,
+      "dayChange": 0.45,
+      "dayChangePercent": 0.66
+    },
+    "acquisition": {
+      "purchaseDate": "2023-03-15T00:00:00.000Z",
+      "purchaseMethod": "buy",
+      "purchasePrice": 60
+    },
+    "alerts": {
+      "priceTargets": [],
+      "percentageTargets": []
+    },
+    "isActive": true,
+    "createdAt": "2025-09-14T09:57:25.535Z",
+    "updatedAt": "2025-09-14T09:57:25.535Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c691851c037e7bc6ea7769",
+    "userId": "68c690e51c037e7bc6ea6491",
+    "accountId": "68c691841c037e7bc6ea7761",
+    "securityInfo": {
+      "symbol": "SWLGX",
+      "name": "Schwab Large-Cap Growth Index Fund",
+      "type": "mutual_fund",
+      "exchange": "SCHWAB",
+      "currency": "USD"
+    },
+    "position": {
+      "shares": 25,
+      "averageCost": 46,
+      "totalCost": 1150,
+      "currentPrice": 52.8,
+      "marketValue": 1320,
+      "gainLoss": 170,
+      "gainLossPercent": 14.78,
+      "dayChange": 0.32,
+      "dayChangePercent": 0.61
+    },
+    "acquisition": {
+      "purchaseDate": "2023-06-20T00:00:00.000Z",
+      "purchaseMethod": "buy",
+      "purchasePrice": 46
+    },
+    "alerts": {
+      "priceTargets": [],
+      "percentageTargets": []
+    },
+    "isActive": true,
+    "createdAt": "2025-09-14T09:57:25.775Z",
+    "updatedAt": "2025-09-14T09:57:25.775Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c691861c037e7bc6ea776b",
+    "userId": "68c690e51c037e7bc6ea6491",
+    "accountId": "68c691841c037e7bc6ea7761",
+    "securityInfo": {
+      "symbol": "SWPPX",
+      "name": "Schwab S&P 500 Index Fund",
+      "type": "mutual_fund",
+      "exchange": "SCHWAB",
+      "currency": "USD"
+    },
+    "position": {
+      "shares": 35,
+      "averageCost": 50,
+      "totalCost": 1750,
+      "currentPrice": 58.25,
+      "marketValue": 2038.75,
+      "gainLoss": 288.75,
+      "gainLossPercent": 16.5,
+      "dayChange": 0.38,
+      "dayChangePercent": 0.66
+    },
+    "acquisition": {
+      "purchaseDate": "2023-09-10T00:00:00.000Z",
+      "purchaseMethod": "buy",
+      "purchasePrice": 50
+    },
+    "alerts": {
+      "priceTargets": [],
+      "percentageTargets": []
+    },
+    "isActive": true,
+    "createdAt": "2025-09-14T09:57:26.015Z",
+    "updatedAt": "2025-09-14T09:57:26.015Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c2b8c15e1d8c421cd6a9",
+    "userId": "68c40c260f1312b22670f27f",
+    "accountId": "68c6c2b6c15e1d8c421cd69f",
+    "securityInfo": {
+      "symbol": "AAPL",
+      "name": "Apple Inc.",
+      "type": "stock",
+      "exchange": "NASDAQ",
+      "currency": "USD"
+    },
+    "position": {
+      "shares": 50,
+      "averageCost": 130,
+      "totalCost": 6500,
+      "currentPrice": 150,
+      "marketValue": 7500,
+      "gainLoss": 1000,
+      "gainLossPercent": 15.38,
+      "dayChange": 2.5,
+      "dayChangePercent": 1.69
+    },
+    "acquisition": {
+      "purchaseDate": "2022-03-15T00:00:00.000Z",
+      "purchaseMethod": "buy",
+      "purchasePrice": 130
+    },
+    "alerts": {
+      "priceTargets": [],
+      "percentageTargets": []
+    },
+    "isActive": true,
+    "createdAt": "2025-09-14T13:27:20.011Z",
+    "updatedAt": "2025-09-14T13:27:20.011Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c2b8c15e1d8c421cd6ab",
+    "userId": "68c40c260f1312b22670f27f",
+    "accountId": "68c6c2b6c15e1d8c421cd69f",
+    "securityInfo": {
+      "symbol": "TSLA",
+      "name": "Tesla Inc.",
+      "type": "stock",
+      "exchange": "NASDAQ",
+      "currency": "USD"
+    },
+    "position": {
+      "shares": 25,
+      "averageCost": 150,
+      "totalCost": 3750,
+      "currentPrice": 200,
+      "marketValue": 5000,
+      "gainLoss": 1250,
+      "gainLossPercent": 33.33,
+      "dayChange": -5,
+      "dayChangePercent": -2.44
+    },
+    "acquisition": {
+      "purchaseDate": "2022-06-20T00:00:00.000Z",
+      "purchaseMethod": "buy",
+      "purchasePrice": 150
+    },
+    "alerts": {
+      "priceTargets": [],
+      "percentageTargets": []
+    },
+    "isActive": true,
+    "createdAt": "2025-09-14T13:27:20.249Z",
+    "updatedAt": "2025-09-14T13:27:20.249Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c2b8c15e1d8c421cd6ad",
+    "userId": "68c40c260f1312b22670f27f",
+    "accountId": "68c6c2b6c15e1d8c421cd69f",
+    "securityInfo": {
+      "symbol": "NVDA",
+      "name": "NVIDIA Corporation",
+      "type": "stock",
+      "exchange": "NASDAQ",
+      "currency": "USD"
+    },
+    "position": {
+      "shares": 30,
+      "averageCost": 300,
+      "totalCost": 9000,
+      "currentPrice": 400,
+      "marketValue": 12000,
+      "gainLoss": 3000,
+      "gainLossPercent": 33.33,
+      "dayChange": 12,
+      "dayChangePercent": 3.09
+    },
+    "acquisition": {
+      "purchaseDate": "2022-09-10T00:00:00.000Z",
+      "purchaseMethod": "buy",
+      "purchasePrice": 300
+    },
+    "alerts": {
+      "priceTargets": [],
+      "percentageTargets": []
+    },
+    "isActive": true,
+    "createdAt": "2025-09-14T13:27:20.480Z",
+    "updatedAt": "2025-09-14T13:27:20.480Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c2b8c15e1d8c421cd6af",
+    "userId": "68c40c260f1312b22670f27f",
+    "accountId": "68c6c2b6c15e1d8c421cd69f",
+    "securityInfo": {
+      "symbol": "VTI",
+      "name": "Vanguard Total Stock Market ETF",
+      "type": "etf",
+      "exchange": "NYSE",
+      "currency": "USD"
+    },
+    "position": {
+      "shares": 100,
+      "averageCost": 200,
+      "totalCost": 20000,
+      "currentPrice": 220,
+      "marketValue": 22000,
+      "gainLoss": 2000,
+      "gainLossPercent": 10,
+      "dayChange": 1.5,
+      "dayChangePercent": 0.69
+    },
+    "acquisition": {
+      "purchaseDate": "2022-01-15T00:00:00.000Z",
+      "purchaseMethod": "buy",
+      "purchasePrice": 200
+    },
+    "alerts": {
+      "priceTargets": [],
+      "percentageTargets": []
+    },
+    "isActive": true,
+    "createdAt": "2025-09-14T13:27:20.713Z",
+    "updatedAt": "2025-09-14T13:27:20.713Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c2b8c15e1d8c421cd6b1",
+    "userId": "68c40c260f1312b22670f27f",
+    "accountId": "68c6c2b6c15e1d8c421cd69f",
+    "securityInfo": {
+      "symbol": "QQQ",
+      "name": "Invesco QQQ Trust",
+      "type": "etf",
+      "exchange": "NASDAQ",
+      "currency": "USD"
+    },
+    "position": {
+      "shares": 50,
+      "averageCost": 300,
+      "totalCost": 15000,
+      "currentPrice": 350,
+      "marketValue": 17500,
+      "gainLoss": 2500,
+      "gainLossPercent": 16.67,
+      "dayChange": 3,
+      "dayChangePercent": 0.86
+    },
+    "acquisition": {
+      "purchaseDate": "2022-04-05T00:00:00.000Z",
+      "purchaseMethod": "buy",
+      "purchasePrice": 300
+    },
+    "alerts": {
+      "priceTargets": [],
+      "percentageTargets": []
+    },
+    "isActive": true,
+    "createdAt": "2025-09-14T13:27:20.951Z",
+    "updatedAt": "2025-09-14T13:27:20.951Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c4e07faa745b735721d2",
+    "userId": "68c6c4da7faa745b73572173",
+    "accountId": "68c6c4df7faa745b735721c7",
+    "securityInfo": {
+      "symbol": "AAPL",
+      "name": "Apple Inc.",
+      "type": "stock",
+      "exchange": "NASDAQ",
+      "currency": "USD"
+    },
+    "position": {
+      "shares": 50,
+      "averageCost": 130,
+      "totalCost": 6500,
+      "currentPrice": 150,
+      "marketValue": 7500,
+      "gainLoss": 1000,
+      "gainLossPercent": 15.38,
+      "dayChange": 2.5,
+      "dayChangePercent": 1.69
+    },
+    "acquisition": {
+      "purchaseDate": "2022-03-15T00:00:00.000Z",
+      "purchaseMethod": "buy",
+      "purchasePrice": 130
+    },
+    "alerts": {
+      "priceTargets": [],
+      "percentageTargets": []
+    },
+    "isActive": true,
+    "createdAt": "2025-09-14T13:36:32.631Z",
+    "updatedAt": "2025-09-14T13:36:32.631Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c4e07faa745b735721d4",
+    "userId": "68c6c4da7faa745b73572173",
+    "accountId": "68c6c4df7faa745b735721c7",
+    "securityInfo": {
+      "symbol": "TSLA",
+      "name": "Tesla Inc.",
+      "type": "stock",
+      "exchange": "NASDAQ",
+      "currency": "USD"
+    },
+    "position": {
+      "shares": 25,
+      "averageCost": 150,
+      "totalCost": 3750,
+      "currentPrice": 200,
+      "marketValue": 5000,
+      "gainLoss": 1250,
+      "gainLossPercent": 33.33,
+      "dayChange": -5,
+      "dayChangePercent": -2.44
+    },
+    "acquisition": {
+      "purchaseDate": "2022-06-20T00:00:00.000Z",
+      "purchaseMethod": "buy",
+      "purchasePrice": 150
+    },
+    "alerts": {
+      "priceTargets": [],
+      "percentageTargets": []
+    },
+    "isActive": true,
+    "createdAt": "2025-09-14T13:36:32.865Z",
+    "updatedAt": "2025-09-14T13:36:32.865Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c4e17faa745b735721d6",
+    "userId": "68c6c4da7faa745b73572173",
+    "accountId": "68c6c4df7faa745b735721c7",
+    "securityInfo": {
+      "symbol": "NVDA",
+      "name": "NVIDIA Corporation",
+      "type": "stock",
+      "exchange": "NASDAQ",
+      "currency": "USD"
+    },
+    "position": {
+      "shares": 30,
+      "averageCost": 300,
+      "totalCost": 9000,
+      "currentPrice": 400,
+      "marketValue": 12000,
+      "gainLoss": 3000,
+      "gainLossPercent": 33.33,
+      "dayChange": 12,
+      "dayChangePercent": 3.09
+    },
+    "acquisition": {
+      "purchaseDate": "2022-09-10T00:00:00.000Z",
+      "purchaseMethod": "buy",
+      "purchasePrice": 300
+    },
+    "alerts": {
+      "priceTargets": [],
+      "percentageTargets": []
+    },
+    "isActive": true,
+    "createdAt": "2025-09-14T13:36:33.101Z",
+    "updatedAt": "2025-09-14T13:36:33.101Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c4e17faa745b735721d8",
+    "userId": "68c6c4da7faa745b73572173",
+    "accountId": "68c6c4df7faa745b735721c7",
+    "securityInfo": {
+      "symbol": "VTI",
+      "name": "Vanguard Total Stock Market ETF",
+      "type": "etf",
+      "exchange": "NYSE",
+      "currency": "USD"
+    },
+    "position": {
+      "shares": 100,
+      "averageCost": 200,
+      "totalCost": 20000,
+      "currentPrice": 220,
+      "marketValue": 22000,
+      "gainLoss": 2000,
+      "gainLossPercent": 10,
+      "dayChange": 1.5,
+      "dayChangePercent": 0.69
+    },
+    "acquisition": {
+      "purchaseDate": "2022-01-15T00:00:00.000Z",
+      "purchaseMethod": "buy",
+      "purchasePrice": 200
+    },
+    "alerts": {
+      "priceTargets": [],
+      "percentageTargets": []
+    },
+    "isActive": true,
+    "createdAt": "2025-09-14T13:36:33.334Z",
+    "updatedAt": "2025-09-14T13:36:33.334Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c4e17faa745b735721da",
+    "userId": "68c6c4da7faa745b73572173",
+    "accountId": "68c6c4df7faa745b735721c7",
+    "securityInfo": {
+      "symbol": "QQQ",
+      "name": "Invesco QQQ Trust",
+      "type": "etf",
+      "exchange": "NASDAQ",
+      "currency": "USD"
+    },
+    "position": {
+      "shares": 50,
+      "averageCost": 300,
+      "totalCost": 15000,
+      "currentPrice": 350,
+      "marketValue": 17500,
+      "gainLoss": 2500,
+      "gainLossPercent": 16.67,
+      "dayChange": 3,
+      "dayChangePercent": 0.86
+    },
+    "acquisition": {
+      "purchaseDate": "2022-04-05T00:00:00.000Z",
+      "purchaseMethod": "buy",
+      "purchasePrice": 300
+    },
+    "alerts": {
+      "priceTargets": [],
+      "percentageTargets": []
+    },
+    "isActive": true,
+    "createdAt": "2025-09-14T13:36:33.567Z",
+    "updatedAt": "2025-09-14T13:36:33.567Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c544c1902ea89d44137d",
+    "userId": "68c6c53ec1902ea89d44131e",
+    "accountId": "68c6c543c1902ea89d441371",
+    "securityInfo": {
+      "symbol": "AAPL",
+      "name": "Apple Inc.",
+      "type": "stock",
+      "exchange": "NASDAQ",
+      "currency": "USD"
+    },
+    "position": {
+      "shares": 50,
+      "averageCost": 130,
+      "totalCost": 6500,
+      "currentPrice": 150,
+      "marketValue": 7500,
+      "gainLoss": 1000,
+      "gainLossPercent": 15.38,
+      "dayChange": 2.5,
+      "dayChangePercent": 1.69
+    },
+    "acquisition": {
+      "purchaseDate": "2022-03-15T00:00:00.000Z",
+      "purchaseMethod": "buy",
+      "purchasePrice": 130
+    },
+    "alerts": {
+      "priceTargets": [],
+      "percentageTargets": []
+    },
+    "isActive": true,
+    "createdAt": "2025-09-14T13:38:12.594Z",
+    "updatedAt": "2025-09-14T13:38:12.594Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c544c1902ea89d44137f",
+    "userId": "68c6c53ec1902ea89d44131e",
+    "accountId": "68c6c543c1902ea89d441371",
+    "securityInfo": {
+      "symbol": "TSLA",
+      "name": "Tesla Inc.",
+      "type": "stock",
+      "exchange": "NASDAQ",
+      "currency": "USD"
+    },
+    "position": {
+      "shares": 25,
+      "averageCost": 150,
+      "totalCost": 3750,
+      "currentPrice": 200,
+      "marketValue": 5000,
+      "gainLoss": 1250,
+      "gainLossPercent": 33.33,
+      "dayChange": -5,
+      "dayChangePercent": -2.44
+    },
+    "acquisition": {
+      "purchaseDate": "2022-06-20T00:00:00.000Z",
+      "purchaseMethod": "buy",
+      "purchasePrice": 150
+    },
+    "alerts": {
+      "priceTargets": [],
+      "percentageTargets": []
+    },
+    "isActive": true,
+    "createdAt": "2025-09-14T13:38:12.831Z",
+    "updatedAt": "2025-09-14T13:38:12.831Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c545c1902ea89d441381",
+    "userId": "68c6c53ec1902ea89d44131e",
+    "accountId": "68c6c543c1902ea89d441371",
+    "securityInfo": {
+      "symbol": "NVDA",
+      "name": "NVIDIA Corporation",
+      "type": "stock",
+      "exchange": "NASDAQ",
+      "currency": "USD"
+    },
+    "position": {
+      "shares": 30,
+      "averageCost": 300,
+      "totalCost": 9000,
+      "currentPrice": 400,
+      "marketValue": 12000,
+      "gainLoss": 3000,
+      "gainLossPercent": 33.33,
+      "dayChange": 12,
+      "dayChangePercent": 3.09
+    },
+    "acquisition": {
+      "purchaseDate": "2022-09-10T00:00:00.000Z",
+      "purchaseMethod": "buy",
+      "purchasePrice": 300
+    },
+    "alerts": {
+      "priceTargets": [],
+      "percentageTargets": []
+    },
+    "isActive": true,
+    "createdAt": "2025-09-14T13:38:13.065Z",
+    "updatedAt": "2025-09-14T13:38:13.065Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c545c1902ea89d441383",
+    "userId": "68c6c53ec1902ea89d44131e",
+    "accountId": "68c6c543c1902ea89d441371",
+    "securityInfo": {
+      "symbol": "VTI",
+      "name": "Vanguard Total Stock Market ETF",
+      "type": "etf",
+      "exchange": "NYSE",
+      "currency": "USD"
+    },
+    "position": {
+      "shares": 100,
+      "averageCost": 200,
+      "totalCost": 20000,
+      "currentPrice": 220,
+      "marketValue": 22000,
+      "gainLoss": 2000,
+      "gainLossPercent": 10,
+      "dayChange": 1.5,
+      "dayChangePercent": 0.69
+    },
+    "acquisition": {
+      "purchaseDate": "2022-01-15T00:00:00.000Z",
+      "purchaseMethod": "buy",
+      "purchasePrice": 200
+    },
+    "alerts": {
+      "priceTargets": [],
+      "percentageTargets": []
+    },
+    "isActive": true,
+    "createdAt": "2025-09-14T13:38:13.360Z",
+    "updatedAt": "2025-09-14T13:38:13.360Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c545c1902ea89d441385",
+    "userId": "68c6c53ec1902ea89d44131e",
+    "accountId": "68c6c543c1902ea89d441371",
+    "securityInfo": {
+      "symbol": "QQQ",
+      "name": "Invesco QQQ Trust",
+      "type": "etf",
+      "exchange": "NASDAQ",
+      "currency": "USD"
+    },
+    "position": {
+      "shares": 50,
+      "averageCost": 300,
+      "totalCost": 15000,
+      "currentPrice": 350,
+      "marketValue": 17500,
+      "gainLoss": 2500,
+      "gainLossPercent": 16.67,
+      "dayChange": 3,
+      "dayChangePercent": 0.86
+    },
+    "acquisition": {
+      "purchaseDate": "2022-04-05T00:00:00.000Z",
+      "purchaseMethod": "buy",
+      "purchasePrice": 300
+    },
+    "alerts": {
+      "priceTargets": [],
+      "percentageTargets": []
+    },
+    "isActive": true,
+    "createdAt": "2025-09-14T13:38:13.594Z",
+    "updatedAt": "2025-09-14T13:38:13.594Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c6cac6f13b0d03f7531b",
+    "userId": "68c6c61ec6f13b0d03f73f61",
+    "accountId": "68c6c6c9c6f13b0d03f75315",
+    "securityInfo": {
+      "symbol": "SWTSX",
+      "name": "Schwab Total Stock Market Index Fund",
+      "type": "mutual_fund",
+      "exchange": "SCHWAB",
+      "currency": "USD"
+    },
+    "position": {
+      "shares": 40,
+      "averageCost": 60,
+      "totalCost": 2400,
+      "currentPrice": 68.5,
+      "marketValue": 2740,
+      "gainLoss": 340,
+      "gainLossPercent": 14.17,
+      "dayChange": 0.45,
+      "dayChangePercent": 0.66
+    },
+    "acquisition": {
+      "purchaseDate": "2023-03-15T00:00:00.000Z",
+      "purchaseMethod": "buy",
+      "purchasePrice": 60
+    },
+    "alerts": {
+      "priceTargets": [],
+      "percentageTargets": []
+    },
+    "isActive": true,
+    "createdAt": "2025-09-14T13:44:42.122Z",
+    "updatedAt": "2025-09-14T13:44:42.122Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c6cac6f13b0d03f7531d",
+    "userId": "68c6c61ec6f13b0d03f73f61",
+    "accountId": "68c6c6c9c6f13b0d03f75315",
+    "securityInfo": {
+      "symbol": "SWLGX",
+      "name": "Schwab Large-Cap Growth Index Fund",
+      "type": "mutual_fund",
+      "exchange": "SCHWAB",
+      "currency": "USD"
+    },
+    "position": {
+      "shares": 25,
+      "averageCost": 46,
+      "totalCost": 1150,
+      "currentPrice": 52.8,
+      "marketValue": 1320,
+      "gainLoss": 170,
+      "gainLossPercent": 14.78,
+      "dayChange": 0.32,
+      "dayChangePercent": 0.61
+    },
+    "acquisition": {
+      "purchaseDate": "2023-06-20T00:00:00.000Z",
+      "purchaseMethod": "buy",
+      "purchasePrice": 46
+    },
+    "alerts": {
+      "priceTargets": [],
+      "percentageTargets": []
+    },
+    "isActive": true,
+    "createdAt": "2025-09-14T13:44:42.356Z",
+    "updatedAt": "2025-09-14T13:44:42.356Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c6cac6f13b0d03f7531f",
+    "userId": "68c6c61ec6f13b0d03f73f61",
+    "accountId": "68c6c6c9c6f13b0d03f75315",
+    "securityInfo": {
+      "symbol": "SWPPX",
+      "name": "Schwab S&P 500 Index Fund",
+      "type": "mutual_fund",
+      "exchange": "SCHWAB",
+      "currency": "USD"
+    },
+    "position": {
+      "shares": 35,
+      "averageCost": 50,
+      "totalCost": 1750,
+      "currentPrice": 58.25,
+      "marketValue": 2038.75,
+      "gainLoss": 288.75,
+      "gainLossPercent": 16.5,
+      "dayChange": 0.38,
+      "dayChangePercent": 0.66
+    },
+    "acquisition": {
+      "purchaseDate": "2023-09-10T00:00:00.000Z",
+      "purchaseMethod": "buy",
+      "purchasePrice": 50
+    },
+    "alerts": {
+      "priceTargets": [],
+      "percentageTargets": []
+    },
+    "isActive": true,
+    "createdAt": "2025-09-14T13:44:42.599Z",
+    "updatedAt": "2025-09-14T13:44:42.599Z",
+    "__v": 0
+  }
+]

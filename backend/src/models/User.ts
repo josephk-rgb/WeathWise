@@ -61,6 +61,7 @@ export interface IUserMetadata {
   ipAddress?: string;
   userAgent?: string;
   onboardingCompleted: boolean;
+  profileNeedsCompletion?: boolean; // Flag to indicate if profile has placeholder data
   tosAcceptedAt?: Date;
   privacyPolicyAcceptedAt?: Date;
 }
@@ -117,14 +118,20 @@ const UserSchema = new Schema<IUser>({
   profile: {
     firstName: {
       type: String,
-      required: true,
+      required: function(this: IUser) { 
+        // Required if onboarding is completed or if profile doesn't need completion
+        return this.metadata?.onboardingCompleted || !this.metadata?.profileNeedsCompletion;
+      },
       trim: true,
       minlength: 1,
       maxlength: 50
     },
     lastName: {
       type: String,
-      required: true,
+      required: function(this: IUser) { 
+        // Required if onboarding is completed or if profile doesn't need completion
+        return this.metadata?.onboardingCompleted || !this.metadata?.profileNeedsCompletion;
+      },
       trim: true,
       minlength: 1,
       maxlength: 50
@@ -294,6 +301,10 @@ const UserSchema = new Schema<IUser>({
       type: String
     },
     onboardingCompleted: {
+      type: Boolean,
+      default: false
+    },
+    profileNeedsCompletion: {
       type: Boolean,
       default: false
     },

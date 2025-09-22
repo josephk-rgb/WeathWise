@@ -142,12 +142,45 @@ export class MarketDataService {
   /**
    * Get historical data
    */
-  async getHistoricalData(symbol: string, _period: string = '1mo'): Promise<any[]> {
+  async getHistoricalData(symbol: string, period: string = '1mo'): Promise<any[]> {
     try {
+      // Calculate date range based on period
+      const now = new Date();
+      let period1: Date;
+      
+      switch (period) {
+        case '1d':
+          period1 = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000);
+          break;
+        case '5d':
+          period1 = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000);
+          break;
+        case '1mo':
+          period1 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        case '3mo':
+          period1 = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+          break;
+        case '6mo':
+          period1 = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+          break;
+        case '1y':
+          period1 = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+          break;
+        case '2y':
+          period1 = new Date(now.getTime() - 730 * 24 * 60 * 60 * 1000);
+          break;
+        case '5y':
+          period1 = new Date(now.getTime() - 1825 * 24 * 60 * 60 * 1000);
+          break;
+        default:
+          period1 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      }
+
       const historical = await yahooFinance.historical(symbol, {
-        period1: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
-        period2: new Date(),
-        interval: '1d'
+        period1,
+        period2: now,
+        interval: period === '5y' ? '1wk' : '1d' // Weekly for 5y, daily for shorter periods
       });
       
       return historical.map(day => ({
@@ -163,6 +196,34 @@ export class MarketDataService {
       logger.error(`Error fetching historical data for ${symbol}:`, error);
       return [];
     }
+  }
+
+  /**
+   * Get historical data for multiple symbols
+   */
+  async getMultipleHistoricalData(symbols: string[], period: string = '1y'): Promise<Record<string, any[]>> {
+    const result: Record<string, any[]> = {};
+    
+    // Process symbols in batches to avoid overwhelming the API
+    const batchSize = 5;
+    for (let i = 0; i < symbols.length; i += batchSize) {
+      const symbolBatch = symbols.slice(i, i + batchSize);
+      
+      await Promise.all(symbolBatch.map(async (symbol) => {
+        try {
+          const historicalData = await this.getHistoricalData(symbol, period);
+          result[symbol] = historicalData;
+        } catch (error) {
+          logger.error(`Error fetching historical data for ${symbol}:`, error);
+          result[symbol] = [];
+        }
+      }));
+      
+      // Small delay between batches
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+    
+    return result;
   }
 
   /**
@@ -344,6 +405,120 @@ export class MarketDataService {
     } catch (error) {
       logger.error('Error updating investment prices:', error);
       return investments;
+    }
+  }
+
+  /**
+   * Calculate real portfolio historical performance using actual market data
+   */
+  async calculatePortfolioHistoricalPerformance(investments: any[], period: string = '1y'): Promise<any[]> {
+    try {
+      if (investments.length === 0) {
+        return [];
+      }
+
+      // Filter only active investments (same as real-time calculation)
+      const activeInvestments = investments.filter(inv => inv.isActive !== false);
+      
+      if (activeInvestments.length === 0) {
+        return [];
+      }
+
+      // Get all unique symbols from active investments
+      const symbols = [...new Set(activeInvestments.map(inv => inv.securityInfo.symbol))];
+      
+      logger.info(`Calculating historical performance for ${symbols.length} symbols:`, symbols);
+      
+      // Fetch historical data for all symbols
+      const historicalData = await this.getMultipleHistoricalData(symbols, period);
+      
+      // Get all unique dates from the historical data
+      const allDates = new Set<string>();
+      Object.values(historicalData).forEach(data => {
+        data.forEach(day => {
+          const dateStr = day.date instanceof Date ? day.date.toISOString().split('T')[0] : day.date;
+          allDates.add(dateStr);
+        });
+      });
+      
+      // Sort dates
+      const sortedDates = Array.from(allDates).sort();
+      
+      logger.info(`Found ${sortedDates.length} unique dates for historical calculation`);
+      
+      // Calculate portfolio value for each date
+      const portfolioHistory = sortedDates.map(date => {
+        let totalValue = 0;
+        
+        activeInvestments.forEach(investment => {
+          const symbol = investment.securityInfo.symbol;
+          const symbolData = historicalData[symbol];
+          
+          if (symbolData && symbolData.length > 0) {
+            // Find the closest date (or exact match) for this symbol
+            let priceData = symbolData.find(day => {
+              const dayDateStr = day.date instanceof Date ? day.date.toISOString().split('T')[0] : day.date;
+              return dayDateStr === date;
+            });
+            
+            // If no exact match, find the most recent price before this date
+            if (!priceData) {
+              priceData = symbolData
+                .filter(day => {
+                  const dayDateStr = day.date instanceof Date ? day.date.toISOString().split('T')[0] : day.date;
+                  return dayDateStr <= date;
+                })
+                .sort((a, b) => {
+                  const dateA = a.date instanceof Date ? a.date : new Date(a.date);
+                  const dateB = b.date instanceof Date ? b.date : new Date(b.date);
+                  return dateB.getTime() - dateA.getTime();
+                })[0];
+            }
+            
+            // If still no data, use the purchase price as fallback
+            if (!priceData) {
+              priceData = { close: investment.acquisition.purchasePrice };
+            }
+            
+            const positionValue = investment.position.shares * priceData.close;
+            totalValue += positionValue;
+          } else {
+            // Fallback to purchase price if no historical data
+            const positionValue = investment.position.shares * investment.acquisition.purchasePrice;
+            totalValue += positionValue;
+          }
+        });
+        
+        return {
+          date,
+          value: Math.round(totalValue * 100) / 100
+        };
+      });
+      
+      logger.info(`Generated ${portfolioHistory.length} historical data points`);
+      if (portfolioHistory.length > 0) {
+        logger.info(`Portfolio value range: ${portfolioHistory[0].value} to ${portfolioHistory[portfolioHistory.length - 1].value}`);
+        
+        // Debug: Calculate current portfolio value using the same method for comparison
+        const currentDate = new Date().toISOString().split('T')[0];
+        const currentValueFromHistory = portfolioHistory.find(h => h.date === currentDate)?.value || 0;
+        
+        // Calculate current value using real-time method for comparison
+        let currentValueRealTime = 0;
+        activeInvestments.forEach(investment => {
+          currentValueRealTime += investment.position.shares * investment.position.currentPrice;
+        });
+        
+        logger.info(`Current portfolio value comparison:`);
+        logger.info(`  From historical calculation: ${currentValueFromHistory}`);
+        logger.info(`  From real-time calculation: ${currentValueRealTime}`);
+        logger.info(`  Difference: ${Math.abs(currentValueFromHistory - currentValueRealTime)}`);
+      }
+      
+      return portfolioHistory;
+    } catch (error) {
+      logger.error('Error calculating portfolio historical performance:', error);
+      return [];
     }
   }
 }

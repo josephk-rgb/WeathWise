@@ -40,7 +40,14 @@ export const CURRENCIES = {
   PEN: { symbol: 'S/', name: 'Peruvian Sol' },
 };
 
-export const formatCurrency = (amount: number, currency: string = 'USD'): string => {
+export const formatCurrency = (amount: number | undefined | null, currency: string = 'USD'): string => {
+  // Handle undefined, null, or NaN values
+  if (amount === undefined || amount === null || isNaN(amount)) {
+    const currencyInfo = CURRENCIES[currency as keyof typeof CURRENCIES];
+    const symbol = currencyInfo?.symbol || '$';
+    return `${symbol}0.00`;
+  }
+  
   const currencyInfo = CURRENCIES[currency as keyof typeof CURRENCIES];
   if (!currencyInfo) return `$${amount.toLocaleString()}`;
   

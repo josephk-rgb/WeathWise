@@ -52,10 +52,14 @@ const ProfileCompletionModal: React.FC<ProfileCompletionModalProps> = ({
 
     if (!formData.firstName.trim()) {
       newErrors.firstName = 'First name is required';
+    } else if (formData.firstName.trim().length < 1) {
+      newErrors.firstName = 'First name must be at least 1 character';
     }
 
     if (!formData.lastName.trim()) {
       newErrors.lastName = 'Last name is required';
+    } else if (formData.lastName.trim().length < 1) {
+      newErrors.lastName = 'Last name must be at least 1 character';
     }
 
     if (formData.phone && !/^\+?[\d\s\-\(\)]+$/.test(formData.phone)) {
@@ -82,12 +86,21 @@ const ProfileCompletionModal: React.FC<ProfileCompletionModalProps> = ({
       return;
     }
 
+    // Ensure required fields are present
+    if (!formData.firstName.trim() || !formData.lastName.trim()) {
+      setErrors({ submit: 'First name and last name are required to complete your profile.' });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
+      console.log('🔧 [PROFILE] Submitting profile data:', formData);
       await onComplete(formData);
-    } catch (error) {
-      console.error('Error completing profile:', error);
-      setErrors({ submit: 'Failed to save profile. Please try again.' });
+      console.log('✅ [PROFILE] Profile completed successfully');
+    } catch (error: any) {
+      console.error('❌ [PROFILE] Error completing profile:', error);
+      const errorMessage = error.message || 'Failed to save profile. Please try again.';
+      setErrors({ submit: errorMessage });
     } finally {
       setIsSubmitting(false);
     }

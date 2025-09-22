@@ -35,12 +35,48 @@ async function testMockDataGeneration() {
     if (!adminUser) {
       console.log('⚠️  Admin user not found, creating one...');
       adminUser = await User.create({
-        auth0Id: `auth0|${Date.now()}`, // Generate a temporary auth0 ID
+        auth0Id: `auth0|testadmin${Date.now()}`, // Generate a temporary auth0 ID
         email: adminEmail,
         role: 'admin',
         profile: {
           firstName: 'Admin',
           lastName: 'User'
+        },
+        preferences: {
+          currency: 'USD',
+          timezone: 'America/New_York',
+          language: 'en',
+          theme: 'light',
+          notifications: {
+            email: true,
+            push: false,
+            sms: false,
+            trading: true,
+            news: true
+          }
+        },
+        riskProfile: {
+          level: 'moderate',
+          questionnaire: {
+            age: 35,
+            experience: 'intermediate',
+            timeline: 'long_term',
+            riskTolerance: 6,
+            completedAt: new Date()
+          }
+        },
+        subscription: {
+          plan: 'free',
+          startDate: new Date()
+        },
+        encryption: {
+          keyVersion: 1,
+          encryptedKey: 'test-encrypted-key'
+        },
+        metadata: {
+          onboardingCompleted: true,
+          loginCount: 1,
+          lastLoginAt: new Date()
         }
       });
       console.log('✅ Admin user created');

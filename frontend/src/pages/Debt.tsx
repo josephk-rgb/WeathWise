@@ -10,6 +10,7 @@ import { Debt } from '../types';
 const DebtPage: React.FC = () => {
   const { user, debts, setDebts, currency } = useStore();
   const [showAddForm, setShowAddForm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     totalAmount: '',
@@ -19,6 +20,10 @@ const DebtPage: React.FC = () => {
     dueDate: '',
     type: 'credit_card' as Debt['type'],
   });
+
+  useEffect(() => {
+    console.log('showAddForm state changed:', showAddForm);
+  }, [showAddForm]);
 
   useEffect(() => {
     if (user) {
@@ -54,9 +59,32 @@ const DebtPage: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    console.log('Form submitted!');
+    console.log('User:', user);
+    console.log('Form data:', formData);
+    
+    if (!user) {
+      console.log('No user - returning early');
+      return;
+    }
 
+    setIsSubmitting(true);
     try {
+      // Validate required fields
+      if (!formData.name || !formData.totalAmount || !formData.remainingBalance || 
+          !formData.interestRate || !formData.minimumPayment || !formData.dueDate) {
+        console.error('Missing required fields:', {
+          name: !formData.name,
+          totalAmount: !formData.totalAmount,
+          remainingBalance: !formData.remainingBalance,
+          interestRate: !formData.interestRate,
+          minimumPayment: !formData.minimumPayment,
+          dueDate: !formData.dueDate
+        });
+        alert('Please fill in all required fields');
+        return;
+      }
+
       const debtData = {
         name: formData.name,
         totalAmount: Number(formData.totalAmount),
@@ -71,8 +99,28 @@ const DebtPage: React.FC = () => {
         paymentHistory: []
       };
 
+      // Validate numbers
+      if (isNaN(debtData.totalAmount) || isNaN(debtData.remainingBalance) || 
+          isNaN(debtData.interestRate) || isNaN(debtData.minimumPayment)) {
+        console.error('Invalid number values:', debtData);
+        alert('Please enter valid numbers for amount fields');
+        return;
+      }
+
+      // Validate date
+      if (isNaN(debtData.dueDate.getTime())) {
+        console.error('Invalid date:', formData.dueDate);
+        alert('Please enter a valid due date');
+        return;
+      }
+
+      console.log('Sending debt data:', debtData);
       await apiService.createDebt(debtData);
+      console.log('Debt created successfully');
+      
       await loadDebts(); // Reload debts from server
+      console.log('Debts reloaded');
+      
       setShowAddForm(false);
       setFormData({
         name: '',
@@ -83,8 +131,25 @@ const DebtPage: React.FC = () => {
         dueDate: '',
         type: 'credit_card' as Debt['type'],
       });
+      console.log('Form reset and hidden');
     } catch (error) {
       console.error('Error creating debt:', error);
+      
+      // Try to get more details about the error
+      if (error instanceof Error) {
+        console.error('Error message:', error.message);
+      }
+      
+      // If it's an API error, try to get the response
+      if ((error as any).response) {
+        console.error('API Error Response:', (error as any).response);
+        console.error('API Error Status:', (error as any).response.status);
+        console.error('API Error Data:', (error as any).response.data);
+      }
+      
+      alert('Failed to create debt. Check console for details.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -166,6 +231,7 @@ const DebtPage: React.FC = () => {
         </Card>
       </div>
 
+      {/* Add Debt Form */}
       {/* Add Debt Form */}
       {showAddForm && (
         <Card className="mb-8">
@@ -263,12 +329,25 @@ const DebtPage: React.FC = () => {
               />
             </div>
 
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Due Date
+              </label>
+              <input
+                type="date"
+                value={formData.dueDate}
+                onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                className="input-field"
+                required
+              />
+            </div>
+
             <div className="md:col-span-2 flex space-x-3">
-              <Button type="button" variant="secondary" onClick={() => setShowAddForm(false)}>
+              <Button type="button" variant="secondary" onClick={() => setShowAddForm(false)} disabled={isSubmitting}>
                 Cancel
               </Button>
-              <Button type="submit">
-                Add Debt
+              <Button type="submit" loading={isSubmitting} disabled={isSubmitting}>
+                {isSubmitting ? 'Adding Debt...' : 'Add Debt'}
               </Button>
             </div>
           </form>

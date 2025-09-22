@@ -13,6 +13,16 @@ export interface IGoal extends Document {
   currency: string;
   originalCurrency?: string;
   originalAmount?: number;
+  
+  // Enhanced goal-account relationship
+  linkedAccountId?: mongoose.Types.ObjectId; // Primary account for this goal
+  isAccountBacked: boolean; // Whether goal has dedicated account
+  allocatedAccounts?: Array<{
+    accountId: mongoose.Types.ObjectId;
+    allocatedAmount: number;
+    lastUpdated: Date;
+  }>; // Multiple accounts can contribute to a goal
+  
   isActive: boolean;
   isCompleted: boolean;
   completedAt?: Date;
@@ -81,6 +91,33 @@ const GoalSchema = new Schema<IGoal>({
     type: Number,
     min: 0
   },
+  
+  // Enhanced goal-account relationship
+  linkedAccountId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Account'
+  },
+  isAccountBacked: {
+    type: Boolean,
+    default: false
+  },
+  allocatedAccounts: [{
+    accountId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Account',
+      required: true
+    },
+    allocatedAmount: {
+      type: Number,
+      required: true,
+      min: 0
+    },
+    lastUpdated: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  
   isActive: {
     type: Boolean,
     default: true
@@ -108,10 +145,28 @@ const GoalSchema = new Schema<IGoal>({
 GoalSchema.index({ userId: 1, isActive: 1 });
 GoalSchema.index({ userId: 1, targetDate: 1 });
 GoalSchema.index({ userId: 1, priority: 1 });
+GoalSchema.index({ linkedAccountId: 1 });
+GoalSchema.index({ 'allocatedAccounts.accountId': 1 });
 
 // Virtual to calculate progress percentage
 GoalSchema.virtual('progress').get(function() {
   return this.targetAmount > 0 ? (this.currentAmount / this.targetAmount) * 100 : 0;
+});
+
+// Virtual to get actual progress from linked accounts
+GoalSchema.virtual('actualProgress').get(function(this: IGoal) {
+  if (this.isAccountBacked && this.allocatedAccounts && this.allocatedAccounts.length > 0) {
+    return this.allocatedAccounts.reduce((sum, allocation) => sum + allocation.allocatedAmount, 0);
+  }
+  return this.currentAmount; // Fallback to manual tracking
+});
+
+// Virtual to calculate progress variance (difference between tracked and actual)
+GoalSchema.virtual('progressVariance').get(function(this: IGoal) {
+  const actualProgress = this.isAccountBacked && this.allocatedAccounts && this.allocatedAccounts.length > 0
+    ? this.allocatedAccounts.reduce((sum, allocation) => sum + allocation.allocatedAmount, 0)
+    : this.currentAmount;
+  return actualProgress - this.currentAmount;
 });
 
 // Pre-save middleware to update completion status

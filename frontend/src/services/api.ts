@@ -9,7 +9,9 @@ import {
   NewsResponse,
   RealtimePortfolioValue,
   AdvancedPortfolioAnalytics,
-  NewsProvider
+  NewsProvider,
+  Account,
+  PhysicalAsset
 } from '../types';
 
 // Enhanced API service - stateless authentication
@@ -130,6 +132,9 @@ class ApiService {
     console.log('🔧 [DEBUG] full URL:', url);
     console.log('🔧 [DEBUG] method:', options.method || 'GET');
     console.log('🔧 [DEBUG] has token:', !!token);
+    console.log('🔧 [DEBUG] token preview:', token ? token.substring(0, 30) + '...' : 'null');
+    console.log('🔧 [DEBUG] token value:', token ? `${token.substring(0, 20)}...` : 'null/undefined');
+    console.log('🔧 [DEBUG] token preview:', token ? `${token.substring(0, 20)}...` : 'null');
     
     // Create a request key for deduplication and caching
     const method = options.method || 'GET';
@@ -172,14 +177,55 @@ class ApiService {
     // Update request timestamp
     this.requestTimestamps.set(requestKey, Date.now());
     
+    // Build headers explicitly to avoid spread issues
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    // Add any custom headers from options
+    if (options.headers) {
+      Object.entries(options.headers).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          headers[key] = value as string;
+        }
+      });
+    }
+    
+    // Always add Authorization header if token exists
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+      // Debug: Log token details for news endpoints
+      if (endpoint.includes('/market/news')) {
+        console.log('🔧 [NEWS DEBUG] Token details:', {
+          hasToken: !!token,
+          tokenType: typeof token,
+          tokenLength: token.length,
+          tokenStart: token.substring(0, 20),
+          tokenEnd: token.substring(token.length - 20),
+          isJWTFormat: token.split('.').length === 3
+        });
+      }
+    }
+
     const config: RequestInit = {
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token && { Authorization: `Bearer ${token}` }),
-        ...options.headers,
-      },
+      headers,
       ...options,
     };
+
+    // Debug: Log authorization header for polling endpoints
+    if (endpoint.includes('/portfolio/summary') || endpoint.includes('/investments')) {
+      console.log('🔧 [DEBUG] Polling request headers:', {
+        endpoint,
+        hasToken: !!token,
+        tokenType: typeof token,
+        tokenValue: token ? token.substring(0, 50) + '...' : 'null',
+        hasAuthHeader: !!config.headers && 'Authorization' in config.headers,
+        authHeaderValue: config.headers && 'Authorization' in config.headers ? 
+          (config.headers as any).Authorization.substring(0, 30) + '...' : 'none',
+        allHeaders: Object.keys(config.headers || {}),
+        headerConstruction: token ? `Bearer ${token}`.substring(0, 30) + '...' : 'no token'
+      });
+    }
 
     if (this.debugMode) {
       console.log('🚀 Making API request:', {
@@ -211,16 +257,92 @@ class ApiService {
 
   private async executeRequest(url: string, config: RequestInit, endpoint: string, options: RequestInit, retryCount: number, cacheKey?: string, cacheTTL?: number): Promise<any> {
     try {
-      const response = await fetch(url, config);
+      // Set timeout for long-running operations (like clear data, backup, AI chat)
+      const timeoutMs = endpoint.includes('/clear/') || endpoint.includes('/backup') || endpoint.includes('/ml/chat') || endpoint.includes('/ai/chat') ? 300000 : 30000; // 5 minutes for clear/backup/chat, 30 seconds for others
+      
+      // Enhanced debugging for clear operations
+      if (endpoint.includes('/clear/') || endpoint.includes('/backup')) {
+        console.log('🔧 [DEBUG] Long-running operation detected:', {
+          endpoint,
+          timeoutMs,
+          url,
+          method: config.method,
+          hasBody: !!config.body,
+          bodySize: config.body ? JSON.stringify(config.body).length : 0,
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        console.log('⏰ [DEBUG] Request timeout triggered:', {
+          endpoint,
+          timeoutMs,
+          elapsed: timeoutMs,
+          timestamp: new Date().toISOString()
+        });
+        controller.abort();
+      }, timeoutMs);
+      
+      const startTime = Date.now();
+      console.log('🚀 [DEBUG] Starting request:', {
+        endpoint,
+        url,
+        method: config.method,
+        timeoutMs,
+        timestamp: new Date().toISOString()
+      });
+      
+      const response = await fetch(url, {
+        ...config,
+        signal: controller.signal
+      });
+      
+      const endTime = Date.now();
+      const duration = endTime - startTime;
+      
+      clearTimeout(timeoutId);
+      
+      console.log('📡 [DEBUG] Request completed:', {
+        endpoint,
+        status: response.status,
+        statusText: response.statusText,
+        duration: `${duration}ms`,
+        timestamp: new Date().toISOString()
+      });
       
       if (this.debugMode) {
         console.log('📡 API response status:', response.status);
+      }
+
+      // Handle 304 Not Modified - return cached data if available
+      if (response.status === 304) {
+        if (this.debugMode) {
+          console.log('📋 304 Not Modified - using cached data');
+        }
+        
+        // Return cached data if available, otherwise return null
+        if (cacheKey) {
+          const cached = this.cache.get(cacheKey);
+          if (cached) {
+            return cached.data;
+          }
+        }
+        
+        // If no cached data available, return null (data hasn't changed)
+        return null;
       }
 
       if (!response.ok) {
         if (response.status === 401) {
           console.log('🔐 Authentication failed');
           this.clearToken();
+          
+          // Dispatch a custom event to notify auth system
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('auth-token-cleared'));
+          }
+          
           throw new Error('Authentication failed');
         }
         
@@ -251,6 +373,19 @@ class ApiService {
 
       const result = await response.json();
       
+      // Enhanced debugging for clear operations
+      if (endpoint.includes('/clear/') || endpoint.includes('/backup')) {
+        console.log('📋 [DEBUG] Response data received:', {
+          endpoint,
+          success: result.success,
+          message: result.message,
+          dataKeys: result.data ? Object.keys(result.data) : [],
+          recordsDeleted: result.data?.recordsDeleted,
+          backupCreated: result.data?.backupCreated,
+          timestamp: new Date().toISOString()
+        });
+      }
+      
       if (this.debugMode) {
         console.log('📦 API response data received:', !!result);
       }
@@ -268,8 +403,14 @@ class ApiService {
       }
       
       return result;
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ API request failed:', error);
+      
+      // Handle timeout errors
+      if (error.name === 'AbortError') {
+        throw new Error(`Request timed out after ${endpoint.includes('/clear/') || endpoint.includes('/backup') ? '5 minutes' : '30 seconds'}. The operation may still be running on the server.`);
+      }
+      
       throw error;
     }
   }
@@ -285,11 +426,19 @@ class ApiService {
   }
 
   // User profile methods
-  async getCurrentUser(): Promise<User> {
+  async getCurrentUser(auth0UserData?: { email?: string; given_name?: string; family_name?: string; name?: string }): Promise<User> {
     console.log('📡 Calling getCurrentUser API...');
+    console.log('🔧 [FRONTEND] Sending Auth0 user data:', auth0UserData);
+    
     try {
+      // Send Auth0 user data in the request body to help backend create/update user
+      const requestOptions: RequestInit = auth0UserData ? {
+        method: 'POST',
+        body: JSON.stringify({ auth0UserData })
+      } : {};
+      
       // Cache user profile for 10 minutes since it rarely changes
-      const result = await this.makeRequest('/auth/me', {}, 0, 600000);
+      const result = await this.makeRequest('/auth/me', requestOptions, 0, 600000);
       console.log('✅ getCurrentUser successful:', !!result);
       return result;
     } catch (error) {
@@ -443,9 +592,76 @@ class ApiService {
     });
   }
 
+  // Data transformation helper methods
+  private transformBackendInvestment(backendInvestment: any): Investment {
+    return {
+      id: backendInvestment._id || backendInvestment.id,
+      userId: backendInvestment.userId || '',
+      symbol: backendInvestment.securityInfo?.symbol || '',
+      name: backendInvestment.securityInfo?.name || '',
+      shares: backendInvestment.position?.shares || 0,
+      purchasePrice: backendInvestment.acquisition?.purchasePrice || backendInvestment.position?.averageCost || 0,
+      currentPrice: backendInvestment.position?.currentPrice || 0,
+      type: backendInvestment.securityInfo?.type || 'other',
+      purchaseDate: backendInvestment.acquisition?.purchaseDate ? new Date(backendInvestment.acquisition.purchaseDate) : new Date(),
+      currency: backendInvestment.securityInfo?.currency || 'USD',
+      originalCurrency: backendInvestment.securityInfo?.currency,
+      originalPurchasePrice: backendInvestment.acquisition?.purchasePrice
+    };
+  }
+
+  private transformBackendInvestments(backendInvestments: any[]): Investment[] {
+    if (!Array.isArray(backendInvestments)) {
+      return [];
+    }
+    return backendInvestments.map(inv => this.transformBackendInvestment(inv));
+  }
+
   // Investment methods
   async getInvestments(_userId: string): Promise<Investment[]> {
     const response = await this.makeRequest('/investments');
+    if (response && response.success && Array.isArray(response.data)) {
+      return this.transformBackendInvestments(response.data);
+    }
+    if (Array.isArray(response)) {
+      return this.transformBackendInvestments(response);
+    }
+    return [];
+  }
+
+  async createInvestment(investmentData: Omit<Investment, 'id'>): Promise<Investment> {
+    const response = await this.makeRequest('/investments', {
+      method: 'POST',
+      body: JSON.stringify(investmentData),
+    });
+    
+    if (response && response.success && response.data) {
+      return this.transformBackendInvestment(response.data);
+    }
+    return response;
+  }
+
+  async updateInvestment(id: string, investmentData: Partial<Investment>): Promise<Investment> {
+    const response = await this.makeRequest(`/investments/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(investmentData),
+    });
+    
+    if (response && response.success && response.data) {
+      return this.transformBackendInvestment(response.data);
+    }
+    return response;
+  }
+
+  async deleteInvestment(id: string): Promise<void> {
+    return this.makeRequest(`/investments/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Account methods
+  async getAccounts(): Promise<Account[]> {
+    const response = await this.makeRequest('/accounts');
     if (response && response.success && Array.isArray(response.data)) {
       return response.data;
     }
@@ -455,22 +671,54 @@ class ApiService {
     return [];
   }
 
-  async createInvestment(investmentData: Omit<Investment, 'id'>): Promise<Investment> {
-    return this.makeRequest('/investments', {
+  async createAccount(accountData: Omit<Account, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<Account> {
+    return this.makeRequest('/accounts', {
       method: 'POST',
-      body: JSON.stringify(investmentData),
+      body: JSON.stringify(accountData),
     });
   }
 
-  async updateInvestment(id: string, investmentData: Partial<Investment>): Promise<Investment> {
-    return this.makeRequest(`/investments/${id}`, {
+  async updateAccount(id: string, accountData: Partial<Account>): Promise<Account> {
+    return this.makeRequest(`/accounts/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(investmentData),
+      body: JSON.stringify(accountData),
     });
   }
 
-  async deleteInvestment(id: string): Promise<void> {
-    return this.makeRequest(`/investments/${id}`, {
+  async deleteAccount(id: string): Promise<void> {
+    return this.makeRequest(`/accounts/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Physical Asset methods
+  async getAssets(): Promise<PhysicalAsset[]> {
+    const response = await this.makeRequest('/physical-assets');
+    if (response && response.success && Array.isArray(response.data)) {
+      return response.data;
+    }
+    if (Array.isArray(response)) {
+      return response;
+    }
+    return [];
+  }
+
+  async createAsset(assetData: Omit<PhysicalAsset, 'id' | 'userId' | 'equity' | 'createdAt' | 'updatedAt'>): Promise<PhysicalAsset> {
+    return this.makeRequest('/physical-assets', {
+      method: 'POST',
+      body: JSON.stringify(assetData),
+    });
+  }
+
+  async updateAsset(id: string, assetData: Partial<PhysicalAsset>): Promise<PhysicalAsset> {
+    return this.makeRequest(`/physical-assets/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(assetData),
+    });
+  }
+
+  async deleteAsset(id: string): Promise<void> {
+    return this.makeRequest(`/physical-assets/${id}`, {
       method: 'DELETE',
     });
   }
@@ -493,7 +741,38 @@ class ApiService {
 
   async getPortfolioPerformance(): Promise<any> {
     const response = await this.makeRequest('/portfolio/performance');
-    return response.success ? response.data : response;
+    
+    // Handle both response formats: wrapped {success, data} and direct data
+    let backendData;
+    if (response && response.success && response.data) {
+      // Standard wrapped response format
+      backendData = response.data;
+    } else if (response && (response.historicalPerformance || response.investments)) {
+      // Direct data format (what we're actually receiving)
+      backendData = response;
+    } else {
+      // No valid data
+      return response;
+    }
+    
+    return {
+      ...backendData,
+      // Transform historical performance data if it exists
+      historicalPerformance: backendData.historicalPerformance || [],
+      // Transform investments data if it exists
+      investments: backendData.investments ? backendData.investments.map((inv: any) => ({
+        symbol: inv.symbol,
+        name: inv.name,
+        type: inv.type,
+        shares: inv.shares,
+        currentPrice: inv.currentPrice,
+        averageCost: inv.averageCost,
+        currentValue: inv.currentValue,
+        costBasis: inv.costBasis,
+        gainLoss: inv.gainLoss,
+        gainLossPercent: inv.gainLossPercent
+      })) : []
+    };
   }
 
   // Market data methods
@@ -509,16 +788,27 @@ class ApiService {
 
   // Enhanced Yahoo Finance Market Data Methods
   async getYahooMarketData(symbols: string[]): Promise<MarketData[]> {
-    const response = await this.makeRequest('/market/yahoo-data', {
-      method: 'POST',
-      body: JSON.stringify({ symbols }),
-    });
-    return response.data || response;
+    // Temporarily disabled: backend endpoint /market/yahoo-data not available
+    console.warn('getYahooMarketData is disabled. Returning empty array.');
+    return [];
   }
 
   async getYahooQuote(symbol: string): Promise<MarketData> {
-    const response = await this.makeRequest(`/market/yahoo-quote/${symbol}`);
-    return response.data || response;
+    // Temporarily disabled: rely on standard market data or return minimal stub
+    console.warn('getYahooQuote is disabled. Returning stub.');
+    return {
+      symbol,
+      name: symbol,
+      currentPrice: 0,
+      change: 0,
+      changePercent: 0,
+      volume: 0,
+      high: 0,
+      low: 0,
+      open: 0,
+      previousClose: 0,
+      lastUpdated: new Date()
+    } as unknown as MarketData;
   }
 
   async getMarketSummary(): Promise<MarketData[]> {
@@ -529,6 +819,48 @@ class ApiService {
   // Real-time Portfolio Value with Yahoo Finance
   async getRealtimePortfolioValue(): Promise<RealtimePortfolioValue> {
     const response = await this.makeRequest('/investments/portfolio/summary');
+    
+    if (response && response.success && response.data) {
+      // Transform the backend portfolio summary to match frontend expectations
+      const backendData = response.data;
+      return {
+        totalValue: backendData.totalValue || 0,
+        totalCost: backendData.totalCost || 0,
+        totalGainLoss: backendData.totalGainLoss || 0,
+        totalGainLossPercent: backendData.totalGainLossPercent || 0,
+        lastUpdated: backendData.lastUpdated ? new Date(backendData.lastUpdated) : new Date(),
+        marketData: backendData.topHoldings ? backendData.topHoldings.map((holding: any) => ({
+          id: holding.symbol,
+          userId: '',
+          symbol: holding.symbol,
+          name: holding.name,
+          shares: 0, // Not provided in summary
+          purchasePrice: 0, // Not provided in summary
+          currentPrice: holding.value || 0,
+          type: 'stock' as const,
+          purchaseDate: new Date(),
+          currency: 'USD',
+          value: holding.value || 0,
+          cost: 0,
+          gainLoss: holding.gainLoss || 0,
+          gainLossPercent: holding.gainLossPercent || 0,
+          marketData: {
+            symbol: holding.symbol,
+            name: holding.name,
+            currentPrice: holding.value || 0,
+            change: 0,
+            changePercent: 0,
+            volume: 0,
+            high: holding.value || 0,
+            low: holding.value || 0,
+            open: holding.value || 0,
+            previousClose: holding.value || 0,
+            lastUpdated: new Date()
+          }
+        })) : []
+      };
+    }
+    
     return response.data || response;
   }
 
@@ -560,7 +892,38 @@ class ApiService {
 
   // AI/Recommendation methods
   async getRecommendations(_userId: string): Promise<Recommendation[]> {
-    return this.makeRequest('/ai/recommendations');
+    const response = await this.makeRequest('/ai/recommendations');
+    if (response && response.success && Array.isArray(response.recommendations)) {
+      return response.recommendations;
+    }
+    return Array.isArray(response) ? response : [];
+  }
+
+  // New: Trigger recommendation generation for a scope (dashboard | portfolio)
+  async refreshRecommendations(scope: 'dashboard' | 'portfolio', max: number = 5, portfolio?: any): Promise<{ success: boolean; accepted: boolean; scope: string; max: number }> {
+    const params = new URLSearchParams();
+    params.append('scope', scope);
+    if (max) params.append('max', String(max));
+
+    const response = await this.makeRequest(`/ai/recommendations/refresh?${params.toString()}`, {
+      method: 'POST',
+      body: JSON.stringify({ max, portfolio })
+    });
+
+    return response;
+  }
+
+  // New: Poll recommendations by scope (dashboard | portfolio)
+  async getRecommendationsByScope(scope: 'dashboard' | 'portfolio', limit: number = 5): Promise<Recommendation[]> {
+    const params = new URLSearchParams();
+    params.append('scope', scope);
+    params.append('limit', String(limit));
+
+    const response = await this.makeRequest(`/ai/recommendations?${params.toString()}`);
+    if (response && response.success && Array.isArray(response.recommendations)) {
+      return response.recommendations;
+    }
+    return Array.isArray(response) ? response : [];
   }
 
   async sendChatMessage(message: string, context?: any): Promise<string> {
@@ -579,7 +942,7 @@ class ApiService {
   }
 
   // NEW: ML-powered chat with personalized financial context via backend proxy
-  async sendMLChatMessage(message: string, model: string = "llama3.1:8b", includeFinancialData: boolean = true): Promise<any> {
+  async sendMLChatMessage(message: string, model: string = "llama3.1:8b", includeFinancialData: boolean = true, sessionId?: string, title?: string): Promise<any> {
     console.log('🔧 [DEBUG] sendMLChatMessage called');
     console.log('🔧 [DEBUG] Base URL:', this.baseUrl);
     console.log('🔧 [DEBUG] Full URL will be:', `${this.baseUrl}/ml/chat`);
@@ -590,7 +953,9 @@ class ApiService {
       body: JSON.stringify({ 
         message, 
         model,
-        include_financial_data: includeFinancialData
+        include_financial_data: includeFinancialData,
+        session_id: sessionId,
+        title
       }),
     });
     
@@ -602,8 +967,81 @@ class ApiService {
     return this.makeRequest(`/ml/chat/history/${sessionId}?limit=${limit}`);
   }
 
+  // Enhanced chat session management
+  async getChatSessions(limit: number = 20, offset: number = 0): Promise<any> {
+    return this.makeRequest(`/ml/chat/sessions?limit=${limit}&offset=${offset}`);
+  }
+
+  async getChatSessionById(sessionId: string): Promise<any> {
+    return this.makeRequest(`/ml/chat/sessions/${sessionId}`);
+  }
+
+  async createChatSession(title?: string): Promise<any> {
+    return this.makeRequest('/ml/chat/sessions', {
+      method: 'POST',
+      body: JSON.stringify({ title }),
+    });
+  }
+
+  async updateChatSession(sessionId: string, updates: any): Promise<any> {
+    return this.makeRequest(`/ml/chat/sessions/${sessionId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+
+  async deleteChatSession(sessionId: string): Promise<any> {
+    return this.makeRequest(`/ml/chat/sessions/${sessionId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async searchChatHistory(query: string, limit: number = 20): Promise<any> {
+    return this.makeRequest(`/ml/chat/search?q=${encodeURIComponent(query)}&limit=${limit}`);
+  }
+
+  async exportChatSession(sessionId: string, format: 'json' | 'txt' = 'json'): Promise<Blob> {
+    const response = await fetch(`${this.baseUrl}/ml/chat/sessions/${sessionId}/export?format=${format}`, {
+      headers: {
+        Authorization: `Bearer ${this.currentToken}`,
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Export failed: ${response.status}`);
+    }
+    
+    return response.blob();
+  }
+
   async checkMLServiceHealth(): Promise<any> {
     return this.makeRequest('/ml/health');
+  }
+
+  // ML: Portfolio optimization and sentiment
+  async getPortfolioOptimization(symbols: string[], riskTolerance: 'conservative'|'moderate'|'aggressive' = 'moderate', currentWeights?: number[], targetReturn?: number): Promise<any> {
+    return this.makeRequest('/ml/optimize-portfolio', {
+      method: 'POST',
+      body: JSON.stringify({ symbols, risk_tolerance: riskTolerance, current_weights: currentWeights, target_return: targetReturn })
+    });
+  }
+
+  async getEfficientFrontier(symbols: string[], numPortfolios: number = 100): Promise<any> {
+    return this.makeRequest('/ml/efficient-frontier', {
+      method: 'POST',
+      body: JSON.stringify({ symbols, num_portfolios: numPortfolios })
+    });
+  }
+
+  async getSymbolSentiment(symbol: string): Promise<any> {
+    return this.makeRequest(`/ml/sentiment/${encodeURIComponent(symbol)}`);
+  }
+
+  async trainSentiment(symbols: string[]): Promise<any> {
+    return this.makeRequest('/ml/sentiment/train', {
+      method: 'POST',
+      body: JSON.stringify({ symbols })
+    });
   }
 
   async getFinancialInsights(): Promise<any> {
@@ -634,6 +1072,27 @@ class ApiService {
   async getDashboardStats(): Promise<any> {
     // Cache dashboard stats for 5 minutes - increased from default 3 minutes
     return this.makeRequest('/analytics/dashboard-stats', {}, 0, 300000);
+  }
+
+  async getEnhancedDashboardStats(): Promise<any> {
+    // Use enhanced dashboard stats with true net worth calculation
+    return this.makeRequest('/analytics/enhanced-dashboard-stats', {}, 0, 300000);
+  }
+
+  // 🚀 PERFORMANCE OPTIMIZATION: Single dashboard endpoint
+  // Combines all dashboard data into one optimized API call
+  async getCompleteDashboardData(period: string = 'current_month'): Promise<any> {
+    console.log('🚀 Calling optimized dashboard endpoint with period:', period);
+    // Cache complete dashboard data for 5 minutes (longer than individual endpoints)
+    // This replaces 9 separate API calls with a single optimized call
+    const result = await this.makeRequest(`/analytics/dashboard-complete?period=${period}`, {}, 0, 300000);
+    console.log('🚀 Optimized dashboard endpoint response:', {
+      success: result?.success,
+      hasData: !!result?.data,
+      dataKeys: result?.data ? Object.keys(result.data) : [],
+      period: period
+    });
+    return result;
   }
 
   async getFinancialHealth(): Promise<any> {
@@ -670,31 +1129,211 @@ class ApiService {
   }
 
   // Public method for making authenticated requests (used by polling manager)
-  async makeAuthenticatedRequest(endpoint: string, cacheTTL?: number): Promise<any> {
-    return this.makeRequest(endpoint, {}, 0, cacheTTL);
+  async makeAuthenticatedRequest(endpoint: string, cacheTTL?: number, forceRefresh?: boolean): Promise<any> {
+    const options: RequestInit = {};
+    
+    // If forceRefresh is true, add a cache-busting header to prevent 304 responses
+    if (forceRefresh) {
+      options.headers = {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      };
+    }
+    
+    return this.makeRequest(endpoint, options, 0, cacheTTL);
   }
 
-  // Mock Data Methods for Admin Users
-  async generateMockData(config: any): Promise<any> {
-    return this.makeRequest('/mock-data/generate', {
+  // Persona Management Methods for Admin Users
+  
+  // Get available personas
+  async getAvailablePersonas(): Promise<any> {
+    return this.makeRequest('/admin/persona/available');
+  }
+
+  // Get persona information
+  async getPersonaInfo(personaName: string): Promise<any> {
+    return this.makeRequest(`/admin/persona/info/${personaName}`);
+  }
+
+  // Load persona data for a user
+  async loadPersonaData(userId: string, personaName: string, options?: any): Promise<any> {
+    return this.makeRequest(`/admin/persona/load/${userId}`, {
       method: 'POST',
-      body: JSON.stringify(config),
+      body: JSON.stringify({ personaName, options }),
     });
   }
 
-  async getMockDataSummary(): Promise<any> {
-    return this.makeRequest('/mock-data/summary');
+  // Load persona data for multiple users
+  async loadPersonaDataBulk(userIds: string[], personaName: string, options?: any): Promise<any> {
+    return this.makeRequest('/admin/persona/load-bulk', {
+      method: 'POST',
+      body: JSON.stringify({ userIds, personaName, options }),
+    });
   }
 
-  async clearMockData(): Promise<any> {
-    return this.makeRequest('/mock-data/clear', {
+  // Validate persona data for a user
+  async validatePersonaData(userId: string, config?: any): Promise<any> {
+    const params = config ? `?config=${encodeURIComponent(JSON.stringify(config))}` : '';
+    return this.makeRequest(`/admin/persona/validate/${userId}${params}`);
+  }
+
+  // Generate historical data for a user
+  async generateHistoricalData(userId: string, config?: any): Promise<any> {
+    return this.makeRequest(`/admin/persona/generate-historical/${userId}`, {
+      method: 'POST',
+      body: JSON.stringify({ config }),
+    });
+  }
+
+  // Clear all persona data for a user
+  async clearPersonaData(userId: string, confirm: boolean = false, backup: boolean = true): Promise<any> {
+    return this.makeRequest(`/admin/persona/clear/${userId}`, {
       method: 'DELETE',
+      body: JSON.stringify({ confirm, backup }),
     });
   }
 
-  async getMockDataConfig(): Promise<any> {
-    return this.makeRequest('/mock-data/config');
+  // Get persona data status for a user
+  async getPersonaStatus(userId: string): Promise<any> {
+    return this.makeRequest(`/admin/persona/status/${userId}`);
   }
+
+  // Get summary of all persona data
+  async getPersonaSummary(personaName?: string, limit?: number, offset?: number): Promise<any> {
+    const params = new URLSearchParams();
+    if (personaName) params.append('personaName', personaName);
+    if (limit) params.append('limit', limit.toString());
+    if (offset) params.append('offset', offset.toString());
+    
+    const queryString = params.toString();
+    return this.makeRequest(`/admin/persona/summary${queryString ? `?${queryString}` : ''}`);
+  }
+
+  // Create backup of persona data
+  async createPersonaBackup(userId?: string, personaName?: string, includeHistoricalData: boolean = true): Promise<any> {
+    return this.makeRequest('/admin/persona/backup', {
+      method: 'POST',
+      body: JSON.stringify({ userId, personaName, includeHistoricalData }),
+    });
+  }
+
+  // Restore persona data from backup
+  async restorePersonaBackup(backupName: string, userId?: string, confirm: boolean = false): Promise<any> {
+    return this.makeRequest('/admin/persona/restore', {
+      method: 'POST',
+      body: JSON.stringify({ backupName, userId, confirm }),
+    });
+  }
+
+  // List available backups
+  async listPersonaBackups(limit?: number): Promise<any> {
+    const params = limit ? `?limit=${limit}` : '';
+    return this.makeRequest(`/admin/persona/backups${params}`);
+  }
+
+  // Delete a backup
+  async deletePersonaBackup(backupName: string, confirm: boolean = false): Promise<any> {
+    return this.makeRequest(`/admin/persona/backup/${backupName}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ confirm }),
+    });
+  }
+
+  // Get persona system health status
+  async getPersonaSystemHealth(): Promise<any> {
+    return this.makeRequest('/admin/persona/health');
+  }
+
+  // Test persona loading without saving to database
+  async testPersonaLoading(personaName: string, options?: any): Promise<any> {
+    return this.makeRequest(`/admin/persona/test/${personaName}`, {
+      method: 'POST',
+      body: JSON.stringify({ options }),
+    });
+  }
+
+  // Get persona usage analytics
+  async getPersonaAnalytics(timeframe?: string, personaName?: string): Promise<any> {
+    const params = new URLSearchParams();
+    if (timeframe) params.append('timeframe', timeframe);
+    if (personaName) params.append('personaName', personaName);
+    
+    const queryString = params.toString();
+    return this.makeRequest(`/admin/persona/analytics${queryString ? `?${queryString}` : ''}`);
+  }
+
+  // Export persona data for a user
+  async exportPersonaData(userId: string, format: string = 'json', includeHistoricalData: boolean = true): Promise<any> {
+    return this.makeRequest(`/admin/persona/export/${userId}`, {
+      method: 'POST',
+      body: JSON.stringify({ format, includeHistoricalData }),
+    });
+  }
+
+  // Import persona data from file
+  async importPersonaData(userId: string, format: string, data: string, options?: any): Promise<any> {
+    return this.makeRequest('/admin/persona/import', {
+      method: 'POST',
+      body: JSON.stringify({ userId, format, data, options }),
+    });
+  }
+
+  // Get persona template information
+  async getPersonaTemplates(personaName?: string): Promise<any> {
+    const params = personaName ? `?personaName=${personaName}` : '';
+    return this.makeRequest(`/admin/persona/templates${params}`);
+  }
+
+  // Update persona template
+  async updatePersonaTemplate(personaName: string, template: any): Promise<any> {
+    return this.makeRequest(`/admin/persona/template/${personaName}`, {
+      method: 'PUT',
+      body: JSON.stringify({ template }),
+    });
+  }
+
+  // Create new persona template
+  async createPersonaTemplate(personaName: string, template: any): Promise<any> {
+    return this.makeRequest('/admin/persona/template', {
+      method: 'POST',
+      body: JSON.stringify({ personaName, template }),
+    });
+  }
+
+  // Delete persona template
+  async deletePersonaTemplate(personaName: string, confirm: boolean = false): Promise<any> {
+    return this.makeRequest(`/admin/persona/template/${personaName}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ confirm }),
+    });
+  }
+
+  // Snapshot Management Methods
+  
+  // Manually trigger snapshot creation
+  async createSnapshot(userId?: string, type: string = 'all'): Promise<any> {
+    return this.makeRequest('/admin/persona/snapshot/create', {
+      method: 'POST',
+      body: JSON.stringify({ userId, type }),
+    });
+  }
+
+  // Get snapshot system status
+  async getSnapshotStatus(): Promise<any> {
+    return this.makeRequest('/admin/persona/snapshot/status');
+  }
+
+  // Clean up old snapshots
+  async cleanupSnapshots(daysToKeep: number = 365): Promise<any> {
+    return this.makeRequest('/admin/persona/snapshot/cleanup', {
+      method: 'POST',
+      body: JSON.stringify({ daysToKeep }),
+    });
+  }
+
+  // Legacy Mock Data Methods (REMOVED - Use Persona System Instead)
+  // The old mock data system has been completely replaced by the persona-based system.
+  // Use the persona management methods above for all data generation needs.
 }
 
 export const apiService = new ApiService();

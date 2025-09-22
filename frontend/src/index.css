@@ -1,9 +1,9 @@
+/* Import highlight.js theme for code syntax highlighting */
+@import 'highlight.js/styles/github-dark.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Import highlight.js theme for code syntax highlighting */
-@import 'highlight.js/styles/github-dark.css';
 
 @layer base {
   html {

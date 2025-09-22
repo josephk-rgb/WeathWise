@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { X, Upload, Camera, Calendar, DollarSign, Tag, Repeat } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Upload, Camera, Calendar, DollarSign, Tag, Repeat, CreditCard } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { Transaction } from '../../types';
+import { apiService } from '../../services/api';
 import Button from '../UI/Button';
 import Card from '../UI/Card';
 import { CURRENCIES, convertCurrency } from '../../utils/currency';
@@ -13,6 +13,8 @@ interface TransactionModalProps {
 
 const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose }) => {
   const { user, addTransaction, currency: baseCurrency } = useStore();
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [loadingAccounts, setLoadingAccounts] = useState(false);
   const [formData, setFormData] = useState({
     amount: '',
     description: '',
@@ -20,6 +22,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose }) 
     type: 'expense' as 'income' | 'expense',
     date: new Date().toISOString().split('T')[0],
     currency: baseCurrency,
+    accountId: '', // Add account selection
     isRecurring: false,
     recurringFrequency: 'monthly' as 'weekly' | 'monthly' | 'yearly',
     receiptFile: null as File | null,
@@ -31,42 +34,83 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose }) 
     'Business', 'Personal Care', 'Gifts & Donations', 'Other'
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Load accounts when modal opens
+  useEffect(() => {
+    if (isOpen && user) {
+      loadAccounts();
+    }
+  }, [isOpen, user]);
+
+  const loadAccounts = async () => {
+    if (!user) return;
+    setLoadingAccounts(true);
+    try {
+      const accountsData = await apiService.getAccounts();
+      setAccounts(accountsData);
+      // Set default account if none selected
+      if (!formData.accountId && accountsData.length > 0) {
+        setFormData(prev => ({ ...prev, accountId: accountsData[0].id }));
+      }
+    } catch (error) {
+      console.error('Error loading accounts:', error);
+    } finally {
+      setLoadingAccounts(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
-    const originalAmount = Number(formData.amount);
-    const convertedAmount = convertCurrency(originalAmount, formData.currency, baseCurrency);
-    const finalAmount = formData.type === 'expense' ? -Math.abs(convertedAmount) : Math.abs(convertedAmount);
-    const transaction: Transaction = {
-      id: Date.now().toString(),
-      userId: user.id,
-      amount: finalAmount,
-      description: formData.description,
-      category: formData.category,
-      type: formData.type,
-      date: new Date(formData.date),
-      currency: baseCurrency,
-      originalCurrency: formData.currency !== baseCurrency ? formData.currency : undefined,
-      originalAmount: formData.currency !== baseCurrency ? originalAmount : undefined,
-      isRecurring: formData.isRecurring,
-      recurringFrequency: formData.isRecurring ? formData.recurringFrequency : undefined,
-      receiptUrl: formData.receiptFile ? URL.createObjectURL(formData.receiptFile) : undefined,
-    };
+    try {
+      const originalAmount = Number(formData.amount);
+      const convertedAmount = convertCurrency(originalAmount, formData.currency, baseCurrency);
+      const finalAmount = formData.type === 'expense' ? -Math.abs(convertedAmount) : Math.abs(convertedAmount);
+      
+      // Prepare transaction data for API (without id, as backend will generate it)
+      const transactionData = {
+        userId: user.id,
+        accountId: formData.accountId, // Include account selection
+        amount: finalAmount,
+        description: formData.description,
+        category: formData.category,
+        type: formData.type,
+        date: new Date(formData.date),
+        currency: baseCurrency,
+        isRecurring: formData.isRecurring,
+        recurringFrequency: formData.isRecurring ? formData.recurringFrequency : undefined,
+        receiptUrl: formData.receiptFile ? URL.createObjectURL(formData.receiptFile) : undefined,
+        tags: [], // Add empty tags array as expected by backend
+      };
 
-    addTransaction(transaction);
-    onClose();
-    setFormData({
-      amount: '',
-      description: '',
-      category: '',
-      type: 'expense',
-      date: new Date().toISOString().split('T')[0],
-      currency: baseCurrency,
-      isRecurring: false,
-      recurringFrequency: 'monthly',
-      receiptFile: null,
-    });
+      // Call API to create transaction
+      const response = await apiService.createTransaction(transactionData);
+      
+      // Extract the transaction from the response (handle both response formats)
+      const savedTransaction = (response as any).data || response;
+      
+      // Add to local store
+      addTransaction(savedTransaction);
+      
+      // Close modal and reset form
+      onClose();
+      setFormData({
+        amount: '',
+        description: '',
+        category: '',
+        type: 'expense',
+        date: new Date().toISOString().split('T')[0],
+        currency: baseCurrency,
+        accountId: accounts.length > 0 ? accounts[0].id : '', // Reset to first account
+        isRecurring: false,
+        recurringFrequency: 'monthly',
+        receiptFile: null,
+      });
+    } catch (error) {
+      console.error('Error creating transaction:', error);
+      // TODO: Show error message to user
+      alert('Failed to create transaction. Please try again.');
+    }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -168,6 +212,32 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose }) 
                 </p>
               </div>
             )}
+
+            {/* Account Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Account
+              </label>
+              <div className="relative">
+                <CreditCard className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <select
+                  value={formData.accountId}
+                  onChange={(e) => setFormData({ ...formData, accountId: e.target.value })}
+                  className="input-field pl-10"
+                  required
+                  disabled={loadingAccounts}
+                >
+                  <option value="">
+                    {loadingAccounts ? 'Loading accounts...' : 'Select account'}
+                  </option>
+                  {accounts.map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.accountInfo?.name || account.name} - {account.type} ({account.accountInfo?.balance || account.balance ? `$${(account.accountInfo?.balance || account.balance).toLocaleString()}` : 'No balance'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
             {/* Description */}
             <div>

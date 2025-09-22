@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, TrendingUp, PieChart, Search, SortAsc, SortDesc } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Plus, TrendingUp, PieChart, Search, SortAsc, SortDesc, RefreshCw } from 'lucide-react';
 import { useStore } from '../store/useStore';
+import { useAuth } from '../hooks/useAuth';
 import { apiService } from '../services/api';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
@@ -8,14 +9,16 @@ import { formatCurrency } from '../utils/currency';
 import { Investment } from '../types';
 import PortfolioGrowthChart from '../components/Charts/PortfolioGrowthChart';
 import PortfolioMetrics from '../components/Dashboard/PortfolioMetrics';
-import PortfolioInsights from '../components/Dashboard/PortfolioInsights';
+// ...existing code...
 import HoldingCard from '../components/Dashboard/HoldingCard';
-import RealtimePortfolioValue from '../components/Dashboard/RealtimePortfolioValue';
 import AdvancedAnalytics from '../components/Dashboard/AdvancedAnalytics';
-import { generatePortfolioHistory, formatPortfolioHistory } from '../utils/portfolioData';
+import { formatPortfolioHistory } from '../utils/portfolioData';
+import PortfolioSentiment from '../components/Portfolio/PortfolioSentiment';
+import PortfolioRebalance from '../components/Portfolio/PortfolioRebalance';
 
 const PortfolioPage: React.FC = () => {
   const { user, investments, setInvestments, currency } = useStore();
+  const { isAuthenticated, isLoading: authLoading, tokenReady } = useAuth();
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingInvestment, setEditingInvestment] = useState<Investment | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -24,6 +27,10 @@ const PortfolioPage: React.FC = () => {
   const [filterType, setFilterType] = useState<string>('all');
   const [portfolioHistory, setPortfolioHistory] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  const [dataQuality, setDataQuality] = useState<any>(null);
+  const [recs, setRecs] = useState<any[]>([]);
+  const [recsLoading, setRecsLoading] = useState(false);
+  const [recsStatus, setRecsStatus] = useState('');
   
   const [formData, setFormData] = useState({
     symbol: '',
@@ -52,34 +59,81 @@ const PortfolioPage: React.FC = () => {
   }, [user]);
 
   useEffect(() => {
+    console.log('=== PORTFOLIO HISTORY useEffect TRIGGERED ===');
+    console.log('Dependencies:', { investments: investments.length, user: !!user, isAuthenticated, authLoading, tokenReady });
+    
     // Load portfolio history from backend instead of generating fake data
     const loadPortfolioHistory = async () => {
-      if (!user) return;
+      console.log('=== LOADING PORTFOLIO HISTORY ===');
+      console.log('User:', user);
+      console.log('User ID:', user?.id);
+      console.log('User exists:', !!user);
+      console.log('Is authenticated:', isAuthenticated);
+      console.log('Auth loading:', authLoading);
+      console.log('Token ready:', tokenReady);
+      console.log('Investments length:', investments.length);
+      
+      // Don't bail out completely - just wait for auth to be ready
+      if (!user || authLoading) {
+        console.log('User not loaded or auth still loading, skipping for now');
+        return;
+      }
+      
+      if (!isAuthenticated || !tokenReady) {
+        console.log('Waiting for authentication/token to be ready...');
+        console.log('Conditions:', { isAuthenticated, tokenReady });
+        return;
+      }
+      
+      console.log('Authentication ready, proceeding with API call...');
       
       try {
         setLoadingHistory(true);
+        console.log('Making API call to getPortfolioPerformance...');
+        console.log('Current token from API service:', apiService.getCurrentToken() ? 'EXISTS' : 'NULL');
+        console.log('Token preview:', apiService.getCurrentToken()?.substring(0, 30) + '...');
         const response = await apiService.getPortfolioPerformance();
-        if (response.success && response.data && response.data.historicalPerformance) {
-          // Use real portfolio performance data
-          const formattedHistory = formatPortfolioHistory(response.data.historicalPerformance);
+        console.log('API response received:', response);
+        console.log('Response success:', response.success);
+        console.log('Response data exists:', !!response.data);
+        console.log('Historical performance exists:', !!response.data?.historicalPerformance);
+        console.log('Historical performance length:', response.data?.historicalPerformance?.length);
+        
+        // The API service now handles response format normalization
+        if (response && response.historicalPerformance) {
+          console.log('=== RAW API RESPONSE ===');
+          console.log('Full response:', response);
+          console.log('Available keys:', Object.keys(response));
+          console.log('Historical performance length:', response.historicalPerformance.length);
+          
+          const formattedHistory = formatPortfolioHistory(response.historicalPerformance);
+          console.log('=== PORTFOLIO HISTORY DATA ===');
+          console.log('Formatted history:', formattedHistory);
+          console.log('Formatted data points count:', formattedHistory.length);
+          console.log('First data point:', formattedHistory[0]);
+          console.log('Last data point:', formattedHistory[formattedHistory.length - 1]);
+          console.log('=== END PORTFOLIO HISTORY ===');
           setPortfolioHistory(formattedHistory);
+          setDataQuality(response.dataQuality);
         } else {
-          // Fallback to generated data if no historical data available
-          const history = generatePortfolioHistory(investments);
-          setPortfolioHistory(history);
+          // No fallback - just set empty array if no data
+          console.log('No API data available, setting empty array');
+          console.log('Response exists:', !!response);
+          console.log('Response has historicalPerformance:', !!response?.historicalPerformance);
+          setPortfolioHistory([]);
         }
       } catch (error) {
         console.error('Error loading portfolio history:', error);
-        // Fallback to generated data on error
-        const history = generatePortfolioHistory(investments);
-        setPortfolioHistory(history);
+        // No fallback - just set empty array on error
+        setPortfolioHistory([]);
       } finally {
         setLoadingHistory(false);
       }
     };
 
+    console.log('useEffect triggered - calling loadPortfolioHistory');
     loadPortfolioHistory();
-  }, [investments, user]);
+  }, [investments, user, isAuthenticated, authLoading, tokenReady]);
 
   const loadInvestments = async () => {
     if (!user) return;
@@ -105,30 +159,43 @@ const PortfolioPage: React.FC = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
-    const investmentData: Investment = {
-      id: editingInvestment?.id || Date.now().toString(),
-      userId: user.id,
-      symbol: formData.symbol,
-      name: formData.name,
-      shares: Number(formData.shares),
-      purchasePrice: Number(formData.purchasePrice),
-      currentPrice: Number(formData.currentPrice),
-      type: formData.type,
-      purchaseDate: new Date(formData.purchaseDate),
-      currency,
-    };
+    try {
+      const investmentData = {
+        userId: user.id,
+        symbol: formData.symbol,
+        name: formData.name,
+        shares: Number(formData.shares),
+        purchasePrice: Number(formData.purchasePrice),
+        currentPrice: Number(formData.currentPrice),
+        type: formData.type,
+        purchaseDate: new Date(formData.purchaseDate),
+        currency,
+        // Add fields expected by backend
+        purchaseMethod: 'buy',
+        fees: 0,
+      };
 
-    if (editingInvestment) {
-      setInvestments(safeInvestments.map(inv => inv.id === editingInvestment.id ? investmentData : inv));
-    } else {
-      setInvestments([...safeInvestments, investmentData]);
+      if (editingInvestment) {
+        // Update existing investment
+        const response = await apiService.updateInvestment(editingInvestment.id, investmentData);
+        const updatedInvestment = (response as any).data || response;
+        setInvestments(safeInvestments.map(inv => inv.id === editingInvestment.id ? updatedInvestment : inv));
+      } else {
+        // Create new investment
+        const response = await apiService.createInvestment(investmentData);
+        const savedInvestment = (response as any).data || response;
+        setInvestments([...safeInvestments, savedInvestment]);
+      }
+
+      resetForm();
+    } catch (error) {
+      console.error('Error saving investment:', error);
+      alert('Failed to save investment. Please try again.');
     }
-
-    resetForm();
   };
 
   const resetForm = () => {
@@ -217,6 +284,90 @@ const PortfolioPage: React.FC = () => {
 
   const assetAllocation = getAssetAllocation();
 
+  // Derive holdings with current value and allocation for ML components
+  const holdings = (() => {
+    const list = safeInvestments.map(inv => {
+      const value = (inv.shares || 0) * (inv.currentPrice || 0);
+      return { symbol: inv.symbol, name: inv.name, value };
+    });
+    const total = list.reduce((s, h) => s + (h.value || 0), 0);
+    return list.map(h => ({ ...h, allocation: total > 0 ? (h.value / total) * 100 : 0 }));
+  })();
+
+  // Normalize risk tolerance from user profile
+  const getRiskTolerance = () => {
+    const rp: any = (user as any)?.riskProfile;
+    if (rp && typeof rp === 'object' && rp.level) return rp.level as 'conservative'|'moderate'|'aggressive';
+    if (typeof rp === 'string') return rp as 'conservative'|'moderate'|'aggressive';
+    return 'moderate' as const;
+  };
+
+  // Debug: Log data being passed to chart
+  console.log('=== PASSING DATA TO CHART ===', {
+    portfolioHistory,
+    dataLength: portfolioHistory.length,
+    loadingHistory,
+    currency,
+    isAuthenticated,
+    authLoading,
+    tokenReady
+  });
+
+
+  const pollPortfolioRecommendations = useCallback(async () => {
+    let attempt = 0;
+    const maxAttempts = 20;
+    while (attempt < maxAttempts) {
+      try {
+        const items = await apiService.getRecommendationsByScope('portfolio', 5);
+        if (Array.isArray(items) && items.length > 0) {
+          setRecs(items);
+          setRecsStatus('');
+          break;
+        }
+      } catch {}
+      attempt++;
+      const delay = Math.min(15000 * Math.pow(1.2, attempt), 60000);
+      setRecsStatus(`Generating portfolio recommendations… (retry ${attempt}/${maxAttempts})`);
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise(r => setTimeout(r, delay));
+    }
+    setRecsLoading(false);
+  }, []);
+
+  const handleRefreshPortfolioRecs = useCallback(async () => {
+    try {
+      setRecsLoading(true);
+      setRecsStatus('Starting…');
+      // You can pass a compact portfolio summary if desired
+      await apiService.refreshRecommendations('portfolio', 5);
+      pollPortfolioRecommendations();
+    } catch (e) {
+      setRecsLoading(false);
+      setRecsStatus('Failed to start generation');
+    }
+  }, [pollPortfolioRecommendations]);
+
+  // Auto-load portfolio recommendations on page load (mirrors dashboard behavior)
+  useEffect(() => {
+    const loadPortfolioRecs = async () => {
+      if (!isAuthenticated || authLoading || !tokenReady) return;
+      try {
+        const existing = await apiService.getRecommendationsByScope('portfolio', 5);
+        if (Array.isArray(existing) && existing.length > 0) {
+          setRecs(existing);
+          setRecsStatus('');
+          return;
+        }
+        setRecsLoading(true);
+        setRecsStatus('Starting…');
+        await apiService.refreshRecommendations('portfolio', 5);
+        pollPortfolioRecommendations();
+      } catch {}
+    };
+    loadPortfolioRecs();
+  }, [isAuthenticated, authLoading, tokenReady, pollPortfolioRecommendations]);
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
@@ -241,9 +392,11 @@ const PortfolioPage: React.FC = () => {
       <div className="mb-8">
         <PortfolioGrowthChart 
           data={portfolioHistory} 
+          investments={investments}
           currency={currency}
           height={400}
           loading={loadingHistory}
+          dataQuality={dataQuality}
         />
       </div>
 
@@ -252,19 +405,18 @@ const PortfolioPage: React.FC = () => {
         <PortfolioMetrics investments={investments} currency={currency} />
       </div>
 
-      {/* 🚀 NEW: Enhanced Yahoo Finance Integration */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <RealtimePortfolioValue investments={investments} currency={currency} />
-        
-        {/* Portfolio Insights */}
-        <div className="lg:col-span-1">
-          <PortfolioInsights investments={investments} currency={currency} />
-        </div>
-      </div>
+      {/* Temporarily disabled to fix authentication issues */}
+      {/* <RealtimePortfolioValue investments={investments} currency={currency} /> */}
 
       {/* 🚀 NEW: Advanced Portfolio Analytics */}
       <div className="mb-8">
         <AdvancedAnalytics />
+      </div>
+
+      {/* 🚀 NEW: Portfolio ML Components */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <PortfolioRebalance holdings={holdings} riskTolerance={getRiskTolerance()} />
+        <PortfolioSentiment holdings={holdings} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -361,7 +513,52 @@ const PortfolioPage: React.FC = () => {
         </div>
 
         {/* Sidebar */}
-        <div>
+        <div className="flex flex-col gap-6 lg:sticky lg:top-4">
+          {/* Portfolio AI Recommendations */}
+          <Card>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Portfolio Recommendations</h3>
+              <button className="btn btn-outline px-2 py-0.5 text-xs rounded-sm border border-gray-300 dark:border-gray-600" onClick={handleRefreshPortfolioRecs} disabled={recsLoading}>
+                <span className="inline-flex items-center">
+                  <RefreshCw className={`w-3 h-3 mr-1 ${recsLoading ? 'animate-spin' : ''}`} />
+                  {recsLoading ? 'Refreshing…' : 'Refresh'}
+                </span>
+              </button>
+            </div>
+            {recsStatus && (
+              <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">{recsStatus}</div>
+            )}
+            <div className="space-y-3">
+              {recs.length > 0 ? (
+                recs.map((rec, idx) => (
+                  <div key={(rec as any).id || (rec as any)._id || `${rec.title || 'rec'}-${idx}`} className="p-3 bg-violet-50 dark:bg-violet-900/20 rounded-lg">
+                    <div className="flex items-start justify-between mb-1">
+                      <h4 className="font-medium text-gray-900 dark:text-gray-100 text-sm">{rec.title}</h4>
+                      {(() => {
+                        const pct = typeof rec.confidence === 'number' ? (rec.confidence > 1 ? Math.round(rec.confidence) : Math.round(rec.confidence * 100)) : 80;
+                        return (
+                          <span className="text-[10px] bg-violet-100 dark:bg-violet-800 text-violet-700 dark:text-violet-300 px-2 py-0.5 rounded-full">
+                            {pct}%
+                          </span>
+                        );
+                      })()}
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{rec.description}</p>
+                    {Array.isArray(rec.actionItems) && rec.actionItems.length > 0 && (
+                      <ul className="list-disc ml-4 text-xs text-gray-500 dark:text-gray-400">
+                        {rec.actionItems.slice(0, 3).map((a: string, i: number) => (
+                          <li key={i}>{a}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-6 text-sm text-gray-500 dark:text-gray-400">No portfolio recommendations yet</div>
+              )}
+            </div>
+          </Card>
+
           {/* Asset Allocation */}
           <Card>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Asset Allocation</h3>
@@ -373,7 +570,7 @@ const PortfolioPage: React.FC = () => {
                 </p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="flex flex-col gap-3">
                 {assetAllocation.map((allocation, index) => {
                   const colors = [
                     'bg-violet-500', 'bg-blue-500', 'bg-green-500', 
@@ -382,7 +579,7 @@ const PortfolioPage: React.FC = () => {
                   const color = colors[index % colors.length];
                   
                   return (
-                    <div key={allocation.name} className="flex items-center justify-between">
+                    <div key={allocation.name} className="flex items-center justify-between py-3 px-3 rounded-md bg-gray-50 dark:bg-gray-800/40">
                       <div className="flex items-center space-x-3">
                         <div className={`w-4 h-4 rounded-full ${color}`} />
                         <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
@@ -390,10 +587,10 @@ const PortfolioPage: React.FC = () => {
                         </span>
                       </div>
                       <div className="text-right">
-                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                           {allocation.percentage.toFixed(1)}%
                         </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                           {formatCurrency(allocation.value, currency)}
                         </div>
                       </div>
@@ -406,10 +603,7 @@ const PortfolioPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Portfolio Insights - Full Width Row */}
-      <div className="mt-8">
-        <PortfolioInsights investments={investments} currency={currency} />
-      </div>
+  {/* Portfolio Insights removed from bottom of page */}
 
       {/* Add/Edit Investment Form */}
       {showAddForm && (

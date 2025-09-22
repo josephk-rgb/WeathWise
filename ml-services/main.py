@@ -12,7 +12,7 @@ from database import connect_mongodb, disconnect_mongodb, connect_redis, disconn
 from database import mongodb_connected, redis_connected
 
 # Import routers
-from routes import portfolio_analysis, market_prediction, risk_assessment, ai_chat
+from routes import portfolio_analysis, market_prediction, risk_assessment, ai_chat, recommendations
 
 # Load environment variables
 load_dotenv()
@@ -92,6 +92,7 @@ app.include_router(portfolio_analysis.router, prefix="/api/ml/portfolio", tags=[
 app.include_router(market_prediction.router, prefix="/api/ml/market", tags=["Market Prediction"])
 app.include_router(risk_assessment.router, prefix="/api/ml/risk", tags=["Risk Assessment"])
 app.include_router(ai_chat.router, prefix="/api/ml/chat", tags=["AI Chat"])
+app.include_router(recommendations.router, prefix="/api/ml/recommendations", tags=["Recommendations"])
 
 # BACKWARD COMPATIBILITY: Add /ai prefix for direct frontend calls
 app.include_router(ai_chat.router, prefix="/ai", tags=["AI Chat (Legacy)"])

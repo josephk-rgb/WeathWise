@@ -17,25 +17,56 @@ export const useAuth = () => {
   const [isInitializing, setIsInitializing] = useState(false);
   const initializingRef = useRef(false); // Use ref to prevent React Strict Mode issues
 
+  // ALWAYS log the current state
+  console.log('🔧 [FRONTEND] useAuth hook state check:');
+  console.log('🔧 [FRONTEND] - isAuthenticated:', isAuthenticated);
+  console.log('🔧 [FRONTEND] - isLoading:', isLoading);
+  console.log('🔧 [FRONTEND] - user exists:', !!user);
+  console.log('🔧 [FRONTEND] - tokenInitialized:', tokenInitialized);
+  console.log('🔧 [FRONTEND] - isInitializing:', isInitializing);
+  console.log('🔧 [FRONTEND] - tokenReady:', tokenReady);
+  
+  if (user) {
+    console.log('🔧 [FRONTEND] Auth0 user object found:', JSON.stringify(user, null, 2));
+  }
+
   // Automatically get and set token when authenticated
   useEffect(() => {
-    if (isAuthenticated && user && !isLoading && !tokenInitialized && !isInitializing && !initializingRef.current) {
+    console.log('🔧 [FRONTEND] useEffect triggered with conditions:');
+    console.log('🔧 [FRONTEND] - isAuthenticated && user && !isLoading && !tokenInitialized && !isInitializing && !initializingRef.current');
+    console.log('🔧 [FRONTEND] -', isAuthenticated, '&&', !!user, '&&', !isLoading, '&&', !tokenInitialized, '&&', !isInitializing, '&&', !initializingRef.current);
+    console.log('🔧 [FRONTEND] - Final result:', isAuthenticated && user && !isLoading && !tokenInitialized && !isInitializing && !initializingRef.current);
+    
+    // FORCE token initialization for debugging - remove the tokenInitialized check temporarily
+    if (isAuthenticated && user && !isLoading && !isInitializing && !initializingRef.current) {
       const initializeToken = async () => {
         try {
           initializingRef.current = true; // Set ref immediately
           setIsInitializing(true);
-          console.log('Initializing Auth0 token for user:', user.email);
+          console.log('🔧 [FRONTEND] Initializing Auth0 token for user:', user.email);
+          console.log('🔧 [FRONTEND] Full Auth0 user object:', JSON.stringify(user, null, 2));
           setTokenInitialized(true);
           
           const token = await getAccessTokenSilently({
             authorizationParams: {
               audience: import.meta.env.VITE_AUTH0_AUDIENCE,
+              scope: "openid profile email"
             }
           });
-          console.log('Got Auth0 token:', token.substring(0, 30) + '...');
+          console.log('🔧 [FRONTEND] Got Auth0 token:', token.substring(0, 30) + '...');
+          
+          // Decode and log the token payload
+          try {
+            const tokenParts = token.split('.');
+            const payload = JSON.parse(atob(tokenParts[1]));
+            console.log('🔧 [FRONTEND] Token payload:', JSON.stringify(payload, null, 2));
+          } catch (decodeError) {
+            console.error('🔧 [FRONTEND] Failed to decode token:', decodeError);
+          }
+          
           apiService.setToken(token);
           setTokenReady(true);
-          console.log('Auth0 token successfully set');
+          console.log('🔧 [FRONTEND] Auth0 token successfully set');
         } catch (error) {
           console.error('Error getting Auth0 token:', error);
           setTokenReady(false);
@@ -68,8 +99,48 @@ export const useAuth = () => {
     }
   }, [isAuthenticated, user, isLoading, getAccessTokenSilently]); // Removed tokenInitialized from dependencies
 
+  // Listen for token clearing events from API service
+  useEffect(() => {
+    const handleTokenCleared = async () => {
+      console.log('🔧 [FRONTEND] Token cleared by API service, updating auth state');
+      setTokenReady(false);
+      setTokenInitialized(false);
+      
+      // Try to get a fresh token if user is still authenticated
+      if (isAuthenticated && !isLoading) {
+        console.log('🔧 [FRONTEND] Attempting to refresh token after clearing');
+        try {
+          const newToken = await getAccessTokenSilently();
+          console.log('🔧 [FRONTEND] Got fresh token after clearing:', newToken.substring(0, 30) + '...');
+          apiService.setToken(newToken);
+          setTokenReady(true);
+          setTokenInitialized(true);
+        } catch (error) {
+          console.error('🔧 [FRONTEND] Failed to refresh token after clearing:', error);
+        }
+      }
+    };
+
+    window.addEventListener('auth-token-cleared', handleTokenCleared);
+    
+    return () => {
+      window.removeEventListener('auth-token-cleared', handleTokenCleared);
+    };
+  }, [isAuthenticated, isLoading, getAccessTokenSilently]);
+
   const login = () => {
-    loginWithRedirect();
+    console.log('🔧 [FRONTEND] Starting Auth0 login with configuration:');
+    console.log('🔧 [FRONTEND] - Domain:', import.meta.env.VITE_AUTH0_DOMAIN);
+    console.log('🔧 [FRONTEND] - Client ID:', import.meta.env.VITE_AUTH0_CLIENT_ID);
+    console.log('🔧 [FRONTEND] - Audience:', import.meta.env.VITE_AUTH0_AUDIENCE);
+    console.log('🔧 [FRONTEND] - Scopes: openid profile email');
+    
+    loginWithRedirect({
+      authorizationParams: {
+        audience: import.meta.env.VITE_AUTH0_AUDIENCE,
+        scope: "openid profile email"
+      }
+    });
   };
 
   const handleLogout = () => {
@@ -83,13 +154,24 @@ export const useAuth = () => {
 
   const getToken = async () => {
     try {
-      console.log('Getting fresh Auth0 token...');
+      console.log('🔧 [FRONTEND] Getting fresh Auth0 token...');
       const token = await getAccessTokenSilently({
         authorizationParams: {
           audience: import.meta.env.VITE_AUTH0_AUDIENCE,
+          scope: "openid profile email"
         }
       });
-      console.log('Got fresh token:', token.substring(0, 30) + '...');
+      console.log('🔧 [FRONTEND] Got fresh token:', token.substring(0, 30) + '...');
+      
+      // Decode and log the fresh token payload too
+      try {
+        const tokenParts = token.split('.');
+        const payload = JSON.parse(atob(tokenParts[1]));
+        console.log('🔧 [FRONTEND] Fresh token payload:', JSON.stringify(payload, null, 2));
+      } catch (decodeError) {
+        console.error('🔧 [FRONTEND] Failed to decode fresh token:', decodeError);
+      }
+      
       apiService.setToken(token);
       setTokenReady(true);
       return token;

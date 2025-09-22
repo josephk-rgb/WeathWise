@@ -12,15 +12,18 @@ import {
   CreditCard,
   Lightbulb,
   History,
-  Bookmark,
-  Clock
+  Clock,
+  Plus
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { apiService } from '../services/api';
+// Server-backed sessions only
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import MarkdownMessage from '../components/Chat/MarkdownMessage';
+import ChatHistory from '../components/Chat/ChatHistory';
 import { formatCurrency } from '../utils/currency';
+import { useUser } from '../contexts/UserContext';
 
 interface QuickAction {
   id: string;
@@ -33,18 +36,30 @@ interface QuickAction {
 const TalkToFinances: React.FC = () => {
   const { 
     chatMessages, 
-    addChatMessage, 
+    addChatMessage,
+    setChatMessages,
+    currentSessionId,
+    setCurrentSessionId,
+    setChatSessions,
     transactions, 
     investments, 
     goals,
-    currency 
+    currency,
+    setTransactions,
+    setGoals,
+    setInvestments
   } = useStore();
+  const { isAuthenticated, isLoading: authLoading, userProfile } = useUser();
   
   const [message, setMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(true);
+  const [showHistory, setShowHistory] = useState(false);
+  const [currentSession, setCurrentSession] = useState<string | null>(currentSessionId);
+  const [dashboardStats, setDashboardStats] = useState<any | null>(null);
+  const hydrationStartedRef = useRef<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -102,9 +117,67 @@ const TalkToFinances: React.FC = () => {
     scrollToBottom();
   }, [chatMessages]);
 
+  // Hydrate financial context on mount if needed (independent of Dashboard)
+  useEffect(() => {
+    const shouldLoadData = (
+      (Array.isArray(transactions) ? transactions.length === 0 : true) ||
+      (Array.isArray(investments) ? investments.length === 0 : true) ||
+      (Array.isArray(goals) ? goals.length === 0 : true) ||
+      !dashboardStats
+    );
+
+    const hasToken = !!apiService.getCurrentToken();
+    if (!isAuthenticated || authLoading || !userProfile || !hasToken) return;
+    if (!shouldLoadData) return;
+    if (hydrationStartedRef.current) return; // prevent duplicate hydration in StrictMode/dev
+    hydrationStartedRef.current = true;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        // Prefer optimized dashboard endpoint
+        apiService.clearCache();
+        const response = await apiService.getCompleteDashboardData();
+        const data = response?.data || {};
+        if (!cancelled) {
+          const tx = Array.isArray(data.transactions) ? data.transactions : undefined;
+          const gl = Array.isArray(data.goals) ? data.goals : undefined;
+          const inv = Array.isArray(data.investments) ? data.investments : undefined;
+          if (tx && tx.length > 0) setTransactions(tx);
+          if (gl && gl.length > 0) setGoals(gl);
+          if (inv && inv.length > 0) setInvestments(inv);
+          if (data.dashboardStats) setDashboardStats(data.dashboardStats);
+        }
+      } catch (e) {
+        // Fallback to individual endpoints
+        try {
+          const [tx, gl, inv, stats] = await Promise.all([
+            apiService.getTransactions(userProfile.id).catch(() => []),
+            apiService.getGoals(userProfile.id).catch(() => []),
+            apiService.getInvestments(userProfile.id).catch(() => []),
+            apiService.getEnhancedDashboardStats().then(r => (r?.success ? r.data : r)).catch(() => null)
+          ]);
+          if (!cancelled) {
+            if (Array.isArray(tx) && tx.length > 0) setTransactions(tx);
+            if (Array.isArray(gl) && gl.length > 0) setGoals(gl);
+            if (Array.isArray(inv) && inv.length > 0) setInvestments(inv);
+            if (stats) setDashboardStats(stats);
+          }
+        } catch (_) {
+          // silent
+        }
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [isAuthenticated, authLoading, userProfile, transactions?.length, investments?.length, goals?.length, dashboardStats, setTransactions, setGoals, setInvestments]);
+
   const handleSendMessage = async (customMessage?: string) => {
     const messageToSend = customMessage || message;
     if (!messageToSend.trim()) return;
+
+    // Use existing session id or let server create on first send
+    let sessionId = currentSession;
 
     const userMessage = {
       id: Date.now().toString(),
@@ -115,13 +188,37 @@ const TalkToFinances: React.FC = () => {
     };
 
     addChatMessage(userMessage);
+    
+    // Server-backed: no local persistence
+    
     setMessage('');
     setSelectedImage(null);
     setIsTyping(true);
 
     try {
       // Use the new ML proxy endpoint for personalized responses
-      const response = await apiService.sendMLChatMessage(messageToSend, "llama3.1:8b", true);
+      const response = await apiService.sendMLChatMessage(messageToSend, "llama3.1:8b", true, sessionId || undefined, undefined);
+      if (!sessionId && response?.session_id) {
+        sessionId = response.session_id;
+        setCurrentSession(sessionId);
+        setCurrentSessionId(sessionId);
+        // Refresh sessions list
+        try {
+          const server = await apiService.getChatSessions(100, 0);
+          const sessions = Array.isArray(server.sessions) ? server.sessions : [];
+          setChatSessions(sessions.map((s: any) => ({
+            id: s.id,
+            title: s.title,
+            lastMessage: s.lastMessage || '',
+            messageCount: s.messageCount || 0,
+            createdAt: new Date(s.createdAt || s.created_at || Date.now()),
+            updatedAt: new Date(s.updatedAt || s.updated_at || Date.now()),
+            isActive: s.id === sessionId
+          })));
+        } catch (e) {
+          console.error('Failed to refresh sessions after first send:', e);
+        }
+      }
       
       if (!response || !response.response || response.response.trim() === '') {
         throw new Error('Empty response received from AI service');
@@ -134,6 +231,8 @@ const TalkToFinances: React.FC = () => {
         timestamp: new Date(),
       };
       addChatMessage(aiMessage);
+      
+      // Server persists messages
     } catch (error) {
       console.error('Error sending message:', error);
       
@@ -147,6 +246,76 @@ const TalkToFinances: React.FC = () => {
       addChatMessage(errorMessage);
     } finally {
       setIsTyping(false);
+    }
+  };
+
+  const handleSelectSession = async (sessionId: string) => {
+    try {
+      console.log('[TalkToFinances] Selecting session:', sessionId);
+      setCurrentSession(sessionId);
+      setCurrentSessionId(sessionId);
+      setShowHistory(false);
+      
+      // Load messages from backend only
+      setChatMessages([]);
+      try {
+        console.log('[TalkToFinances] Fetching backend history for session:', sessionId);
+        const history = await apiService.getMLChatHistory(sessionId);
+        console.log('[TalkToFinances] Backend history response:', history);
+        if (history && Array.isArray(history.messages) && history.messages.length > 0) {
+          const messages = history.messages.map((msg: any) => ({
+            id: msg.id,
+            content: msg.content,
+            sender: msg.message_type === 'user' ? 'user' : 'ai',
+            timestamp: new Date(msg.timestamp),
+            imageUrl: msg.metadata?.imageUrl
+          }));
+          setChatMessages(messages);
+        }
+      } catch (_) {
+        // ignore and fall back to local
+      }
+      // If not loaded from backend, keep empty
+    } catch (error) {
+      console.error('Failed to load session:', error);
+      setChatMessages([]);
+    }
+  };
+
+  const handleCreateNewSession = async () => {
+    try {
+      const resp = await apiService.createChatSession('New Chat');
+      const sid = resp?.session_id || resp?.id;
+      if (sid) {
+        setCurrentSession(sid);
+        setCurrentSessionId(sid);
+        // Refresh sessions list so it appears immediately
+        try {
+          const server = await apiService.getChatSessions(100, 0);
+          const sessions = Array.isArray(server.sessions) ? server.sessions : [];
+          setChatSessions(sessions.map((s: any) => ({
+            id: s.id,
+            title: s.title,
+            lastMessage: s.lastMessage || '',
+            messageCount: s.messageCount || 0,
+            createdAt: new Date(s.createdAt || s.created_at || Date.now()),
+            updatedAt: new Date(s.updatedAt || s.updated_at || Date.now()),
+            isActive: s.id === sid
+          })));
+        } catch (e) {
+          console.error('Failed to refresh sessions after create:', e);
+        }
+      } else {
+        setCurrentSession(null);
+        setCurrentSessionId(null);
+      }
+    } catch (e) {
+      console.error('Failed to create server session:', e);
+      setCurrentSession(null);
+      setCurrentSessionId(null);
+    } finally {
+      setChatMessages([]);
+      setShowHistory(false);
     }
   };
 
@@ -177,19 +346,54 @@ const TalkToFinances: React.FC = () => {
   const safeTransactions = Array.isArray(transactions) ? transactions : [];
   const safeInvestments = Array.isArray(investments) ? investments : [];
 
-  // Calculate financial summary
-  const totalIncome = safeTransactions
-    .filter(t => t.type === 'income')
-    .reduce((sum, t) => sum + t.amount, 0);
+  // Calculate financial summary (prefer backend stats)
+  const computeCurrentMonthTotals = () => {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const withinCurrentMonth = (d: Date) => d >= startOfMonth && d < startOfNextMonth;
 
-  const totalExpenses = Math.abs(safeTransactions
-    .filter(t => t.type === 'expense')
-    .reduce((sum, t) => sum + t.amount, 0));
+    const monthlyIncome = safeTransactions
+      .filter((t: any) => ((t.transactionInfo?.type || t.type) === 'income'))
+      .filter((t: any) => {
+        const raw = (t.transactionInfo?.date || t.date);
+        const dt = raw ? new Date(raw) : null;
+        return dt ? withinCurrentMonth(dt) : false;
+      })
+      .reduce((sum: number, t: any) => sum + Math.abs(t.transactionInfo?.amount || t.amount || 0), 0);
 
-  const portfolioValue = safeInvestments.reduce((sum, inv) => 
-    sum + (inv.shares * inv.currentPrice), 0);
+    const monthlyExpenses = Math.abs(
+      safeTransactions
+        .filter((t: any) => ((t.transactionInfo?.type || t.type) === 'expense'))
+        .filter((t: any) => {
+          const raw = (t.transactionInfo?.date || t.date);
+          const dt = raw ? new Date(raw) : null;
+          return dt ? withinCurrentMonth(dt) : false;
+        })
+        .reduce((sum: number, t: any) => sum + Math.abs(t.transactionInfo?.amount || t.amount || 0), 0)
+    );
 
-  const netWorth = totalIncome - totalExpenses + portfolioValue;
+    return { monthlyIncome, monthlyExpenses };
+  };
+
+  const fallbackMonthly = computeCurrentMonthTotals();
+  const monthlyIncome = (dashboardStats && dashboardStats.income?.current != null)
+    ? dashboardStats.income.current
+    : fallbackMonthly.monthlyIncome;
+  const monthlyExpenses = (dashboardStats && dashboardStats.expenses?.current != null)
+    ? dashboardStats.expenses.current
+    : fallbackMonthly.monthlyExpenses;
+
+  const portfolioValue = (dashboardStats && dashboardStats.portfolio?.current != null)
+    ? dashboardStats.portfolio.current
+    : safeInvestments.reduce((sum, inv) => 
+        sum + ((inv.shares || 0) * (inv.currentPrice || 0)), 0);
+
+  const netWorth = (dashboardStats && dashboardStats.netWorth?.current != null)
+    ? dashboardStats.netWorth.current
+    : (monthlyIncome - monthlyExpenses + portfolioValue);
+
+  const roundCurrency = (value: number) => Math.round(value || 0);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
@@ -218,8 +422,19 @@ const TalkToFinances: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-8" style={{ height: 'calc(100vh - 200px)' }}>
+          {/* Chat History Sidebar */}
+          {showHistory && (
+            <div className="xl:col-span-1 space-y-6 overflow-y-auto h-full max-h-full">
+              <ChatHistory
+                onSelectSession={handleSelectSession}
+                onCreateNewSession={handleCreateNewSession}
+                className="h-full"
+              />
+            </div>
+          )}
+
           {/* Financial Context Panel */}
-          <div className="xl:col-span-1 space-y-6 overflow-y-auto h-full max-h-full">
+          <div className={`space-y-6 overflow-y-auto h-full max-h-full ${showHistory ? 'xl:col-span-1' : 'xl:col-span-1'}`}>
             <Card>
               <div className="flex items-center space-x-2 mb-4">
                 <DollarSign className="w-5 h-5 text-violet-500" />
@@ -229,25 +444,25 @@ const TalkToFinances: React.FC = () => {
                 <div className="flex justify-between">
                   <span className="text-gray-600 dark:text-gray-400">Net Worth</span>
                   <span className="font-medium text-gray-900 dark:text-white">
-                    {formatCurrency(netWorth, currency)}
+                    {formatCurrency(roundCurrency(netWorth), currency)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600 dark:text-gray-400">Portfolio Value</span>
                   <span className="font-medium text-gray-900 dark:text-white">
-                    {formatCurrency(portfolioValue, currency)}
+                    {formatCurrency(roundCurrency(portfolioValue), currency)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600 dark:text-gray-400">Monthly Income</span>
                   <span className="font-medium text-green-600">
-                    {formatCurrency(totalIncome / 6, currency)}
+                    {formatCurrency(roundCurrency(monthlyIncome), currency)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600 dark:text-gray-400">Monthly Expenses</span>
                   <span className="font-medium text-red-600">
-                    {formatCurrency(totalExpenses / 6, currency)}
+                    {formatCurrency(roundCurrency(monthlyExpenses), currency)}
                   </span>
                 </div>
               </div>
@@ -266,7 +481,7 @@ const TalkToFinances: React.FC = () => {
                         {goal.title}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {formatCurrency(goal.currentAmount, currency)} / {formatCurrency(goal.targetAmount, currency)}
+                        {formatCurrency(roundCurrency(goal.currentAmount), currency)} / {formatCurrency(roundCurrency(goal.targetAmount), currency)}
                       </p>
                     </div>
                     <div className="w-16 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -277,6 +492,9 @@ const TalkToFinances: React.FC = () => {
                     </div>
                   </div>
                 ))}
+                {goals.length === 0 && (
+                  <div className="text-sm text-gray-500 dark:text-gray-400">No active goals found.</div>
+                )}
               </div>
             </Card>
 
@@ -315,8 +533,8 @@ const TalkToFinances: React.FC = () => {
           </div>
 
           {/* Main Chat Interface */}
-          <div className="xl:col-span-3 flex flex-col h-full">
-            <Card className="flex-1 flex flex-col h-full">
+          <div className={`flex flex-col h-full ${showHistory ? 'xl:col-span-2' : 'xl:col-span-3'}`}>
+            <Card className="flex-1 flex flex-col h-full max-h-[calc(100vh-220px)]">
               {/* Chat Header */}
               <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center space-x-3">
@@ -329,17 +547,25 @@ const TalkToFinances: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setShowHistory(!showHistory)}
+                  >
                     <History className="w-4 h-4" />
                   </Button>
-                  <Button variant="outline" size="sm">
-                    <Bookmark className="w-4 h-4" />
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleCreateNewSession}
+                  >
+                    <Plus className="w-4 h-4" />
                   </Button>
                 </div>
               </div>
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0">
+              <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0 h-full">
                 {chatMessages.length === 0 && (
                   <div className="text-center py-8">
                     <div className="w-16 h-16 bg-gradient-to-r from-violet-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">

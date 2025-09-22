@@ -32,6 +32,7 @@ interface NetWorthData {
 interface NetWorthTrendProps {
   currency?: string;
   height?: number;
+  currentNetWorth?: number; // Current net worth from dashboard stats to ensure consistency
 }
 
 const timePeriods = [
@@ -45,6 +46,7 @@ const timePeriods = [
 const NetWorthTrend: React.FC<NetWorthTrendProps> = ({
   currency = 'USD',
   height = 320,
+  currentNetWorth,
 }) => {
   const [selectedPeriod, setSelectedPeriod] = useState('6M');
   const [viewMode, setViewMode] = useState<'trend' | 'breakdown'>('trend');
@@ -78,6 +80,8 @@ const NetWorthTrend: React.FC<NetWorthTrendProps> = ({
         if (response.success && response.data?.trend) {
           const trendData = response.data.trend;
           console.log('📊 Net Worth Trend Data Received:', trendData);
+          console.log('📊 Sample data point:', trendData[0]);
+          console.log('📊 Data length:', trendData.length);
           
           // Check if this is meaningful data or just sample/empty data
           const hasRealData = trendData.length > 0 && 
@@ -86,6 +90,7 @@ const NetWorthTrend: React.FC<NetWorthTrendProps> = ({
             );
           
           console.log('📊 Has real data?', hasRealData);
+          console.log('📊 Net worth values:', trendData.map((item: any) => item.netWorth));
           
           if (hasRealData) {
             setData(trendData);
@@ -146,7 +151,7 @@ const NetWorthTrend: React.FC<NetWorthTrendProps> = ({
         change: 0,
         changePercent: 0,
         trend: 'neutral' as const,
-        current: 0,
+        current: currentNetWorth || 0, // Use provided current net worth if available
         previous: 0,
         highestPoint: 0,
         lowestPoint: 0,
@@ -154,7 +159,8 @@ const NetWorthTrend: React.FC<NetWorthTrendProps> = ({
       };
     }
 
-    const current = filteredData[filteredData.length - 1].netWorth;
+    // Use provided currentNetWorth for consistency with dashboard card, fallback to trend data
+    const current = currentNetWorth !== undefined ? currentNetWorth : filteredData[filteredData.length - 1].netWorth;
     const previous = filteredData[0].netWorth;
     const change = current - previous;
     const changePercent = previous !== 0 ? (change / Math.abs(previous)) * 100 : 0;
@@ -178,7 +184,7 @@ const NetWorthTrend: React.FC<NetWorthTrendProps> = ({
       lowestPoint,
       volatility,
     };
-  }, [filteredData, hasRealData]);
+  }, [filteredData, hasRealData, currentNetWorth]);
 
   const formatValue = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -352,6 +358,28 @@ const NetWorthTrend: React.FC<NetWorthTrendProps> = ({
         </div>
       ) : hasRealData ? (
         <div className="relative">
+          {/* Legend for breakdown chart - only show in breakdown mode */}
+          {viewMode === 'breakdown' && (
+            <div className="flex justify-center gap-6 mb-4 text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-sm bg-emerald-500"></div>
+                <span className="text-gray-600 dark:text-gray-400">Assets</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-sm bg-purple-600"></div>
+                <span className="text-gray-600 dark:text-gray-400">Investments</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-sm bg-blue-500"></div>
+                <span className="text-gray-600 dark:text-gray-400">Cash</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-sm bg-red-500"></div>
+                <span className="text-gray-600 dark:text-gray-400">Net Worth</span>
+              </div>
+            </div>
+          )}
+          
           <ResponsiveContainer width="100%" height={height}>
             {viewMode === 'trend' ? (
               <AreaChart data={filteredData} margin={{ left: 20, right: 20, top: 20, bottom: 20 }}>

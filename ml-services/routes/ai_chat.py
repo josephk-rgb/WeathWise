@@ -5,6 +5,7 @@ import httpx
 import json
 import asyncio
 import subprocess
+import os
 import time
 import uuid
 import logging
@@ -96,18 +97,45 @@ Remember: You're not just answering questions - you're their personal financial 
         
         full_prompt = f"{full_context}\n\nUser question: {message}\n\nBased on the user's WeathWise account data above, provide a personalized response. If they're asking about their financial situation and you have their data, reference the specific numbers and details. If they're a new user without data yet, acknowledge this and guide them on how to get started with WeathWise:"
         
-        # Call Ollama using subprocess
-        result = subprocess.run(
-            ["ollama", "run", model, full_prompt],
-            capture_output=True,
-            text=True,
-            timeout=30  # 30 second timeout
-        )
-        
-        if result.returncode == 0:
-            return result.stdout.strip()
-        else:
-            raise Exception(f"Ollama error: {result.stderr}")
+        # Configurable timeout and simple retries
+        timeout_env = os.getenv("OLLAMA_TIMEOUT_SECONDS")
+        try:
+            timeout_seconds = int(timeout_env) if timeout_env else 45
+        except ValueError:
+            timeout_seconds = 45
+
+        retries_env = os.getenv("OLLAMA_RETRIES")
+        try:
+            max_retries = max(0, int(retries_env)) if retries_env else 1
+        except ValueError:
+            max_retries = 1
+
+        last_err: Optional[Exception] = None
+        for attempt in range(max_retries + 1):
+            try:
+                result = subprocess.run(
+                    ["ollama", "run", model, full_prompt],
+                    capture_output=True,
+                    text=True,
+                    timeout=timeout_seconds
+                )
+                if result.returncode == 0:
+                    return result.stdout.strip()
+                last_err = Exception(f"Ollama error: {result.stderr}")
+            except subprocess.TimeoutExpired as te:
+                last_err = te
+                logger.warning(f"⏱️ Ollama call timed out (attempt {attempt + 1}/{max_retries + 1}, timeout={timeout_seconds}s)")
+            except Exception as e:
+                last_err = e
+                logger.warning(f"⚠️ Ollama call failed (attempt {attempt + 1}/{max_retries + 1}): {e}")
+
+            # brief backoff before retry (non-blocking sleep ok in async)
+            await asyncio.sleep(0.5 * (attempt + 1))
+
+        # If all attempts failed, raise last error captured
+        if isinstance(last_err, subprocess.TimeoutExpired):
+            raise Exception("Ollama request timed out")
+        raise Exception(str(last_err) if last_err else "Unknown error calling Ollama")
             
     except subprocess.TimeoutExpired:
         raise Exception("Ollama request timed out")
@@ -139,6 +167,12 @@ async def chat_with_ai(request: ChatRequest, authorization: Optional[str] = Head
                 )
                 
                 if user_financial_data and any(user_financial_data.values()):
+                    # Ensure tolerant shape: map legacy keys if present
+                    if not user_financial_data.get("profile") and user_financial_data.get("user_profile"):
+                        user_financial_data["profile"] = user_financial_data.get("user_profile")
+                    if not user_financial_data.get("transactions") and user_financial_data.get("recent_transactions"):
+                        user_financial_data["transactions"] = user_financial_data.get("recent_transactions")
+
                     # Format financial context for LLM using backend proxy
                     financial_context = backend_proxy.format_financial_context_for_llm(user_financial_data)
                     
@@ -267,8 +301,25 @@ async def chat_with_ai(request: ChatRequest, authorization: Optional[str] = Head
         )
         
     except Exception as e:
-        logger.error(f"❌ Chat error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        # Graceful fallback on Ollama timeout or errors
+        err_msg = str(e)
+        logger.error(f"❌ Chat error: {err_msg}")
+        if "timed out" in err_msg.lower() or "ollama" in err_msg.lower():
+            processing_time_ms = int((time.time() - start_time) * 1000)
+            fallback_response = (
+                "I'm sorry—I'm having trouble generating a response right now. "
+                "The AI engine took too long to reply. Please try again in a moment."
+            )
+            return ChatResponse(
+                response=fallback_response,
+                confidence=0.4,
+                sources=["system_fallback"],
+                session_id=request.session_id or "",
+                cached=False,
+                processing_time_ms=processing_time_ms,
+                financial_insights=None,
+            )
+        raise HTTPException(status_code=500, detail=err_msg)
 
 @router.get("/history/{session_id}")
 async def get_conversation_history(session_id: str, user_id: Optional[str] = None, limit: int = 50):

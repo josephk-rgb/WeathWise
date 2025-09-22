@@ -1,0 +1,559 @@
+{
+  "personaInfo": {
+    "name": "Elena Rodriguez",
+    "description": "Recent Graduate - 23 years old, Austin Marketing Coordinator",
+    "financialStory": "Building emergency fund, learning to invest, debt management",
+    "netWorthJourney": "-$25K → $8K over 1.5 years (building from negative)",
+    "timeframe": "18 months",
+    "keyEvents": [
+      "First job after graduation",
+      "Emergency fund completion",
+      "First investments"
+    ]
+  },
+  "userProfile": {
+    "firstName": "Elena",
+    "lastName": "Rodriguez",
+    "email": "elena.rodriguez@marketingplus.com",
+    "dateOfBirth": "2000-11-08",
+    "address": {
+      "street": "789 South First Street",
+      "city": "Austin",
+      "state": "TX",
+      "zipCode": "78704",
+      "country": "US"
+    },
+    "preferences": {
+      "currency": "USD",
+      "timezone": "America/Chicago",
+      "language": "en",
+      "theme": "auto",
+      "notifications": {
+        "email": true,
+        "push": true,
+        "sms": false,
+        "trading": true,
+        "news": false
+      }
+    },
+    "riskProfile": {
+      "level": "moderate",
+      "questionnaire": {
+        "age": 23,
+        "experience": "beginner",
+        "timeline": "medium_term",
+        "riskTolerance": 6,
+        "completedAt": "2022-07-01T00:00:00.000Z"
+      }
+    },
+    "subscription": {
+      "plan": "free",
+      "startDate": "2022-07-01T00:00:00.000Z",
+      "features": ["basic_analytics"]
+    }
+  },
+  "accounts": [
+    {
+      "_id": "checking_account_elena",
+      "type": "checking",
+      "provider": {
+        "name": "Bank of America",
+        "id": "bofa_001",
+        "logo": "https://logos.com/bank-of-america.png"
+      },
+      "accountInfo": {
+        "name": "Bank of America Advantage Plus",
+        "accountNumber": "****3691",
+        "routingNumber": "111000025",
+        "balance": 1800,
+        "currency": "USD"
+      },
+      "institutionName": "Bank of America",
+      "connectionStatus": {
+        "isConnected": true,
+        "lastConnected": "2024-01-15T10:30:00.000Z",
+        "provider": "plaid"
+      },
+      "category": "primary_checking"
+    },
+    {
+      "_id": "savings_account_elena",
+      "type": "savings",
+      "provider": {
+        "name": "Bank of America",
+        "id": "bofa_002",
+        "logo": "https://logos.com/bank-of-america.png"
+      },
+      "accountInfo": {
+        "name": "Bank of America Advantage Savings",
+        "accountNumber": "****7412",
+        "routingNumber": "111000025",
+        "balance": 12500,
+        "currency": "USD"
+      },
+      "institutionName": "Bank of America",
+      "connectionStatus": {
+        "isConnected": true,
+        "lastConnected": "2024-01-15T10:30:00.000Z",
+        "provider": "plaid"
+      },
+      "category": "emergency_savings"
+    },
+    {
+      "type": "credit",
+      "provider": {
+        "name": "Discover",
+        "id": "discover_001",
+        "logo": "https://logos.com/discover.png"
+      },
+      "accountInfo": {
+        "name": "Discover it Cash Back",
+        "accountNumber": "****5820",
+        "routingNumber": "111000025",
+        "balance": 0,
+        "currency": "USD"
+      },
+      "institutionName": "Discover Bank",
+      "connectionStatus": {
+        "isConnected": true,
+        "lastConnected": "2024-01-15T10:30:00.000Z",
+        "provider": "yodlee"
+      },
+      "category": "primary_checking"
+    }
+  ],
+  "investments": [
+    {
+      "securityInfo": {
+        "symbol": "SWTSX",
+        "name": "Schwab Total Stock Market Index Fund",
+        "type": "mutual_fund",
+        "sector": "Diversified",
+        "exchange": "SCHWAB"
+      },
+      "position": {
+        "shares": 40,
+        "averageCost": 60.00,
+        "totalCost": 2400.00,
+        "currentPrice": 68.50,
+        "marketValue": 2740.00,
+        "dayChange": 0.45,
+        "dayChangePercent": 0.66,
+        "gainLoss": 340.00,
+        "gainLossPercent": 14.17
+      },
+      "acquisition": {
+        "purchaseDate": "2023-03-15T00:00:00.000Z",
+        "purchaseMethod": "buy",
+        "purchasePrice": 60.00,
+        "totalCost": 2400.00
+      },
+      "performance": {
+        "dayChange": 0.45,
+        "dayChangePercent": 0.66,
+        "ytdReturn": 12.5,
+        "totalReturn": 14.17
+      },
+      "isActive": true
+    },
+    {
+      "securityInfo": {
+        "symbol": "SWLGX",
+        "name": "Schwab Large-Cap Growth Index Fund",
+        "type": "mutual_fund",
+        "sector": "Large Cap Growth",
+        "exchange": "SCHWAB"
+      },
+      "position": {
+        "shares": 25,
+        "averageCost": 46.00,
+        "totalCost": 1150.00,
+        "currentPrice": 52.80,
+        "marketValue": 1320.00,
+        "dayChange": 0.32,
+        "dayChangePercent": 0.61,
+        "gainLoss": 170.00,
+        "gainLossPercent": 14.78
+      },
+      "acquisition": {
+        "purchaseDate": "2023-06-20T00:00:00.000Z",
+        "purchaseMethod": "buy",
+        "purchasePrice": 46.00,
+        "totalCost": 1150.00
+      },
+      "performance": {
+        "dayChange": 0.32,
+        "dayChangePercent": 0.61,
+        "ytdReturn": 15.2,
+        "totalReturn": 14.78
+      },
+      "isActive": true
+    },
+    {
+      "securityInfo": {
+        "symbol": "SWPPX",
+        "name": "Schwab S&P 500 Index Fund",
+        "type": "mutual_fund",
+        "sector": "Large Cap",
+        "exchange": "SCHWAB"
+      },
+      "position": {
+        "shares": 35,
+        "averageCost": 50.00,
+        "totalCost": 1750.00,
+        "currentPrice": 58.25,
+        "marketValue": 2038.75,
+        "dayChange": 0.38,
+        "dayChangePercent": 0.66,
+        "gainLoss": 288.75,
+        "gainLossPercent": 16.50
+      },
+      "acquisition": {
+        "purchaseDate": "2023-09-10T00:00:00.000Z",
+        "purchaseMethod": "buy",
+        "purchasePrice": 50.00,
+        "totalCost": 1750.00
+      },
+      "performance": {
+        "dayChange": 0.38,
+        "dayChangePercent": 0.66,
+        "ytdReturn": 11.8,
+        "totalReturn": 16.50
+      },
+      "isActive": true
+    }
+  ],
+  "debts": [
+    {
+      "type": "student_loan",
+      "name": "Federal Direct Student Loan",
+      "lender": "Great Lakes Educational Loan Services",
+      "totalAmount": 35000,
+      "originalAmount": 35000,
+      "remainingBalance": 28500,
+      "interestRate": 4.99,
+      "minimumPayment": 280,
+      "monthlyPayment": 280,
+      "dueDate": "2024-02-01T00:00:00.000Z",
+      "isActive": true
+    },
+    {
+      "type": "credit_card",
+      "name": "Discover it Cash Back",
+      "lender": "Discover Bank",
+      "totalAmount": 800,
+      "originalAmount": 0,
+      "remainingBalance": 800,
+      "interestRate": 22.99,
+      "minimumPayment": 120,
+      "monthlyPayment": 120,
+      "dueDate": "2024-02-15T00:00:00.000Z",
+      "isActive": true
+    }
+  ],
+  "budgets": [
+    {
+      "category": "Housing",
+      "allocated": 1200,
+      "spent": 1150,
+      "month": "2024-01",
+      "year": 2024,
+      "isActive": true
+    },
+    {
+      "category": "Food",
+      "allocated": 350,
+      "spent": 320,
+      "month": "2024-01",
+      "year": 2024,
+      "isActive": true
+    },
+    {
+      "category": "Transportation",
+      "allocated": 200,
+      "spent": 180,
+      "month": "2024-01",
+      "year": 2024,
+      "isActive": true
+    },
+    {
+      "category": "Utilities",
+      "allocated": 150,
+      "spent": 145,
+      "month": "2024-01",
+      "year": 2024,
+      "isActive": true
+    },
+    {
+      "category": "Savings",
+      "allocated": 600,
+      "spent": 600,
+      "month": "2024-01",
+      "year": 2024,
+      "isActive": true
+    },
+    {
+      "category": "Business",
+      "allocated": 300,
+      "spent": 300,
+      "month": "2024-01",
+      "year": 2024,
+      "isActive": true
+    },
+    {
+      "category": "Debt Payments",
+      "allocated": 400,
+      "spent": 400,
+      "month": "2024-01",
+      "year": 2024,
+      "isActive": true
+    }
+  ],
+  "goals": [
+    {
+      "title": "Emergency Fund",
+      "description": "Build 3-month emergency fund",
+      "targetAmount": 7500,
+      "currentAmount": 8500,
+      "targetDate": "2023-12-01T00:00:00.000Z",
+      "category": "Emergency Fund",
+      "priority": "high",
+      "isActive": true,
+      "isCompleted": true,
+      "completedAt": "2023-12-01T00:00:00.000Z",
+      "isAccountBacked": true,
+      "linkedAccountId": "savings_account_elena",
+      "allocatedAccounts": [
+        {
+          "accountId": "savings_account_elena",
+          "allocatedAmount": 8500,
+          "lastUpdated": "2024-01-15T00:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "title": "Credit Card Payoff",
+      "description": "Pay off credit card debt completely",
+      "targetAmount": 800,
+      "currentAmount": 800,
+      "targetDate": "2024-06-30T00:00:00.000Z",
+      "category": "Other",
+      "priority": "high",
+      "isActive": true,
+      "isCompleted": false,
+      "isAccountBacked": false,
+      "allocatedAccounts": []
+    },
+    {
+      "title": "Student Loan Reduction",
+      "description": "Reduce student loan balance by $10K",
+      "targetAmount": 10000,
+      "currentAmount": 6500,
+      "targetDate": "2025-12-31T00:00:00.000Z",
+      "category": "Other",
+      "priority": "medium",
+      "isActive": true,
+      "isCompleted": false,
+      "isAccountBacked": false,
+      "allocatedAccounts": []
+    },
+    {
+      "title": "Investment Portfolio Growth",
+      "description": "Grow investment portfolio to $10K",
+      "targetAmount": 10000,
+      "currentAmount": 6098.75,
+      "targetDate": "2025-06-30T00:00:00.000Z",
+      "category": "Investment",
+      "priority": "medium",
+      "isActive": true,
+      "isCompleted": false,
+      "isAccountBacked": true,
+      "linkedAccountId": "checking_account_elena",
+      "allocatedAccounts": [
+        {
+          "accountId": "checking_account_elena",
+          "allocatedAmount": 1000,
+          "lastUpdated": "2024-01-15T00:00:00.000Z"
+        }
+      ]
+    }
+  ],
+  "accountBalanceHistory": [
+    {
+      "accountId": "checking_account_elena",
+      "date": "2022-07-01T00:00:00.000Z",
+      "balance": 500,
+      "changeType": "initial",
+      "changeAmount": 500,
+      "previousBalance": 0,
+      "description": "Initial account balance"
+    },
+    {
+      "accountId": "savings_account_elena",
+      "date": "2022-07-01T00:00:00.000Z",
+      "balance": 2000,
+      "changeType": "initial",
+      "changeAmount": 2000,
+      "previousBalance": 0,
+      "description": "Initial account balance"
+    }
+  ],
+  "physicalAssets": [],
+  "netWorthProgression": [
+    {
+      "date": "2022-07-01",
+      "netWorth": -25000,
+      "breakdown": {
+        "liquidAssets": 500,
+        "portfolioValue": 0,
+        "physicalAssets": 0,
+        "totalLiabilities": 35000
+      }
+    },
+    {
+      "date": "2022-12-01",
+      "netWorth": -18000,
+      "breakdown": {
+        "liquidAssets": 2500,
+        "portfolioValue": 0,
+        "physicalAssets": 0,
+        "totalLiabilities": 34500
+      }
+    },
+    {
+      "date": "2023-06-01",
+      "netWorth": -12000,
+      "breakdown": {
+        "liquidAssets": 5000,
+        "portfolioValue": 2400,
+        "physicalAssets": 0,
+        "totalLiabilities": 33500
+      }
+    },
+    {
+      "date": "2023-12-01",
+      "netWorth": -5000,
+      "breakdown": {
+        "liquidAssets": 8000,
+        "portfolioValue": 4500,
+        "physicalAssets": 0,
+        "totalLiabilities": 29500
+      }
+    },
+    {
+      "date": "2024-01-01",
+      "netWorth": 8000,
+      "breakdown": {
+        "liquidAssets": 11300,
+        "portfolioValue": 6098.75,
+        "physicalAssets": 0,
+        "totalLiabilities": 29300
+      }
+    }
+  ],
+  "accountBalanceProgression": {
+    "checking": [
+      {"date": "2022-07-01", "balance": 500},
+      {"date": "2022-12-01", "balance": 1200},
+      {"date": "2023-06-01", "balance": 2000},
+      {"date": "2023-12-01", "balance": 2800},
+      {"date": "2024-01-01", "balance": 2800}
+    ],
+    "savings": [
+      {"date": "2022-07-01", "balance": 0},
+      {"date": "2022-12-01", "balance": 1300},
+      {"date": "2023-06-01", "balance": 3000},
+      {"date": "2023-12-01", "balance": 5200},
+      {"date": "2024-01-01", "balance": 8500}
+    ],
+    "investment": [
+      {"date": "2023-03-01", "balance": 2400},
+      {"date": "2023-06-01", "balance": 2400},
+      {"date": "2023-09-01", "balance": 3550},
+      {"date": "2023-12-01", "balance": 4500},
+      {"date": "2024-01-01", "balance": 6098.75}
+    ]
+  },
+  "investmentPriceProgression": {
+    "SWTSX": [
+      {"date": "2023-03-01", "price": 60.00},
+      {"date": "2023-06-01", "price": 62.50},
+      {"date": "2023-09-01", "price": 65.00},
+      {"date": "2023-12-01", "price": 67.25},
+      {"date": "2024-01-01", "price": 68.50}
+    ],
+    "SWLGX": [
+      {"date": "2023-06-01", "price": 46.00},
+      {"date": "2023-09-01", "price": 48.50},
+      {"date": "2023-12-01", "price": 51.00},
+      {"date": "2024-01-01", "price": 52.80}
+    ],
+    "SWPPX": [
+      {"date": "2023-09-01", "price": 50.00},
+      {"date": "2023-12-01", "price": 55.25},
+      {"date": "2024-01-01", "price": 58.25}
+    ]
+  },
+  "transactionPatterns": {
+    "income": [
+      {
+        "type": "salary",
+        "amount": 3200,
+        "frequency": "monthly",
+        "dayOfMonth": 1,
+        "merchant": "Marketing Plus Inc",
+        "description": "Monthly salary deposit"
+      },
+      {
+        "type": "freelance",
+        "amount": 400,
+        "frequency": "monthly",
+        "variation": 0.5,
+        "merchant": "Various Clients",
+        "description": "Freelance marketing work"
+      }
+    ],
+    "expenses": [
+      {
+        "type": "rent",
+        "amount": 1150,
+        "frequency": "monthly",
+        "dayOfMonth": 1,
+        "merchant": "Austin Rentals LLC",
+        "description": "Monthly rent payment"
+      },
+      {
+        "type": "utilities",
+        "amount": 145,
+        "frequency": "monthly",
+        "dayOfMonth": 15,
+        "merchant": "Austin Energy",
+        "description": "Electric and water bill"
+      },
+      {
+        "type": "groceries",
+        "amount": 250,
+        "frequency": "monthly",
+        "variation": 0.2,
+        "merchant": "H-E-B",
+        "description": "Weekly grocery shopping"
+      },
+      {
+        "type": "transportation",
+        "amount": 150,
+        "frequency": "monthly",
+        "variation": 0.15,
+        "merchant": "CapMetro",
+        "description": "Public transportation and rideshare"
+      },
+      {
+        "type": "dining",
+        "amount": 200,
+        "frequency": "monthly",
+        "variation": 0.25,
+        "merchant": "Various Austin Restaurants",
+        "description": "Dining out and food delivery"
+      }
+    ]
+  }
+}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, memo } from 'react';
-import { TrendingUp, Target, Shield, PieChart, BarChart3, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Shield, BarChart3, RefreshCw } from 'lucide-react';
 import { apiService } from '../../services/api';
 import { AdvancedPortfolioAnalytics } from '../../types';
 
@@ -23,10 +23,6 @@ const AdvancedAnalyticsComponent: React.FC<AdvancedAnalyticsProps> = ({ classNam
 
     try {
       const data = await apiService.getAdvancedPortfolioAnalytics();
-      console.log('🔍 Raw analytics data received:', data);
-      console.log('🔍 Data type:', typeof data);
-      console.log('🔍 Data keys:', data ? Object.keys(data) : 'null/undefined');
-      console.log('🔍 portfolioMetrics exists?', data?.portfolioMetrics);
       setAnalytics(data);
       setLastUpdate(new Date());
     } catch (error: any) {
@@ -44,16 +40,6 @@ const AdvancedAnalyticsComponent: React.FC<AdvancedAnalyticsProps> = ({ classNam
       high: 'text-red-600 bg-red-100'
     };
     return colors[level as keyof typeof colors] || 'text-gray-600 bg-gray-100';
-  };
-
-  const getRiskIcon = (level: string) => {
-    const safeLevel = level || 'low';
-    switch (safeLevel) {
-      case 'low': return <Shield className="h-4 w-4" />;
-      case 'medium': return <Target className="h-4 w-4" />;
-      case 'high': return <AlertTriangle className="h-4 w-4" />;
-      default: return <Shield className="h-4 w-4" />;
-    }
   };
 
   if (loading) {
@@ -98,12 +84,9 @@ const AdvancedAnalyticsComponent: React.FC<AdvancedAnalyticsProps> = ({ classNam
     return null;
   }
 
-  // Add debugging and defensive programming
-  console.log('🔍 Analytics in render:', analytics);
-  
   // Check if we have any meaningful portfolio data
-  const hasPortfolioData = analytics?.individualAssets && analytics.individualAssets.length > 0;
-  
+  const hasPortfolioData = analytics?.portfolioMetrics || (analytics?.individualAssets && analytics.individualAssets.length > 0);
+
   if (!hasPortfolioData) {
     return (
       <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 ${className}`}>
@@ -135,48 +118,28 @@ const AdvancedAnalyticsComponent: React.FC<AdvancedAnalyticsProps> = ({ classNam
     );
   }
   
-  // Safely destructure with defaults
-  const portfolioMetrics = analytics?.portfolioMetrics || { 
-    beta: 0, 
-    volatility: 0, 
-    sharpeRatio: 0, 
-    valueAtRisk: 0, 
-    correlation: 0 
-  };
-  
-  const individualAssets = analytics?.individualAssets || [];
-  const composition = analytics?.composition || [];
-  const riskAnalysis = analytics?.riskAnalysis || { 
-    overall: 'low' as const, 
-    diversification: 0, 
-    concentration: 0 
+  // Safely map data into minimal structure used by compact UI
+  const portfolioMetrics = analytics?.portfolioMetrics || {
+    beta: 0,
+    volatility: 0,
+    sharpeRatio: 0,
+    valueAtRisk: 0,
+    correlation: 0
   };
 
-  console.log('🔍 portfolioMetrics after destructuring:', portfolioMetrics);
-  console.log('🔍 riskAnalysis after destructuring:', riskAnalysis);
-  console.log('🔍 riskAnalysis.overall:', riskAnalysis?.overall);
-  console.log('🔍 originalAnalytics.riskAnalysis:', analytics?.riskAnalysis);
-  console.log('🔍 composition data:', composition);
-  console.log('🔍 individualAssets data:', individualAssets);
-
-  // Helper function to safely get risk level
-  const getRiskLevel = () => {
-    const level = riskAnalysis?.overall;
-    if (level && ['low', 'medium', 'high'].includes(level)) {
-      return level;
-    }
-    return 'low';
-  };
+  const riskLevel = (() => {
+    const level = analytics?.riskAnalysis?.overall;
+    return level && ['low', 'medium', 'high'].includes(level) ? level : 'low';
+  })();
 
   return (
     <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 ${className}`}>
-      {/* Header */}
       <div className="p-6 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <BarChart3 className="h-5 w-5 text-blue-600" />
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-              Advanced Portfolio Analytics
+              Portfolio Analytics
             </h3>
           </div>
           <button
@@ -188,210 +151,38 @@ const AdvancedAnalyticsComponent: React.FC<AdvancedAnalyticsProps> = ({ classNam
             <RefreshCw className={`h-4 w-4 text-gray-500 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
-        <p className="text-sm text-gray-500 mt-1">
-          Real-time risk metrics powered by Yahoo Finance
-        </p>
       </div>
 
       <div className="p-6 space-y-6">
-        {/* Portfolio Risk Metrics */}
-        <div>
-          <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-            Risk Metrics
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Beta</span>
-                <TrendingUp className="h-4 w-4 text-blue-500" />
-              </div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {portfolioMetrics.beta?.toFixed(2) || 'N/A'}
-              </div>
-              <div className="text-xs text-gray-500 mt-1">
-                vs S&P 500
-              </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+            <div className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Beta</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">{portfolioMetrics.beta?.toFixed(2) || 'N/A'}</div>
+          </div>
+          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+            <div className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Volatility</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">{portfolioMetrics.volatility?.toFixed(1) || 'N/A'}%</div>
+          </div>
+          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+            <div className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Sharpe</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">{portfolioMetrics.sharpeRatio?.toFixed(2) || 'N/A'}</div>
+          </div>
+          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Overall Risk</span>
+              <Shield className="h-4 w-4 text-gray-500" />
             </div>
-
-            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Volatility</span>
-                <BarChart3 className="h-4 w-4 text-orange-500" />
-              </div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {portfolioMetrics.volatility?.toFixed(1) || 'N/A'}%
-              </div>
-              <div className="text-xs text-gray-500 mt-1">
-                30-day rolling
-              </div>
-            </div>
-
-            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Sharpe Ratio</span>
-                <Target className="h-4 w-4 text-green-500" />
-              </div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {portfolioMetrics.sharpeRatio?.toFixed(2) || 'N/A'}
-              </div>
-              <div className="text-xs text-gray-500 mt-1">
-                Risk-adjusted return
-              </div>
-            </div>
-
-            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Value at Risk</span>
-                <AlertTriangle className="h-4 w-4 text-red-500" />
-              </div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {portfolioMetrics.valueAtRisk?.toFixed(1) || 'N/A'}%
-              </div>
-              <div className="text-xs text-gray-500 mt-1">
-                95% confidence
-              </div>
+            <div className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${formatRiskLevel(riskLevel)}`}>
+              {riskLevel.toUpperCase()}
             </div>
           </div>
         </div>
 
-        {/* Risk Analysis Summary */}
-        <div>
-          <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-            Risk Analysis
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-              <div className="flex items-center space-x-2 mb-2">
-                {getRiskIcon(getRiskLevel())}
-                <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                  Overall Risk
-                </span>
-              </div>
-              <div className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${formatRiskLevel(getRiskLevel())}`}>
-                {getRiskLevel().toUpperCase()}
-              </div>
-            </div>
-
-            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-              <div className="flex items-center space-x-2 mb-2">
-                <PieChart className="h-4 w-4 text-blue-500" />
-                <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                  Diversification
-                </span>
-              </div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {Math.round(riskAnalysis?.diversification || 0)}%
-              </div>
-            </div>
-
-            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-              <div className="flex items-center space-x-2 mb-2">
-                <Target className="h-4 w-4 text-purple-500" />
-                <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                  Concentration
-                </span>
-              </div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {Math.round(riskAnalysis?.concentration || 0)}%
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Portfolio Composition */}
-        {composition && composition.length > 0 && (
-          <div>
-            <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-              Asset Allocation
-            </h4>
-            <div className="space-y-3">
-              {composition.map((asset, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-3 h-3 rounded-full bg-blue-500" style={{
-                      backgroundColor: `hsl(${index * 137.5 % 360}, 70%, 50%)`
-                    }}></div>
-                    <span className="text-sm font-medium text-gray-900 dark:text-white capitalize">
-                      {asset.type || 'Unknown'}
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm text-gray-500">
-                      ${(asset.value || 0).toLocaleString()}
-                    </span>
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">
-                      {(asset.percentage || 0).toFixed(1)}%
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Individual Asset Risk */}
-        {individualAssets && individualAssets.length > 0 && (
-          <div>
-            <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-              Individual Asset Risk
-            </h4>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-700">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Symbol
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Weight
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Beta
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Volatility
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Sharpe Ratio
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                  {individualAssets.slice(0, 5).map((asset, index) => (
-                    <tr key={index}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                        {asset.symbol || 'N/A'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                        {((asset.weight || 0) * 100).toFixed(1)}%
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                        {asset.analytics?.beta?.toFixed(2) || 'N/A'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                        {asset.analytics?.volatility?.toFixed(1) || 'N/A'}%
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                        {asset.analytics?.sharpeRatio?.toFixed(2) || 'N/A'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* Footer */}
         {lastUpdate && (
-          <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between text-sm text-gray-500">
-              <span>
-                Data powered by Yahoo Finance
-              </span>
-              <span>
-                Updated {lastUpdate.toLocaleTimeString()}
-              </span>
+          <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between text-xs text-gray-500">
+              <span>Data powered by Yahoo Finance</span>
+              <span>Updated {lastUpdate.toLocaleTimeString()}</span>
             </div>
           </div>
         )}

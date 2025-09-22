@@ -25,27 +25,87 @@ router.get('/me', authMiddleware, async (req: Request, res: Response): Promise<v
       return;
     }
 
-    // Debug: Log user role
-    console.log('🔍 DEBUG - User role for', user.email, ':', user.role);
-    console.log('🔍 DEBUG - Full user object keys:', Object.keys(user));
+  // Debug: Log user role, onboarding status, and full user object
+  console.log('🔍 DEBUG - User role for', user.email, ':', user.role);
+  console.log('🔍 DEBUG - Onboarding completed:', user.metadata.onboardingCompleted);
+  console.log('🔍 DEBUG - Full user object:', JSON.stringify(user, null, 2));
 
-    // Return user profile without sensitive data
-    res.json({
-      id: user._id,
-      email: user.email,
-      role: user.role,
-      profile: user.profile,
-      preferences: user.preferences,
-      riskProfile: user.riskProfile,
-      subscription: user.subscription,
-      metadata: {
-        onboardingCompleted: user.metadata.onboardingCompleted,
-        lastLogin: user.metadata.lastLogin,
-        loginCount: user.metadata.loginCount
-      }
-    });
+  res.json(user);
   } catch (error) {
-    console.error('Get user profile error:', error);
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Update user with Auth0 data (POST version of /me)
+router.post('/me', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!isAuthenticatedUser(req.user)) {
+      res.status(401).json({ error: 'User not authenticated' });
+      return;
+    }
+
+    const { auth0UserData } = req.body;
+    console.log('🔧 [BACKEND] Received Auth0 user data:', auth0UserData);
+
+    // Get existing user
+    let user = await databaseService.findUserById(req.user.id);
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    // Update user with Auth0 data if available and user data is incomplete
+    if (auth0UserData && auth0UserData.email) {
+      let shouldUpdate = false;
+      const updates: any = {};
+
+      // Update email if it's currently a temp email
+      if (user.email.includes('@temp.wealthwise.com') && auth0UserData.email) {
+        updates.email = auth0UserData.email.toLowerCase();
+        shouldUpdate = true;
+        console.log('🔧 [BACKEND] Updating email from temp to real:', auth0UserData.email);
+      }
+
+      // Update names if they're currently placeholders
+      if (user.profile.firstName === 'FirstName' || user.profile.lastName === 'LastName') {
+        if (auth0UserData.given_name && auth0UserData.given_name !== user.profile.firstName) {
+          updates['profile.firstName'] = auth0UserData.given_name;
+          shouldUpdate = true;
+        }
+        if (auth0UserData.family_name && auth0UserData.family_name !== user.profile.lastName) {
+          updates['profile.lastName'] = auth0UserData.family_name;
+          shouldUpdate = true;
+        }
+        // Fallback to parsing name if given_name/family_name not available
+        if (auth0UserData.name && !auth0UserData.given_name) {
+          const nameParts = auth0UserData.name.split(' ');
+          if (nameParts.length > 0 && nameParts[0] !== user.profile.firstName) {
+            updates['profile.firstName'] = nameParts[0];
+            shouldUpdate = true;
+          }
+          if (nameParts.length > 1 && nameParts.slice(1).join(' ') !== user.profile.lastName) {
+            updates['profile.lastName'] = nameParts.slice(1).join(' ');
+            shouldUpdate = true;
+          }
+        }
+      }
+
+      // Apply updates if needed
+      if (shouldUpdate) {
+        console.log('🔧 [BACKEND] Applying updates:', updates);
+        user = await databaseService.updateUser(user.id, updates);
+        console.log('✅ User updated with Auth0 data');
+      }
+    }
+
+    // Debug: Log user role and onboarding status
+    console.log('🔍 DEBUG - User role for', user.email, ':', user.role);
+    console.log('🔍 DEBUG - Onboarding completed:', user.metadata.onboardingCompleted);
+
+    res.json(user);
+  } catch (error) {
+    console.error('Error updating user with Auth0 data:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -59,8 +119,11 @@ router.put('/profile', authMiddleware, [
   body('address').optional().isObject(),
 ], async (req: Request, res: Response): Promise<void> => {
   try {
+    console.log('🔧 [AUTH] Profile update request body:', JSON.stringify(req.body, null, 2));
+    
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log('❌ [AUTH] Validation errors:', errors.array());
       res.status(400).json({ errors: errors.array() });
       return;
     }
@@ -208,21 +271,42 @@ router.post('/legal/accept-tos', authMiddleware, async (req: Request, res: Respo
 // Complete onboarding
 router.post('/complete-onboarding', authMiddleware, async (req: Request, res: Response): Promise<void> => {
   try {
+    console.log('🔧 [DEBUG] Complete onboarding endpoint called');
+    console.log('🔧 [DEBUG] User:', req.user);
+
     if (!isAuthenticatedUser(req.user)) {
+      console.log('🔧 [DEBUG] User not authenticated');
       res.status(401).json({ error: 'User not authenticated' });
       return;
     }
 
-    const updatedUser = await databaseService.updateUser(req.user.id, {
-      metadata: {
-        onboardingCompleted: true
-      }
-    } as any);
-    
-    if (!updatedUser) {
+    // Get current user data to preserve existing metadata
+    const currentUser = await databaseService.findUserById(req.user.id);
+    if (!currentUser) {
+      console.log('🔧 [DEBUG] User not found in database:', req.user.id);
       res.status(404).json({ error: 'User not found' });
       return;
     }
+
+    console.log('🔧 [DEBUG] Current user metadata before update:', currentUser.metadata);
+
+    const updatedUser = await databaseService.updateUser(req.user.id, {
+      metadata: {
+        ...currentUser.metadata,
+        onboardingCompleted: true
+      }
+    });
+    
+    if (!updatedUser) {
+      console.log('🔧 [DEBUG] Failed to update user for onboarding completion');
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    console.log('🔧 [DEBUG] User onboarding completed successfully:', {
+      id: updatedUser._id,
+      onboardingCompleted: updatedUser.metadata.onboardingCompleted
+    });
 
     res.json({
       message: 'Onboarding completed successfully',
@@ -260,34 +344,95 @@ router.put('/complete-profile', authMiddleware, [
   body('address').optional().isObject(),
 ], async (req: Request, res: Response): Promise<void> => {
   try {
+    console.log('🔧 [DEBUG] Complete profile endpoint called');
+    console.log('🔧 [DEBUG] Request body:', JSON.stringify(req.body, null, 2));
+    console.log('🔧 [DEBUG] User:', req.user);
+
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log('🔧 [DEBUG] Validation errors:', errors.array());
       res.status(400).json({ errors: errors.array() });
       return;
     }
 
     if (!isAuthenticatedUser(req.user)) {
+      console.log('🔧 [DEBUG] User not authenticated');
       res.status(401).json({ error: 'User not authenticated' });
       return;
     }
 
+    // Get current user data first to preserve existing profile data
+    const currentUser = await databaseService.findUserById(req.user.id);
+    if (!currentUser) {
+      console.log('🔧 [DEBUG] User not found in database:', req.user.id);
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    console.log('🔧 [DEBUG] Current user found:', {
+      id: currentUser._id,
+      email: currentUser.email,
+      profile: currentUser.profile,
+      metadata: currentUser.metadata
+    });
+
     const updateData: any = {
-      'metadata.onboardingCompleted': true,
-      'metadata.lastUpdated': new Date()
+      metadata: {
+        ...currentUser.metadata,
+        onboardingCompleted: true,
+        profileNeedsCompletion: false, // Clear the flag since we're completing profile
+        lastUpdated: new Date()
+      }
     };
     
-    // Only update profile if data is provided
-    if (req.body.firstName || req.body.lastName || req.body.phone || req.body.dateOfBirth || req.body.address) {
+    // Always update profile if firstName or lastName provided, or if profile needs completion
+    const shouldUpdateProfile = req.body.firstName || req.body.lastName || 
+                               req.body.phone || req.body.dateOfBirth || req.body.address ||
+                               currentUser.metadata?.profileNeedsCompletion;
+    
+    if (shouldUpdateProfile) {
       updateData.profile = {
-        ...(req.body.firstName && { firstName: req.body.firstName }),
-        ...(req.body.lastName && { lastName: req.body.lastName }),
+        ...currentUser.profile, // Preserve existing profile data
+        // Ensure firstName and lastName are properly set
+        firstName: req.body.firstName || currentUser.profile.firstName,
+        lastName: req.body.lastName || currentUser.profile.lastName,
         ...(req.body.phone && { phone: req.body.phone }),
         ...(req.body.dateOfBirth && { dateOfBirth: new Date(req.body.dateOfBirth) }),
         ...(req.body.address && { address: req.body.address })
       };
+      
+      // If we still have placeholder names and no new names provided, this is an error
+      if ((updateData.profile.firstName === 'FirstName' || updateData.profile.firstName === 'User') && !req.body.firstName) {
+        console.log('🔧 [DEBUG] Profile completion missing firstName');
+        res.status(400).json({ error: 'First name is required to complete profile' });
+        return;
+      }
+      
+      if ((updateData.profile.lastName === 'LastName' || updateData.profile.lastName === 'User') && !req.body.lastName) {
+        console.log('🔧 [DEBUG] Profile completion missing lastName');
+        res.status(400).json({ error: 'Last name is required to complete profile' });
+        return;
+      }
+      
+      console.log('🔧 [DEBUG] Profile data to update:', updateData.profile);
     }
 
+    console.log('🔧 [DEBUG] Complete update data:', JSON.stringify(updateData, null, 2));
+
     const updatedUser = await databaseService.updateUser(req.user.id, updateData);
+    
+    if (!updatedUser) {
+      console.log('🔧 [DEBUG] Failed to update user');
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    console.log('🔧 [DEBUG] User updated successfully:', {
+      id: updatedUser._id,
+      email: updatedUser.email,
+      profile: updatedUser.profile,
+      metadata: updatedUser.metadata
+    });
     
     if (!updatedUser) {
       res.status(404).json({ error: 'User not found' });

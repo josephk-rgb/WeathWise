@@ -57,7 +57,12 @@ import analyticsRoutes from './routes/analytics';
 import authTestRoutes from './routes/auth-test';
 import testApisRoutes from './routes/test-apis';
 import mlProxyRoutes from './routes/ml-proxy';
-import mockDataRoutes from './routes/mockData';
+import personaRoutes from './routes/persona';
+import accountRoutes from './routes/accounts';
+import physicalAssetRoutes from './routes/physicalAssets';
+import netWorthRoutes from './routes/netWorth';
+import enhancedFeaturesRoutes from './routes/enhanced-features';
+import adminRoutes from './routes/admin';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -83,8 +88,17 @@ const limiter = rateLimit({
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env['CORS_ORIGIN'] || 'http://localhost:5173',
+  origin: [
+    process.env['CORS_ORIGIN'] || 'http://localhost:5173',
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:5173'
+  ],
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Cache-Control', 'Pragma', 'Accept', 'Accept-Encoding', 'Accept-Language', 'User-Agent'],
+  optionsSuccessStatus: 200 // Some legacy browsers (IE11, various SmartTVs) choke on 204
 }));
 app.use(compression());
 app.use(morgan('combined', { stream: { write: (message) => logger.info(message.trim()) } }));
@@ -114,7 +128,6 @@ app.get('/health', (_req, res) => {
   });
 });
 
-// DEBUG: Add route debugging endpoint
 app.get('/debug/routes', (_req, res) => {
   res.json({
     message: 'WeathWise Backend Route Debug',
@@ -146,6 +159,9 @@ app.get('/debug/routes', (_req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/auth-test', authMiddleware, authTestRoutes);
 app.use('/api/users', authMiddleware, userRoutes);
+app.use('/api/accounts', authMiddleware, accountRoutes);
+app.use('/api/physical-assets', authMiddleware, physicalAssetRoutes);
+app.use('/api/net-worth', netWorthRoutes); // Net worth routes with built-in auth
 app.use('/api/portfolio', authMiddleware, portfolioRoutes);
 app.use('/api/transactions', authMiddleware, transactionRoutes);
 app.use('/api/investments', authMiddleware, investmentRoutes);
@@ -153,11 +169,15 @@ app.use('/api/goals', authMiddleware, goalRoutes);
 app.use('/api/budgets', authMiddleware, budgetRoutes);
 app.use('/api/debts', authMiddleware, debtRoutes);
 app.use('/api/analytics', authMiddleware, analyticsRoutes);
-app.use('/api/market', authMiddleware, marketRoutes);
+// Temporarily remove auth for market routes to fix news issue
+app.use('/api/market', marketRoutes);
 app.use('/api/ai', authMiddleware, aiRoutes);
-app.use('/api/mock-data', mockDataRoutes); // Admin-only mock data routes
+app.use('/api/enhanced-features', enhancedFeaturesRoutes); // Phase 4 & 5 features - no auth for testing
+app.use('/api/admin/persona', personaRoutes); // Admin-only persona management routes
 
-// DEBUG: Log ML proxy route registration
+// Admin routes for daily price management
+app.use('/api/admin', adminRoutes);
+
 console.log('🔧 [DEBUG] Registering ML proxy routes at /api/ml');
 app.use('/api/ml', (req, res, next) => {
   console.log(`🔧 [DEBUG] ML proxy request: ${req.method} ${req.path} - Full URL: ${req.originalUrl}`);
@@ -166,7 +186,6 @@ app.use('/api/ml', (req, res, next) => {
 
 app.use('/api/test-apis', testApisRoutes); // No auth required for testing
 
-// DEBUG: Add global route debugging
 app.use('*', (req, res, next) => {
   console.log(`🔧 [DEBUG] Unmatched route: ${req.method} ${req.originalUrl}`);
   console.log(`🔧 [DEBUG] Available ML routes should be: POST /api/ml/chat, GET /api/ml/health, GET /api/ml/debug/routes`);
@@ -223,6 +242,17 @@ async function startServer() {
     await connectDB();
     logger.info('✅ MongoDB connected successfully');
     
+    // Start cron service for daily price updates
+    const { CronService } = await import('./services/cronService');
+    const cronService = new CronService();
+    cronService.start();
+    logger.info('⏰ Cron service started for daily price updates');
+
+    // Initialize snapshot scheduler for daily net worth snapshots
+    const { SnapshotScheduler } = await import('./services/snapshot/SnapshotScheduler');
+    SnapshotScheduler.initialize();
+    logger.info('📸 Snapshot scheduler initialized for daily net worth snapshots');
+
     // ONLY start the server AFTER database is ready
     server.listen(PORT, () => {
       logger.info(`🚀 Server running on port ${PORT}`);
@@ -252,10 +282,15 @@ async function startServer() {
 process.on('SIGTERM', async () => {
   logger.info('🛑 SIGTERM received, shutting down gracefully...');
   try {
+    // Shutdown snapshot scheduler
+    const { SnapshotScheduler } = await import('./services/snapshot/SnapshotScheduler');
+    await SnapshotScheduler.shutdown();
+    logger.info('📸 Snapshot scheduler stopped');
+    
     await require('mongoose').connection.close();
     logger.info('📊 Database connection closed');
   } catch (error) {
-    logger.error('Error closing database connection:', error);
+    logger.error('Error during shutdown:', error);
   }
   server.close(() => {
     logger.info('🛑 Process terminated');
@@ -266,10 +301,15 @@ process.on('SIGTERM', async () => {
 process.on('SIGINT', async () => {
   logger.info('🛑 SIGINT received, shutting down gracefully...');
   try {
+    // Shutdown snapshot scheduler
+    const { SnapshotScheduler } = await import('./services/snapshot/SnapshotScheduler');
+    await SnapshotScheduler.shutdown();
+    logger.info('📸 Snapshot scheduler stopped');
+    
     await require('mongoose').connection.close();
     logger.info('📊 Database connection closed');
   } catch (error) {
-    logger.error('Error closing database connection:', error);
+    logger.error('Error during shutdown:', error);
   }
   server.close(() => {
     logger.info('🛑 Process terminated');
