@@ -24,7 +24,7 @@ WeathWise AI is a sophisticated financial advisor bot that revolutionizes person
                               │
                     ┌─────────┴─────────┐
                     │   API Gateway     │
-                    │  (Vercel Edge)    │
+                    │     
                     └─────────┬─────────┘
                               │
 ┌─────────────────────────────┴─────────────────────────────┐
@@ -239,31 +239,9 @@ Comprehensive documentation is available in the `docs/` folder:
 - [Testing & QA](docs/10-testing-qa.md)
 - [Deployment & Infrastructure](docs/11-deployment-infrastructure.md)
 
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
 
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🆘 Support
 
-For support and questions:
-- Check the [documentation](docs/)
-- Open an [issue](../../issues)
-- Contact the development team
-
-## 🗺️ Roadmap
-
-- [ ] Complete Auth0 integration
-- [ ] Implement real-time market data
-- [ ] Add advanced ML models
-- [ ] Mobile app development
-- [ ] Advanced portfolio analytics
-- [ ] Social trading features
-- [ ] Cryptocurrency integration
