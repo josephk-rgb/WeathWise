@@ -257,8 +257,8 @@ class ApiService {
 
   private async executeRequest(url: string, config: RequestInit, endpoint: string, options: RequestInit, retryCount: number, cacheKey?: string, cacheTTL?: number): Promise<any> {
     try {
-      // Set timeout for long-running operations (like clear data)
-      const timeoutMs = endpoint.includes('/clear/') || endpoint.includes('/backup') ? 300000 : 30000; // 5 minutes for clear/backup, 30 seconds for others
+      // Set timeout for long-running operations (like clear data, backup, AI chat)
+      const timeoutMs = endpoint.includes('/clear/') || endpoint.includes('/backup') || endpoint.includes('/ml/chat') || endpoint.includes('/ai/chat') ? 300000 : 30000; // 5 minutes for clear/backup/chat, 30 seconds for others
       
       // Enhanced debugging for clear operations
       if (endpoint.includes('/clear/') || endpoint.includes('/backup')) {

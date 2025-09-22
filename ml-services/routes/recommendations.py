@@ -49,18 +49,48 @@ async def build_user_context(user_id: str, auth_token: Optional[str]) -> dict:
         return {}
 
 def call_ollama_prompt(prompt: str, model: str, timeout: int = 45) -> str:
+    import os
+    import time
+    
+    # Configurable timeout and retries (sync version)
+    timeout_env = os.getenv("OLLAMA_TIMEOUT_SECONDS")
     try:
-        result = subprocess.run(
-            ["ollama", "run", model, prompt],
-            capture_output=True,
-            text=True,
-            timeout=timeout
-        )
-        if result.returncode == 0:
-            return result.stdout.strip()
-        raise Exception(result.stderr)
-    except subprocess.TimeoutExpired:
+        timeout_seconds = int(timeout_env) if timeout_env else timeout
+    except ValueError:
+        timeout_seconds = timeout
+
+    retries_env = os.getenv("OLLAMA_RETRIES")
+    try:
+        max_retries = max(0, int(retries_env)) if retries_env else 1
+    except ValueError:
+        max_retries = 1
+
+    last_err = None
+    for attempt in range(max_retries + 1):
+        try:
+            result = subprocess.run(
+                ["ollama", "run", model, prompt],
+                capture_output=True,
+                text=True,
+                timeout=timeout_seconds
+            )
+            if result.returncode == 0:
+                return result.stdout.strip()
+            last_err = Exception(result.stderr)
+        except subprocess.TimeoutExpired as te:
+            last_err = te
+            logger.warning(f"⏱️ Ollama call timed out (attempt {attempt + 1}/{max_retries + 1}, timeout={timeout_seconds}s)")
+        except Exception as e:
+            last_err = e
+            logger.warning(f"⚠️ Ollama call failed (attempt {attempt + 1}/{max_retries + 1}): {e}")
+
+        # brief backoff before retry
+        time.sleep(0.5 * (attempt + 1))
+
+    # If all attempts failed, raise last error captured
+    if isinstance(last_err, subprocess.TimeoutExpired):
         raise Exception("Ollama request timed out")
+    raise Exception(str(last_err) if last_err else "Unknown error calling Ollama")
 
 def build_prompt(scope: Scope, context: dict, max_items: int) -> str:
     summary_parts = []

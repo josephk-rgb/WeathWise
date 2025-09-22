@@ -79,3 +79,4 @@ async function checkBestMonth() {
 
 // Run the check
 checkBestMonth();
+
